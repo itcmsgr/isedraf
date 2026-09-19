@@ -147,7 +147,7 @@
       "status": "IMPLEMENTED",
       "evidence": "scripts/ci/check_reproducible.sh",
       "command": "make check-reproducible",
-      "note": "two builds of the same tree produce identical bytes for all six artifacts; before 2026-09-19 they did not, because `ar rc` wrote the clock and the builder's numeric uid into every deb member header and rpm took BUILDTIME from the clock"
+      "note": "the source tarball and the .deb rebuild BIT-IDENTICALLY on a different distribution (Fedora 44/btrfs/rpm 6.0.2 vs ubuntu-latest/ext4/rpm 4.18.2) and the locally rebuilt files verify against the published attestation; the .rpm differs because rpm 6 writes a zstd payload and rpm 4 writes gzip - a property of rpm, recorded in KGG-016 rather than papered over"
     }
   },
   "runtime": {

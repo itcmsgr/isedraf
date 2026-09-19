@@ -346,7 +346,7 @@ non-reproducible build"*, so the experiment must produce one for certain.
 
 ## KGG-016 — Reproducible on one machine is not reproducible across machines
 
-**State:** `PARTIALLY_CLOSED`
+**State:** `PARTIALLY_CLOSED` — tarball and `.deb` closed, `.rpm` open by toolchain
 
 `make check-reproducible` builds twice and compares, which proves the build is **deterministic**.
 It says nothing about whether a different machine gets the same bytes — and that is the property a
@@ -364,6 +364,20 @@ the artifacts `ubuntu-latest` produced from the same commit:
 
 `BUILDTIME` was **identical** on both machines (`1789794254`), so `SOURCE_DATE_EPOCH` taken from the
 commit works exactly as intended across toolchains.
+
+**Measured again after both fixes, on 2026-09-19, and this is the result that matters:** the public
+commit was rebuilt on a Fedora 44 / btrfs / rpm 6.0.2 workstation and compared against what
+`ubuntu-latest` / ext4 / rpm 4.18.2 produced from the same commit.
+
+| Artifact | Cross-machine | Verified against the published attestation |
+|---|---|---|
+| source tarball | **bit-identical** | **yes** — `gh attestation verify` accepts the locally rebuilt file |
+| `.deb` | **bit-identical** | **yes** — same |
+| `.rpm` | differs | **correctly refused** — no attestation exists for the digest this machine produces |
+
+An independent rebuild on a different distribution produces bytes that GitHub's own attestation
+accepts. The `.rpm` refusal is the honest outcome, not a failure: the artifact genuinely differs, and
+the verifier says so rather than being lenient.
 
 **What may be said, and what may not.** The source tarball is reproducible across machines and
 distributions — observed. The `.deb` is expected to be, now that the filesystem dependency is
