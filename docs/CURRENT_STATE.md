@@ -62,6 +62,7 @@ Designed, not built. No part of this runs.
 - `framework_mapping_packs` — design only - no pack loader, no manifest reader, no entitlement mechanism and no signing exists; no third-party mapping is licensed, reviewed or bundled (design: `docs/licensing/FRAMEWORK_PACK_ARCHITECTURE.md`)
 - `journald_recording`
 - `mounts`
+- `native_control_catalog` — D-111 freezes the invariant and the ISE-* namespace: 14 families, ISE-IDENT reserved and not in use. NO native criterion is authored yet - they arrive in W1-D. make check-native-catalog enforces that the registry and the catalog document agree, that criteria hold to the namespace, that no criterion is derived from a framework, and that no production module is named after a provider (design: `docs/architecture/NATIVE_CONTROL_CATALOG.md`)
 - `pam`
 - `report_pdf`
 - `services`
@@ -104,8 +105,8 @@ Not asserted. Each number is counted at generation time.
 
 | | |
 |---|---|
-| Gates | 17 |
-| Falsification injections | 70 |
+| Gates | 18 |
+| Falsification injections | 73 |
 | Golden vector cases | 15 |
 | Frozen artifacts | 7 |
 | Test files | 3 |

@@ -212,6 +212,35 @@ p.write_text(s.replace(old, "echo \"X-Build-Stamp: $(date +%s%N)\" >> \"$DEBROOT
 PYX' \
   'reproducible build gate FAILED|artifacts identical'
 
+# D-111. The native control catalog is authored first and is ISEDRAF's own. The invariant
+# is frozen; these prove the gate enforcing it can refuse.
+inject "D-111 a production module is named after a framework provider" \
+  'python3 scripts/ci/check_native_catalog.py' \
+  'cp lib/isedraf/identity.py lib/isedraf/cis_collector.py && git add -f -A' \
+  'named after a framework provider|native control catalog gate FAILED'
+
+inject "D-111 the namespace and the catalog document disagree" \
+  'python3 scripts/ci/check_native_catalog.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import json, pathlib
+p = pathlib.Path("scripts/ci/native_controls.json"); d = json.loads(p.read_text())
+d["families"]["ISE-GHOST"] = "a family the catalog document has never heard of"
+p.write_text(json.dumps(d, indent=2))
+PYX' \
+  'registry and not in the catalog document|native control catalog gate FAILED'
+
+inject "D-111 a native criterion is derived from a framework" \
+  'python3 scripts/ci/check_native_catalog.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import json, pathlib
+p = pathlib.Path("scripts/ci/native_controls.json"); d = json.loads(p.read_text())
+d["criteria"].append({f: "x" for f in d["required_criterion_fields"]})
+d["criteria"][0]["criterion_id"] = "ISE-SSH-001"
+d["criteria"][0]["purpose"] = "Implements CIS Controls safeguard 4.1"
+p.write_text(json.dumps(d, indent=2))
+PYX' \
+  'names CIS in the criterion itself|native control catalog gate FAILED'
+
 # D-84/D-90. Third-party framework content is not relicensed by sitting in this
 # repository. The registry is deny-by-default, and "deny by default" is a claim that has
 # to be shown to deny something.
