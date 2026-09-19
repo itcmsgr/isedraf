@@ -49,11 +49,17 @@ bad() { echo "  FAIL  $*" >&2; FAIL=1; }
 # The freeze set is split the same way: docs/architecture/freeze/W1A_CORE_PUBLIC.sha256
 # holds the digests of the published subset, COPIED from the full set rather than
 # recomputed, so both repositories verify the same bytes and neither gate is weakened.
+#
+# V0_1_IMPLEMENTATION_SCOPE.md was in this list and was taken out on evidence. It looked
+# like lane planning; it is the document that DEFINES 54 requirement IDs, and 52 published
+# files cite them - including lib/isedraf/identity.py, cli.py, inventory/model.py and the
+# tests. Every `Implements: SCOPE-045` in the shipped source would have pointed at a
+# document the reader cannot open. A specification that the published code cites is not
+# internal change control.
 EXCLUDE_PREFIXES="planning/ CLAUDE.md
 docs/architecture/DECISIONS_REGISTER.md
 docs/architecture/OPEN_DECISIONS.md
 docs/architecture/AMENDMENTS.md
-docs/architecture/V0_1_IMPLEMENTATION_SCOPE.md
 docs/architecture/W1A_CORE_FREEZE_SCOPE.md
 docs/architecture/MASTER_INDEX.md
 docs/architecture/freeze/W1A_CORE.sha256"

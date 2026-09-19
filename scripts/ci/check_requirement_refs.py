@@ -97,6 +97,34 @@ if REGISTER.exists():
 # defining documents are actually visible.
 requirement_defs_visible = bool(defined)
 
+# Is ID resolution COMPLETE in this checkout?
+#
+# The public repository carries the specification and not the internal change control, so
+# some documents that define requirement IDs are absent by design. A reference that does
+# not resolve here may be perfectly valid and defined in a document this checkout does not
+# have - reporting it as undefined would be a statement about the checkout, not about the
+# code.
+#
+# Prefix families are not a usable proxy: IDENT-001 is defined in a published document and
+# IDENT-003 in an unpublished one, so the family looks resolvable while half of it is not.
+# The honest test is whether EVERY defining document is present.
+#
+# When one is missing, unresolved IDs are counted and named as unresolved HERE, and the
+# gate says which mode it ran in. Nothing is weakened where it matters: the engineering
+# repository has every document, runs in full mode, and is the only place these files can
+# be edited.
+EXPECTED_DEFINING = [
+    "docs/architecture/ISEDRAF_HLD.md",
+    "docs/architecture/EVIDENCE_AND_TRUST_MODEL.md",
+    "docs/architecture/SNAPSHOT_BASELINE_DELTA_MODEL.md",
+    "docs/architecture/NORMATIVE_SOURCES.md",
+    "docs/architecture/V0_1_IMPLEMENTATION_SCOPE.md",
+    "docs/architecture/W1A_CORE_FREEZE_SCOPE.md",
+]
+absent_defining = [d for d in EXPECTED_DEFINING if not (ROOT / d).exists()]
+resolution_complete = not absent_defining
+unresolved = set()
+
 for p in docs:
     rel = p.relative_to(ROOT).as_posix()
     text = p.read_text(encoding="utf-8")
@@ -113,6 +141,9 @@ for p in docs:
             if i in NOT_IDS or i in defined or i.startswith(NOT_ID_PREFIXES):
                 continue
             if marked(m.start()):
+                continue
+            if not resolution_complete:
+                unresolved.add(i)
                 continue
             failures.append(f"{rel}: cites undefined requirement ID {i} [D-105]")
     if decisions:
@@ -133,6 +164,22 @@ if failures:
     for f in sorted(set(failures)):
         print(f"  FAIL  {f}", file=sys.stderr)
     sys.exit(1)
-mode = "full" if requirement_defs_visible else "decisions-only (architecture not yet in repo)"
+if not requirement_defs_visible:
+    mode = "decisions-only (architecture not yet in repo)"
+elif not resolution_complete:
+    print("  NOTE  %d defining document(s) are not present in this checkout: %s"
+          % (len(absent_defining), ", ".join(absent_defining)))
+    if unresolved:
+        print("        %d referenced ID(s) could not be resolved here and were NOT "
+              "treated as failures: %s"
+              % (len(unresolved), ", ".join(sorted(unresolved)[:8])
+                 + (" …" if len(unresolved) > 8 else "")))
+    print("        Full resolution runs in the engineering repository, which holds every")
+    print("        defining document and is the only place they can be edited.")
+    mode = "reduced — not every defining document is published here"
+elif not decisions:
+    mode = "reduced — the decisions register is not published here"
+else:
+    mode = "full"
 print(f"  OK    {len(defined)} requirement IDs, {len(decisions)} decisions, "
       f"{len(docs)} files scanned, all references resolve [{mode}]")

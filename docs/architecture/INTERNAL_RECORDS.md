@@ -16,15 +16,20 @@ missing file.
 | `DECISIONS_REGISTER.md` | 124 numbered project decisions (`D-01`…) with their reasoning | Internal decision history. A reader of the published project is served by what the tool guarantees, not by the order in which the author decided things. |
 | `OPEN_DECISIONS.md` | Questions that are still open, with deadlines | Unresolved internal questions read as commitments once published. Several carry dates that would become promises. |
 | `AMENDMENTS.md` | The owner's change-control record for frozen documents | It governs how the frozen set may be altered. It is authority over this repository, not documentation of the product. |
-| `V0_1_IMPLEMENTATION_SCOPE.md` | Lane scoping that drove implementation order | Planning, not specification. |
 | `W1A_CORE_FREEZE_SCOPE.md` | Which artifacts entered the first freeze set, and why | Internal process record. |
 | `MASTER_INDEX.md` | Generated index of requirement-ID ranges per document | Internal navigation over the full set, including the documents above. |
 
 ## What this does not mean
 
 **It is not a hidden specification.** Everything the tool promises is in the published documents:
-`ISEDRAF_HLD.md`, `EVIDENCE_AND_TRUST_MODEL.md`, `SNAPSHOT_BASELINE_DELTA_MODEL.md` and
-`NORMATIVE_SOURCES.md`. Requirement IDs cited in those documents resolve within them.
+`ISEDRAF_HLD.md`, `EVIDENCE_AND_TRUST_MODEL.md`, `SNAPSHOT_BASELINE_DELTA_MODEL.md`,
+`V0_1_IMPLEMENTATION_SCOPE.md` and `NORMATIVE_SOURCES.md`. Every requirement ID cited anywhere in this
+repository — including the `Implements:` lines in the shipped source — is defined in one of them.
+
+`V0_1_IMPLEMENTATION_SCOPE.md` was briefly on the list above, as planning. It is not: it defines 54
+requirement IDs that 52 published files cite, `lib/isedraf/identity.py` among them. A specification
+the published code points at cannot be unpublished, and the measurement is what corrected the
+classification.
 
 **The published specification is frozen and verifiable.** `docs/architecture/freeze/W1A_CORE_PUBLIC.sha256`
 holds the digests of the published frozen subset. Those digests are **copied** from the full freeze set

@@ -166,5 +166,11 @@
         "scripts/ci/framework_sources.json"
       ]
     }
+  },
+  "unpublished_paths": {
+    "$comment": "Declared gate scopes that are absent by design in a public checkout. check_gate_coverage.py must not call these a stale declaration: the path is real and in scope where the gate can act on it. Anything NOT listed here that matches no file is still a stale declaration.",
+    "paths": [
+      "CLAUDE.md"
+    ]
   }
 }
