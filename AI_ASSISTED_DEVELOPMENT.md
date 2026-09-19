@@ -93,8 +93,8 @@ without implying that an AI tool holds rights in the work.
 `Co-Authored-By` trailer is legacy metadata only, is not an authorship or copyright assignment, and
 history is not rewritten to remove it.
 
-This is **decision D-93** in `docs/architecture/DECISIONS_REGISTER.md`, which is the authoritative current
-statement. `docs/architecture/AMENDMENTS.md` records only the history of how it changed. Disclosure is
+This is **decision D-93** in `docs/architecture/INTERNAL_RECORDS.md`, which is the authoritative current
+statement. `docs/architecture/INTERNAL_RECORDS.md` records only the history of how it changed. Disclosure is
 mandatory; authorship credit to a tool is not granted.
 
 Contributors must configure their tooling accordingly. If an AI assistant or IDE adds an AI

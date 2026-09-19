@@ -148,6 +148,23 @@
         "packaging/rpm/*.spec.in",
         "packaging/deb/control.in"
       ]
+    },
+    "check-public-claims": {
+      "script": "scripts/ci/check_public_claims.py",
+      "implements": "C-01, D-88, D-89, D-90",
+      "falsification": "D-88 the README version badge disagrees with VERSION",
+      "eligible": [
+        "README.md"
+      ]
+    },
+    "check-licensing": {
+      "script": "scripts/ci/check_licensing.py",
+      "implements": "D-84, D-90, GOV-001",
+      "falsification": "D-90 an unregistered framework pack enters the tree",
+      "eligible": [
+        "REUSE.toml",
+        "scripts/ci/framework_sources.json"
+      ]
     }
   }
 }

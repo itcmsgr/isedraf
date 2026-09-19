@@ -27,7 +27,7 @@ release · `LATER` = deferred with a recorded reason. There is **no warning tier
 | G-01 frozen manifest | frozen architecture unchanged without owner amendment | D-68 | `make check-frozen` | `ci-governance / frozen` | pre-commit, PR | fail | **W0** | `ci-architecture.yml` (ADAPT) |
 | G-02 governance manifest | CLAUDE.md, `.claude/settings.json`, `git-hooks/*`, frozen verifier, `exitcodes.json`, `runtime-imports.allow`, doc-lint config unchanged without owner update | D-83 | `make check-governance` | `ci-governance / guardrails` | pre-commit, PR | fail | **W0** | new |
 | G-03 installed-hook parity | `.git/hooks/*` identical to `git-hooks/*` | D-83, D-73 | `make check-governance` | — (local only) | pre-commit | fail | **W0** | new |
-| G-04 register presence | `docs/architecture/DECISIONS_REGISTER.md` is the **only** repository copy | D-68 | `make check-frozen` | `ci-governance / frozen` | PR | fail | **W0** | new |
+| G-04 register presence | `docs/architecture/INTERNAL_RECORDS.md` is the **only** repository copy | D-68 | `make check-frozen` | `ci-governance / frozen` | PR | fail | **W0** | new |
 | G-05 repo authority | repo path is canonical; **no remote configured** during prototype | D-95, §8 | `make check-repo` | `ci-governance / authority` | pre-commit | fail | **W0** | `check-repo-authority.sh` (ADAPT) |
 | G-06 delete guard | protected paths not deleted without an authorization marker | D-83 | `make check-delete-guard` | `ci-governance / delete` | PR | fail | **W0** | `shell-delete-guard.sh` (PORT) |
 | G-07 test/requirement floor | test and requirement-ID population never silently shrinks | D-69, §39 | `make check-floor` | `ci-governance / floor` | PR | fail | W1 | `check-test-count-floor.sh` (PORT) |

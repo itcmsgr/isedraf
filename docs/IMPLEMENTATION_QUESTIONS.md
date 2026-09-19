@@ -8,7 +8,7 @@ Status: IMPLEMENTED
 Implements: D-69, §41
 
 Assumptions only — **never authority**. The owner resolves; resolutions become
-`docs/architecture/AMENDMENTS.md` entries.
+`docs/architecture/INTERNAL_RECORDS.md` entries.
 
 | ID | Type | Requirement IDs | Affected | Safest behaviour implemented | Proposed clarification | Evidence | Status |
 |---|---|---|---|---|---|---|---|

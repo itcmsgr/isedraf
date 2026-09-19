@@ -127,7 +127,7 @@ Falsifying that history would be worse than an inconsistent string.
 | `planning/blueprint/00_nftban/**` | `HISTORICAL_RECORD` | read-only NFTBan inventory, quotes the old name |
 | `planning/blueprint/20_review/**` | `HISTORICAL_RECORD` | review findings quote the text they reviewed |
 | `planning/bootstrap/**` | `HISTORICAL_RECORD` | superseded bootstrap staging |
-| `docs/architecture/AMENDMENTS.md` | `HISTORICAL_RECORD` | amendment history is provenance (D-106) |
+| `docs/architecture/INTERNAL_RECORDS.md` | `HISTORICAL_RECORD` | amendment history is provenance (D-106) |
 
 Active instructions never treat the old name as current product identity, and `check-refs`/`check-paths`
 scan only the active tree. The earlier name was an internal codename; ISEDRAF is the project name (D-108).

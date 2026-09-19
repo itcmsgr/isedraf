@@ -16,7 +16,7 @@ that will apply when it does.
 ## Before you write code
 
 Read, in order: `CLAUDE.md` (or `docs/development/LLM_PROTOCOL.md` if you are using any AI assistant) →
-`docs/architecture/DECISIONS_REGISTER.md` → the relevant frozen architecture documents →
+`docs/architecture/INTERNAL_RECORDS.md` → the relevant frozen architecture documents →
 `docs/CURRENT_STATE.md` → `docs/REPOSITORY_MAP.md` → `docs/development/requirements-trace.md` *(PLANNED — not yet created)*.
 
 Architecture is not inferred from the code. The code may be incomplete; the frozen requirements govern.
@@ -61,7 +61,7 @@ improvement. Where either side was not collected, the result is `NOT_COMPARABLE`
 
 **No scope expansion without an amendment.** Interesting is not in scope. Out-of-scope ideas go to
 `docs/IMPLEMENTATION_QUESTIONS.md` as `FUTURE`. Architecture changes happen only through an owner-written
-`docs/architecture/AMENDMENTS.md` entry and a regenerated manifest.
+`docs/architecture/INTERNAL_RECORDS.md` entry and a regenerated manifest.
 
 ## Local validation
 

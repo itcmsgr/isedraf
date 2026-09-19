@@ -57,6 +57,17 @@ def contradictions():
                 and (ROOT / evidence).exists():
             problems.append("%s is %s yet %s exists — one of the two is wrong"
                             % (name, cap["status"], evidence))
+        # `design` is deliberately NOT `evidence`. A document describing what is intended
+        # is not evidence that it was built - and a PLANNED capability whose design is
+        # written down is the honest case, not a contradiction. Recording them under the
+        # same key made writing the design read as having implemented it.
+        if cap.get("design") and not (ROOT / cap["design"]).exists():
+            problems.append("%s names a design document that does not exist: %s"
+                            % (name, cap["design"]))
+        if cap.get("design") and cap["status"] in ("IMPLEMENTED", "CERTIFIED"):
+            problems.append("%s is %s but carries a `design` path; an implemented "
+                            "capability is recorded with `evidence`"
+                            % (name, cap["status"]))
     floor = REGISTRY["runtime"]["production_python_floor"]
     gate = (ROOT / "scripts" / "ci" / "check_python_floor.py").read_text()
     m = re.search(r"FLOOR = \((\d+), (\d+)\)", gate)
@@ -141,8 +152,10 @@ def render():
         out += ["## %s" % heading, "", note, ""]
         for name in names:
             cap = r["capabilities"][name]
-            out.append("- `%s`%s" % (name,
-                                     " — %s" % cap["note"] if cap.get("note") else ""))
+            design = " (design: `%s`)" % cap["design"] if cap.get("design") else ""
+            out.append("- `%s`%s%s" % (name,
+                                       " — %s" % cap["note"] if cap.get("note") else "",
+                                       design))
         out += [""]
 
     p = r["platforms"]

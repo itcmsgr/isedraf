@@ -7,7 +7,7 @@ Implements: D-87, D-88, D-89, D-90, D-91…D-94
 <!-- doclint:exempt-forbidden-terms — this file must name the terms it forbids -->
 
 ## 1. Authority
-1. Frozen requirements (`docs/architecture/`) 2. `docs/architecture/DECISIONS_REGISTER.md`
+1. Frozen requirements (`docs/architecture/`) 2. `docs/architecture/INTERNAL_RECORDS.md`
 3. `CLAUDE.md` 4. `/docs` 5. `README.md` 6. issues, discussions, articles.
 A lower layer never contradicts a higher one. On conflict: keep the higher statement, record it in
 `docs/IMPLEMENTATION_QUESTIONS.md`, mark the lower document stale. Never update docs to match a bug.
@@ -92,7 +92,7 @@ VERSION CLAUDE.md` · `.github/ISSUE_TEMPLATE/` · `.github/pull_request_templat
   **"Does this change alter normalized state for an unchanged host? If yes, describe comparability/rebind handling."**
 
 ## 9. LLM repository-reading protocol
-Before any change read, in order: `CLAUDE.md` → `docs/architecture/DECISIONS_REGISTER.md` →
+Before any change read, in order: `CLAUDE.md` → `docs/architecture/INTERNAL_RECORDS.md` →
 `FROZEN_MANIFEST.sha256` → relevant frozen documents → `docs/CURRENT_STATE.md` →
 `docs/REPOSITORY_MAP.md` → `docs/development/requirements-trace.md` *(PLANNED — not yet created)* → VERSION/CHANGELOG → relevant module
 → tests/corpus → `docs/IMPLEMENTATION_QUESTIONS.md`. Never infer architecture from code; code may be

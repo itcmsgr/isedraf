@@ -99,6 +99,25 @@ for rel in CURRENT_STATE_DOCS:
             continue
         failures.append(("DANGLING_REFERENCE", rel, n, candidate))
 
+# --- 1b. every MARKDOWN LINK to a repository path must exist ------------------------------
+# The check above only sees `backticked` paths. The public README linked a badge to
+# docs/reference/SUPPORTED_PLATFORMS.md, which has never existed, and the gate could not
+# see it because the target sat inside a markdown link rather than in backticks. A broken
+# link in a published README sends a reader somewhere that does not answer them.
+MDLINK_RE = re.compile(r"\]\(([^)\s#]+)(?:#[^)\s]*)?\)")
+for rel in CURRENT_STATE_DOCS:
+    text = (ROOT / rel).read_text(encoding="utf-8")
+    here = (ROOT / rel).parent
+    for m in MDLINK_RE.finditer(text):
+        target = m.group(1)
+        if target.startswith(("http://", "https://", "mailto:", "#")):
+            continue
+        if target in REGISTRY["reference_allowlist"]:
+            continue
+        if (here / target).exists() or (ROOT / target).exists():
+            continue
+        failures.append(("DANGLING_LINK", rel, line_of(text, m.start()), target))
+
 # --- 2. third-party actions pinned to a full commit SHA -----------------------------------
 USES_RE = re.compile(r"^\s*-?\s*uses:\s*([^\s#]+)", re.M)
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")

@@ -206,6 +206,62 @@ p.write_text(s.replace(old, "echo \"X-Build-Stamp: $(date +%s%N)\" >> \"$DEBROOT
 PYX' \
   'reproducible build gate FAILED|artifacts identical'
 
+# D-84/D-90. Third-party framework content is not relicensed by sitting in this
+# repository. The registry is deny-by-default, and "deny by default" is a claim that has
+# to be shown to deny something.
+inject "D-90 an unregistered framework pack enters the tree" \
+  'python3 scripts/ci/check_licensing.py' \
+  'mkdir -p frameworks/cis-controls-8 && echo "{}" > frameworks/cis-controls-8/pack.json && git add -f -A' \
+  'NOT registered|licensing gate FAILED'
+
+inject "D-90 a LICENSE_REQUIRED framework is bundled anyway" \
+  'python3 scripts/ci/check_licensing.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import json, pathlib
+p = pathlib.Path("scripts/ci/framework_sources.json"); d = json.loads(p.read_text())
+d["sources"].append({f: "x" for f in d["policy"]["record_fields"]})
+d["sources"][0]["framework"] = "acme-framework"
+d["sources"][0]["disposition"] = "LICENSE_REQUIRED"
+p.write_text(json.dumps(d, indent=2))
+pathlib.Path("frameworks/acme-framework").mkdir(parents=True)
+pathlib.Path("frameworks/acme-framework/pack.json").write_text("{}")
+PYX
+git add -f -A' \
+  'does not allow|licensing gate FAILED'
+
+inject "D-90 private licensing research is committed into the tree" \
+  'python3 scripts/ci/check_licensing.py' \
+  'mkdir -p docs/licensed-framework-research && echo x > docs/licensed-framework-research/notes.md && git add -f -A' \
+  'private licensing research|licensing gate FAILED'
+
+inject "D-90 a public document claims support for a restricted framework" \
+  'python3 scripts/ci/check_licensing.py' \
+  'printf "\nISEDRAF supports CIS Controls v8.\n" >> docs/roadmap/ROADMAP.md' \
+  'claims support for|licensing gate FAILED'
+
+inject "D-84 a tracked file carries no licence statement at all" \
+  'python3 scripts/ci/check_licensing.py' \
+  'printf "amount,currency\n1,EUR\n" > pricing.csv && git add -f -A' \
+  'no licence statement|licensing gate FAILED'
+
+# C-01/D-88. A badge is a claim. On the day this repository went public, all four of its
+# badges were wrong and its status line still said the project was private. Nothing
+# checked them, so they aged while everything around them was gated.
+inject "D-88 the README version badge disagrees with VERSION" \
+  'python3 scripts/ci/check_public_claims.py' \
+  'sed -i "s|badge/version-0.1.0--alpha1|badge/version-9.9.9|" README.md' \
+  'version badge says|public claims gate FAILED'
+
+inject "D-90 the README tells a public reader the project is private" \
+  'python3 scripts/ci/check_public_claims.py' \
+  'printf "\n> **Status:** Private pre-release development.\n" >> README.md' \
+  'says the project is private|public claims gate FAILED'
+
+inject "C-01 a public document links to a file that does not exist" \
+  'python3 scripts/ci/check_docs_truth.py' \
+  'printf "\n[platforms](docs/reference/SUPPORTED_PLATFORMS.md)\n" >> README.md' \
+  'DANGLING_LINK|documentation truth gate FAILED'
+
 # D-86/EXEC-016. Both of these got past a green local build and were caught only by a
 # runner: BuildRequires resolved on Fedora and failed on Ubuntu, and rpmbuild merely
 # WARNS about a bogus weekday. A warning in a build log nobody reads is not a control.

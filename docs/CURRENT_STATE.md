@@ -34,6 +34,8 @@ What exists and runs today. Nothing else on this page does.
 | `artifact_attestation` | `.github/workflows/release-candidate.yml` | — |
 | `clean_public_export` | `scripts/ci/release_export.sh` | — |
 | `code_scanning` | `.github/workflows/codeql.yml` | — |
+| `framework_neutral_core` | `docs/licensing/FRAMEWORK_MAPPING_POLICY.md` | — |
+| `framework_source_registry` | `scripts/ci/framework_sources.json` | `make check-licensing` |
 | `identity` | `lib/isedraf/identity.py` | `isedraf identity` |
 | `independent_verifier` | `scripts/vectors/verify.py` | — |
 | `inventory` | `lib/isedraf/inventory/` | `isedraf inventory` |
@@ -56,6 +58,8 @@ Designed, not built. No part of this runs.
 - `baseline_approval`
 - `delta_comparison`
 - `export`
+- `framework_entitlement` — intended boundary recorded (signed pack plus signed local entitlement file, verified offline); no cryptography and no licensing server is implemented or designed, because a protocol written before its legal constraints are known is one that will be rewritten (design: `docs/licensing/FRAMEWORK_PACK_ARCHITECTURE.md`)
+- `framework_mapping_packs` — design only - no pack loader, no manifest reader, no entitlement mechanism and no signing exists; no third-party mapping is licensed, reviewed or bundled (design: `docs/licensing/FRAMEWORK_PACK_ARCHITECTURE.md`)
 - `journald_recording`
 - `mounts`
 - `pam`
@@ -77,6 +81,7 @@ Deliberately postponed to a later freeze set.
 No evidence exists in either direction.
 
 - `arm64` — zero campaigns have run; planned second architecture
+- `framework_specific_reports` — not available: framework-specific output does not exist, and core reports are complete without it
 
 ## Future
 
@@ -99,8 +104,8 @@ Not asserted. Each number is counted at generation time.
 
 | | |
 |---|---|
-| Gates | 15 |
-| Falsification injections | 62 |
+| Gates | 17 |
+| Falsification injections | 70 |
 | Golden vector cases | 15 |
 | Frozen artifacts | 8 |
 | Test files | 3 |

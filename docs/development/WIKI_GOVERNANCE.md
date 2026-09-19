@@ -67,6 +67,6 @@ matters — there is no gate to catch it when it goes stale.
 
 ## Enabling it
 
-An owner amendment in `docs/architecture/AMENDMENTS.md` that resolves OD-11, records how wiki drift will
+An owner amendment in `docs/architecture/INTERNAL_RECORDS.md` that resolves OD-11, records how wiki drift will
 be detected, and states who reviews wiki edits. Gate **C-13** currently fails on any wiki-only
 architectural content.

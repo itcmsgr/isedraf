@@ -66,6 +66,18 @@ for src in [ARCH / n for n in CORE] + EXTRA:
 table = "\n".join(rows) + f"\n| **Total requirements** | | | **{total}** |"
 
 idx = ARCH / "MASTER_INDEX.md"
+
+# The public repository does not carry MASTER_INDEX: it is internal change control, not
+# something a user of the published project needs. Say so and skip, rather than fail on a
+# file that is absent by design - and rather than pass, which would claim a check that did
+# not happen. The index is still verified on every commit in the engineering repository,
+# which is the only place it can be edited.
+if not idx.exists():
+    print("  SKIP  MASTER_INDEX is not present in this checkout — it is internal change")
+    print("        control and is not published. Freshness is enforced in the engineering")
+    print("        repository, where the document exists. Not a pass: nothing was checked.")
+    sys.exit(0)
+
 text = idx.read_text(encoding="utf-8")
 start = text.index("| Document | Status |")
 end = text.index("\n\n", start)
