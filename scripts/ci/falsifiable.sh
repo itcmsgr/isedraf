@@ -165,6 +165,22 @@ p.write_text(s.replace(old, old + "\ninstall -m 0644 CLAUDE.md \"$STAGE/usr/shar
 PYX' \
   'development documentation in the runtime payload|CLAUDE.md'
 
+# D-86. Two builds of the same tree must produce the same bytes. A deb built without
+# the deterministic flag writes the clock and the builder's numeric uid into every
+# member header - both non-determinism and a disclosure leak, in every package built
+# before 2026-09-19.
+#
+# The injection forces `U` rather than merely dropping `D`, because whether plain
+# `ar rc` is deterministic depends on how the local binutils was COMPILED: Ubuntu
+# enables deterministic archives by default and Fedora does not. Dropping `D` therefore
+# fires on one distribution and silently passes on the other - which is exactly why the
+# build writes `D` explicitly instead of trusting the default. The gate under test is
+# "does this detect a non-reproducible build", so the injection makes one for certain.
+inject "D-86 the deb archive records the clock and the builder's uid" \
+  'bash scripts/ci/check_reproducible.sh' \
+  'sed -i "s|ar rcD |ar rcU |" packaging/build.sh' \
+  'reproducible build gate FAILED|artifacts identical'
+
 # D-86/EXEC-016. Both of these got past a green local build and were caught only by a
 # runner: BuildRequires resolved on Fedora and failed on Ubuntu, and rpmbuild merely
 # WARNS about a bogus weekday. A warning in a build log nobody reads is not a control.

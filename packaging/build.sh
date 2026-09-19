@@ -102,10 +102,20 @@ TARFLAGS="--sort=name --owner=root:0 --group=root:0 --mtime=@0 --format=gnu"
 tar $TARFLAGS -czf "$TMPD/control.tar.gz" -C "$DEBROOT/DEBIAN" . || die "control.tar.gz"
 # shellcheck disable=SC2086
 tar $TARFLAGS -czf "$TMPD/data.tar.gz" -C "$DEBROOT" usr || die "data.tar.gz"
-( cd "$TMPD" && ar rc "$DEB" debian-binary control.tar.gz data.tar.gz ) || die "ar"
+# `ar rcD` — DETERMINISTIC mode. Plain `ar rc` writes the current time, the builder's
+# numeric uid and the builder's gid into every member header, so two builds of an
+# identical tree produced different bytes, and the artifact carried the build account's
+# UID to every person who downloaded it. Both were true of every package built so far.
+( cd "$TMPD" && ar rcD "$DEB" debian-binary control.tar.gz data.tar.gz ) || die "ar"
 say "deb: $(basename "$DEB")"
 
 # ---- 4. RPM ------------------------------------------------------------------------------
+# SOURCE_DATE_EPOCH is taken from the commit being built, not from the clock, so rpm's
+# BUILDTIME and every packaged mtime are a property of the SOURCE rather than of the
+# moment someone happened to run this. Without it the same tree produced a different
+# .rpm every time, which makes "rebuild it yourself and compare" impossible.
+SOURCE_DATE_EPOCH="$(git log -1 --pretty=%ct 2>/dev/null || echo 0)"
+export SOURCE_DATE_EPOCH
 if command -v rpmbuild >/dev/null 2>&1; then
     RPMTOP="$DIST/rpmbuild"
     mkdir -p "$RPMTOP"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
@@ -115,6 +125,8 @@ if command -v rpmbuild >/dev/null 2>&1; then
         packaging/rpm/isedraf.spec.in > "$RPMTOP/SPECS/isedraf.spec" || die "rpm spec"
     rpmbuild --define "_topdir $RPMTOP" --define "_sourcedir $RPMTOP/SOURCES" \
              --define "_buildhost isedraf-build" \
+             --define "use_source_date_epoch_as_buildtime 1" \
+             --define "clamp_mtime_to_source_date_epoch 1" \
              -bb "$RPMTOP/SPECS/isedraf.spec" >"$DIST/rpmbuild.log" 2>&1 \
         || { tail -20 "$DIST/rpmbuild.log" >&2; die "rpmbuild failed"; }
     found="$(find "$RPMTOP/RPMS" -name '*.rpm' | head -1)"

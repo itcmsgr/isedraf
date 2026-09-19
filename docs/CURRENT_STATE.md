@@ -43,6 +43,7 @@ What exists and runs today. Nothing else on this page does.
 | `package_rpm` | `packaging/rpm/isedraf.spec.in` | — |
 | `report_json` | `lib/isedraf/report/render.py` | `isedraf report --json` |
 | `report_markdown` | `lib/isedraf/report/render.py` | `isedraf report` |
+| `reproducible_build` | `scripts/ci/check_reproducible.sh` | `make check-reproducible` |
 | `sbom` | `scripts/ci/generate_sbom.py` | — |
 | `scorecard` | `.github/workflows/scorecard.yml` | — |
 | `snapshot` | `lib/isedraf/snapshot.py` | — |
@@ -99,7 +100,7 @@ Not asserted. Each number is counted at generation time.
 | | |
 |---|---|
 | Gates | 15 |
-| Falsification injections | 60 |
+| Falsification injections | 61 |
 | Golden vector cases | 15 |
 | Frozen artifacts | 8 |
 | Test files | 3 |

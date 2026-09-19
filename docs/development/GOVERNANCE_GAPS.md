@@ -305,3 +305,41 @@ Two injections prove it fails. Gates 14 → 15, injections 59 → 61.
 **Lesson recorded:** *a package that builds on the author's distribution is not a package.* The same
 sentence is in the gate's failure message, so the next person meets it at the point of failure rather
 than in a document.
+
+## KGG-015 — The packages were not reproducible, and leaked the builder's UID — CLOSED 2026-09-19
+
+**State:** `CLOSED`
+
+Two builds of an identical tree produced **different** `.deb` and `.rpm` bytes. The source tarball
+was already reproducible; the two packages were not.
+
+| Cause | Effect |
+|---|---|
+| `ar rc` (no `D`) | every member header carried the current time **and the builder's numeric uid and gid** |
+| rpm `BUILDTIME` from the clock | a new digest on every build |
+
+The uid was a **disclosure leak** as well as non-determinism: every `.deb` built before this date
+carried the build account's UID to everyone who downloaded it. The privacy gate could not see it —
+it reads the repository and the publication surface, not the inside of an `ar` member header.
+
+Nothing in the documentation claimed reproducibility, so no statement was false. But the two-file
+checksum design (`SHA256SUMS.build` local ground truth vs `SHA256SUMS` from downloaded assets)
+invites a reader to rebuild and compare, and that was not something a user could actually do.
+
+**Fix:** `ar rcD`, and `SOURCE_DATE_EPOCH` taken from the **commit being built** rather than from
+the clock, with `use_source_date_epoch_as_buildtime` and `clamp_mtime_to_source_date_epoch`. Build
+time is now a property of the source, not of the moment someone happened to run the build.
+
+`make check-reproducible` builds twice and requires identical bytes, with an injection that removes
+the `D` flag. Injections 61 → 62.
+
+**Found by** attempting to verify a locally built artifact against the published attestation and
+noticing the digests could not match — not by review.
+
+**A second thing the runner taught us.** The first version of the injection simply dropped the `D`
+flag, and it **did not fire on CI**. Whether plain `ar rc` is deterministic depends on how the local
+binutils was *compiled*: Ubuntu enables deterministic archives by default, Fedora does not. The
+injection fired on the workstation and passed silently on the runner — which is precisely the reason
+the build writes `D` explicitly rather than trusting a default that varies by distribution. The
+injection now forces `U`, because the property under test is *"does this gate detect a
+non-reproducible build"*, so the experiment must produce one for certain.
