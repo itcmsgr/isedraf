@@ -343,3 +343,33 @@ injection fired on the workstation and passed silently on the runner — which i
 the build writes `D` explicitly rather than trusting a default that varies by distribution. The
 injection now forces `U`, because the property under test is *"does this gate detect a
 non-reproducible build"*, so the experiment must produce one for certain.
+
+## KGG-016 — Reproducible on one machine is not reproducible across machines
+
+**State:** `PARTIALLY_CLOSED`
+
+`make check-reproducible` builds twice and compares, which proves the build is **deterministic**.
+It says nothing about whether a different machine gets the same bytes — and that is the property a
+user actually needs, because "rebuild it yourself and compare" is done on *their* machine.
+
+Measured 2026-09-19 by rebuilding the public commit on a Fedora workstation and comparing against
+the artifacts `ubuntu-latest` produced from the same commit:
+
+| Artifact | Across machines | Why |
+|---|---|---|
+| source tarball | **identical** (`dd43822d75091ea7…`) | `git archive` + `gzip -n9`, no machine-dependent input |
+| `.deb` | differed, **now fixed** | `Installed-Size` came from `du -sk`, which reports **disk** usage: 224 KiB on btrfs, 260 KiB on ext4. The package carried a property of the builder's *filesystem*. It is now summed from file sizes, which depend only on the payload. |
+| `.rpm` | differs, **not fixable here** | rpm 6.0.2 writes a **zstd** payload, rpm 4.18.2 writes **gzip**, and their cpio framing differs. This is a property of rpm, not of this build. |
+
+`BUILDTIME` was **identical** on both machines (`1789794254`), so `SOURCE_DATE_EPOCH` taken from the
+commit works exactly as intended across toolchains.
+
+**What may be said, and what may not.** The source tarball is reproducible across machines and
+distributions — observed. The `.deb` is expected to be, now that the filesystem dependency is
+removed. The `.rpm` is reproducible **for a given rpm major version** and is not reproducible
+across rpm major versions; pinning a builder image would be the only way to change that, and it is
+not attempted. No artifact may be described as "reproducible" without saying which of these it is.
+
+**Note on the `du` defect:** neither the privacy gate nor the payload gate could have caught it.
+Both read the repository, the publication surface and the payload file list — not a metadata field
+whose value is a property of the machine that computed it.

@@ -84,7 +84,14 @@ say "tarball: $(basename "$TARBALL")"
 DEBROOT="$DIST/debroot"
 rm -rf "$DEBROOT"; mkdir -p "$DEBROOT/DEBIAN"
 cp -a "$STAGE/." "$DEBROOT/"
-INSTALLED_KB=$(du -sk "$DEBROOT/usr" | cut -f1)
+# Installed-Size, computed from the FILE SIZES rather than from `du`. `du -sk` reports
+# DISK usage, which depends on the filesystem: the same payload measured 224 on btrfs
+# and 260 on the runner's ext4, so the deb carried a property of the build machine's
+# filesystem and could never reproduce across machines. Debian policy asks for an
+# estimate in KiB; summing ceil(bytes/1024) per file is an estimate that depends only
+# on the payload.
+INSTALLED_KB=$(find "$DEBROOT/usr" -type f -printf '%s\n' \
+    | awk '{ total += int(($1 + 1023) / 1024) } END { print total + 0 }')
 sed -e "s|@VERSION@|$DEB_VERSION|g" -e "s|@MAINTAINER@|$MAINTAINER|g" \
     -e "s|@INSTALLED_SIZE@|$INSTALLED_KB|g" -e "s|@DESCRIPTION@|$DESCRIPTION|g" \
     packaging/deb/control.in > "$DEBROOT/DEBIAN/control" || die "deb control"
