@@ -165,6 +165,19 @@ p.write_text(s.replace(old, old + "\ninstall -m 0644 CLAUDE.md \"$STAGE/usr/shar
 PYX' \
   'development documentation in the runtime payload|CLAUDE.md'
 
+# D-86/EXEC-016. Both of these got past a green local build and were caught only by a
+# runner: BuildRequires resolved on Fedora and failed on Ubuntu, and rpmbuild merely
+# WARNS about a bogus weekday. A warning in a build log nobody reads is not a control.
+inject "D-86 the rpm spec declares a build dependency the release builder cannot resolve" \
+  'python3 scripts/ci/check_packaging.py' \
+  'sed -i "s|^%description|BuildRequires:  coreutils\n\n%description|" packaging/rpm/isedraf.spec.in' \
+  'declares a build dependency|packaging metadata gate FAILED'
+
+inject "D-86 the rpm changelog states a weekday the date never fell on" \
+  'python3 scripts/ci/check_packaging.py' \
+  'sed -i "s|^\* Fri Sep 18 2026|* Thu Sep 18 2026|" packaging/rpm/isedraf.spec.in' \
+  'which was a|packaging metadata gate FAILED'
+
 # D-86. The deb and the rpm are built by two different implementations. Dropping a
 # document from one of them must be caught by comparing them, not by anyone remembering.
 inject "D-86 the rpm and the deb ship different documentation" \

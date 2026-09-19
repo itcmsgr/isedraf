@@ -22,8 +22,13 @@ BuildArch:      noarch
 # already has a perfectly good one.
 Requires:       (python3 or platform-python)
 
-# Nothing is compiled, so nothing is built. The payload is interpreted source.
-BuildRequires:  coreutils
+# Deliberately NO BuildRequires. Nothing is compiled; %install uses `install`, which is
+# present on any machine that can run rpmbuild at all. Declaring `BuildRequires: coreutils`
+# made the build unsatisfiable on a Debian/Ubuntu builder, where rpmbuild exists but its
+# rpm database has never heard of a package called coreutils:
+#     error: Failed build dependencies: coreutils is needed by isedraf-...noarch
+# It passed on a Fedora workstation, where the dependency happens to resolve. The release
+# workflow runs on ubuntu-latest, so this would have broken the RPM for every release.
 
 %description
 ISEDRAF collects Linux host state, normalizes it into canonical bytes, commits immutable
@@ -67,5 +72,5 @@ install -m 0644 docs/operator/STORAGE_AND_OUTPUTS.md \
 %doc %{_docdir}/isedraf
 
 %changelog
-* Thu Sep 18 2026 Antonios Voulvoulis <contact@itcms.gr> - @VERSION@-@RELEASE@
+* Fri Sep 18 2026 Antonios Voulvoulis <contact@itcms.gr> - @VERSION@-@RELEASE@
 - Early technical preview: host identity, host inventory, report engine.

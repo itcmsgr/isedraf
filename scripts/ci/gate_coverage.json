@@ -139,6 +139,15 @@
         "scripts/ci/project_status.json",
         "docs/CURRENT_STATE.md"
       ]
+    },
+    "check-packaging": {
+      "script": "scripts/ci/check_packaging.py",
+      "implements": "D-86, EXEC-016",
+      "falsification": "D-86 the rpm spec declares a build dependency the release builder cannot resolve",
+      "eligible": [
+        "packaging/rpm/*.spec.in",
+        "packaging/deb/control.in"
+      ]
     }
   }
 }

@@ -102,7 +102,11 @@ inject() {
             else
                 _record MUTATION_TOOL_CRASHED "$name" \
                     "the gate failed WITHOUT printing its rejection evidence /$evidence/"
-                [ "${FALSIFIABLE_DEBUG:-0}" = "1" ] && printf '%s\n' "$out" | sed 's/^/         | /' >&2
+                # Always show what the gate actually said. This used to require
+                # FALSIFIABLE_DEBUG=1, which meant a crash that happened only on a CI
+                # runner was undiagnosable from the CI log - the one place it occurred.
+                # A crash you cannot see is a crash you cannot fix.
+                printf '%s\n' "$out" | tail -25 | sed 's/^/         | /' >&2
             fi;;
     esac
 }

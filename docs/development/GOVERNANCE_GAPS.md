@@ -232,3 +232,33 @@ plus the documentation a user was meant to read, and contributor guardrails are 
 absent, then gated so it stays absent, with its own injection.
 
 `planning/` remains private and is never exported, under the same decision.
+
+## KGG-014 — The RPM could not be built on the runner that builds the release — CLOSED 2026-09-19
+
+**State:** `CLOSED`
+
+Two defects in `packaging/rpm/isedraf.spec.in`, both invisible on the author's Fedora workstation
+and both fatal on `ubuntu-latest`, which is the runner the release workflow uses:
+
+| Defect | Why it passed locally | Why it failed on the runner |
+|---|---|---|
+| `BuildRequires: coreutils` | Fedora's rpm database contains a package by that name | a Debian/Ubuntu rpm database has never heard of it → `error: Failed build dependencies` |
+| `%changelog` dated `Thu Sep 18 2026` | 2026-09-18 was a **Friday**; `rpmbuild` only **warns** | the warning was in a log nobody read |
+
+Nothing in this package is compiled, so the correct number of build dependencies is zero.
+
+**How it was found, which matters more than the defects:** it was invisible until the falsifiability
+sandbox learned to commit (KGG-012) and the harness learned to print what a crashed gate actually
+said. Before that, `MUTATION_TOOL_CRASHED` hid the gate's output behind `FALSIFIABLE_DEBUG=1` — so a
+crash that happens **only on a CI runner** was undiagnosable from the CI log, the one place it
+occurs. The harness now always prints it, and the very next run named the cause in one line.
+
+**Fix:** `make check-packaging` (`scripts/ci/check_packaging.py`) checks the packaging metadata as
+**text**, with no rpm, no dpkg and no builder, so it runs inside `make check` on any machine before a
+commit instead of after a release. It rejects any `BuildRequires`, any `%changelog` entry whose
+weekday does not match its date, a missing `BuildArch: noarch` and a missing `Architecture: all`.
+Two injections prove it fails. Gates 14 → 15, injections 59 → 61.
+
+**Lesson recorded:** *a package that builds on the author's distribution is not a package.* The same
+sentence is in the gate's failure message, so the next person meets it at the point of failure rather
+than in a document.

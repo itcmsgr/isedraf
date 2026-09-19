@@ -6,9 +6,9 @@
 # CI invokes these same targets rather than re-implementing them in YAML, which is
 # what prevents a gate silently degrading into a warning. There is no warning tier.
 
-.PHONY: check check-sbom check-tests check-python-floor check-privacy check-docs-truth check-current-state check-headers check-docs check-scope check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-gate-coverage check-falsifiable help
+.PHONY: check check-sbom check-tests check-python-floor check-packaging check-privacy check-docs-truth check-current-state check-headers check-docs check-scope check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-gate-coverage check-falsifiable help
 
-check: check-scope check-headers check-python-floor check-privacy check-docs-truth check-current-state check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-tests check-docs
+check: check-scope check-headers check-python-floor check-packaging check-privacy check-docs-truth check-current-state check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-tests check-docs
 	@echo "make check: all gates passed"
 
 ## check-scope   D-96: no product implementation before architecture freeze
@@ -80,6 +80,10 @@ check-index:
 check-python-floor:
 	@echo "--- production Python floor (D-12) ---"
 	@python3 scripts/ci/check_python_floor.py
+
+## check-packaging  D-86/EXEC-016: packaging metadata, without needing every builder
+check-packaging:
+	@python3 scripts/ci/check_packaging.py
 
 ## check-privacy D-90: no real operator identifier reaches the publication surface
 check-privacy:
