@@ -165,6 +165,15 @@ p.write_text(s.replace(old, old + "\ninstall -m 0644 CLAUDE.md \"$STAGE/usr/shar
 PYX' \
   'development documentation in the runtime payload|CLAUDE.md'
 
+# D-86. Two builds of the same tree must produce the same bytes. `ar rc` without the
+# deterministic flag writes the clock and the builder's numeric uid into every member
+# header - which was both non-determinism and a disclosure leak, in every package built
+# before 2026-09-19.
+inject "D-86 the deb archive records the clock and the builder's uid" \
+  'bash scripts/ci/check_reproducible.sh' \
+  'sed -i "s|ar rcD |ar rc |" packaging/build.sh' \
+  'reproducible build gate FAILED|artifacts identical'
+
 # D-86/EXEC-016. Both of these got past a green local build and were caught only by a
 # runner: BuildRequires resolved on Fedora and failed on Ubuntu, and rpmbuild merely
 # WARNS about a bogus weekday. A warning in a build log nobody reads is not a control.

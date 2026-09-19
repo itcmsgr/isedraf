@@ -142,6 +142,12 @@
       "status": "IMPLEMENTED",
       "evidence": ".github/workflows/scorecard.yml",
       "note": "first run 2026-09-19; results are uploaded to code scanning and NOT published to the public Scorecard API, so no score is displayed anywhere"
+    },
+    "reproducible_build": {
+      "status": "IMPLEMENTED",
+      "evidence": "scripts/ci/check_reproducible.sh",
+      "command": "make check-reproducible",
+      "note": "two builds of the same tree produce identical bytes for all six artifacts; before 2026-09-19 they did not, because `ar rc` wrote the clock and the builder's numeric uid into every deb member header and rpm took BUILDTIME from the clock"
     }
   },
   "runtime": {

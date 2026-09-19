@@ -6,7 +6,7 @@
 # CI invokes these same targets rather than re-implementing them in YAML, which is
 # what prevents a gate silently degrading into a warning. There is no warning tier.
 
-.PHONY: check check-sbom check-tests check-python-floor check-packaging check-privacy check-docs-truth check-current-state check-headers check-docs check-scope check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-gate-coverage check-falsifiable help
+.PHONY: check check-reproducible check-sbom check-tests check-python-floor check-packaging check-privacy check-docs-truth check-current-state check-headers check-docs check-scope check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-gate-coverage check-falsifiable help
 
 check: check-scope check-headers check-python-floor check-packaging check-privacy check-docs-truth check-current-state check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-tests check-docs
 	@echo "make check: all gates passed"
@@ -94,6 +94,10 @@ check-privacy:
 check-package-payload:
 	@echo "--- package payload (D-86, D-90) ---"
 	@bash scripts/ci/check_package_payload.sh
+
+## check-reproducible  D-86: build twice, require identical bytes
+check-reproducible:
+	@bash scripts/ci/check_reproducible.sh
 
 ## check-sbom  D-86/GOV-002: each SBOM describes the artifact it names
 check-sbom:
