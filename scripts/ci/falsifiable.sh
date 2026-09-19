@@ -165,6 +165,23 @@ p.write_text(s.replace(old, old + "\ninstall -m 0644 CLAUDE.md \"$STAGE/usr/shar
 PYX' \
   'development documentation in the runtime payload|CLAUDE.md'
 
+# NORM-037/D-86. A set-like field must not enter an artifact in filesystem order. The
+# engine has had this gate since W1-A; the package build did not, and DEBIAN/sha256sums
+# went in unsorted - same 24 lines, different sequence on btrfs and on ext4.
+# `ls -U` reproduces raw directory order, which is what `find` was doing.
+inject "NORM-037 the deb sha256sums entered the package in filesystem order" \
+  'bash packaging/build.sh 2>&1; bash scripts/ci/check_deb_ordering.sh' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("packaging/build.sh"); s = p.read_text()
+anchor = "| xargs -0 sha256sum > DEBIAN/sha256sums"
+assert anchor in s, "mutation anchor miss"
+head, _, tail = s.partition("( cd \"$DEBROOT\" && find usr -type f -print0")
+_, _, rest = tail.partition(anchor)
+p.write_text(head + "( cd \"$DEBROOT\" && find usr -type f -exec sha256sum {} + > DEBIAN/sha256sums" + rest)
+PYX' \
+  'not sorted|ordering gate FAILED'
+
 # D-86. Two builds of the same tree must produce the same bytes. A deb built without
 # the deterministic flag writes the clock and the builder's numeric uid into every
 # member header - both non-determinism and a disclosure leak, in every package built

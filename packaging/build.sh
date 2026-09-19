@@ -96,8 +96,16 @@ sed -e "s|@VERSION@|$DEB_VERSION|g" -e "s|@MAINTAINER@|$MAINTAINER|g" \
     -e "s|@INSTALLED_SIZE@|$INSTALLED_KB|g" -e "s|@DESCRIPTION@|$DESCRIPTION|g" \
     packaging/deb/control.in > "$DEBROOT/DEBIAN/control" || die "deb control"
 
-( cd "$DEBROOT" && find usr -type f -exec sha256sum {} + > DEBIAN/sha256sums ) \
-    || die "deb sha256sums"
+# Sorted, in the C locale. `find` returns directory order, which is a property of the
+# FILESYSTEM: the same payload produced the same 24 lines in a different sequence on
+# btrfs and on ext4, so the control archive - and therefore the .deb - differed across
+# machines while the payload was byte-identical.
+#
+# This is NORM-037 in the packaging rather than in the engine: a set-like field entered
+# an artifact unordered. The engine has had a gate and an injection for that since W1-A;
+# the package build did not.
+( cd "$DEBROOT" && find usr -type f -print0 | LC_ALL=C sort -z \
+    | xargs -0 sha256sum > DEBIAN/sha256sums ) || die "deb sha256sums"
 
 DEB="$DIST/packages/isedraf_${DEB_VERSION}_all.deb"
 TMPD="$(mktemp -d)"; trap 'rm -rf "$TMPD"' EXIT

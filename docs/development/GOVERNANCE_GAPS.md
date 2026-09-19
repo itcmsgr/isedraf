@@ -359,6 +359,7 @@ the artifacts `ubuntu-latest` produced from the same commit:
 |---|---|---|
 | source tarball | **identical** (`dd43822d75091ea7…`) | `git archive` + `gzip -n9`, no machine-dependent input |
 | `.deb` | differed, **now fixed** | `Installed-Size` came from `du -sk`, which reports **disk** usage: 224 KiB on btrfs, 260 KiB on ext4. The package carried a property of the builder's *filesystem*. It is now summed from file sizes, which depend only on the payload. |
+| `.deb` (second cause) | differed, **now fixed** | `DEBIAN/sha256sums` was generated with `find … -exec sha256sum`, which returns **directory order** — a property of the filesystem. The same 24 lines came out in a different sequence on btrfs and on ext4, so the control archive differed while the payload was byte-identical. This is **`NORM-037` in the packaging rather than in the engine**: a set-like field entered an artifact unordered. The engine has had a gate and an injection for exactly that since W1-A; the package build had neither. `make check-deb-ordering` now does, with its own injection. |
 | `.rpm` | differs, **not fixable here** | rpm 6.0.2 writes a **zstd** payload, rpm 4.18.2 writes **gzip**, and their cpio framing differs. This is a property of rpm, not of this build. |
 
 `BUILDTIME` was **identical** on both machines (`1789794254`), so `SOURCE_DATE_EPOCH` taken from the
