@@ -6,7 +6,7 @@
 # CI invokes these same targets rather than re-implementing them in YAML, which is
 # what prevents a gate silently degrading into a warning. There is no warning tier.
 
-.PHONY: check check-reproducible check-sbom check-tests check-python-floor check-packaging check-privacy check-docs-truth check-current-state check-headers check-docs check-scope check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-gate-coverage check-falsifiable help
+.PHONY: check check-deb-ordering check-reproducible check-sbom check-tests check-python-floor check-packaging check-privacy check-docs-truth check-current-state check-headers check-docs check-scope check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-gate-coverage check-falsifiable help
 
 check: check-scope check-headers check-python-floor check-packaging check-privacy check-docs-truth check-current-state check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-tests check-docs
 	@echo "make check: all gates passed"
@@ -94,6 +94,10 @@ check-privacy:
 check-package-payload:
 	@echo "--- package payload (D-86, D-90) ---"
 	@bash scripts/ci/check_package_payload.sh
+
+## check-deb-ordering  NORM-037/D-86: DEBIAN/sha256sums must not carry filesystem order
+check-deb-ordering:
+	@bash scripts/ci/check_deb_ordering.sh
 
 ## check-reproducible  D-86: build twice, require identical bytes
 check-reproducible:
