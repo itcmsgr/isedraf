@@ -5,7 +5,8 @@
   "capabilities": {
     "w1a_evidence_contract": {
       "status": "CERTIFIED",
-      "evidence": "docs/architecture/freeze/W1A_CORE.sha256"
+      "evidence": "docs/architecture/freeze/W1A_CORE_PUBLIC.sha256",
+      "note": "The published freeze manifest is the public subset; its digests are copied from the full set in the engineering repository, never recomputed, so both verify the same bytes"
     },
     "identity": {
       "status": "IMPLEMENTED",

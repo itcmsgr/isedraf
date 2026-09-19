@@ -83,6 +83,7 @@ inject "C-01 broken internal link" \
   'printf "\n[x](docs/NOPE.md)\n" >> docs/README.md' \
   'broken internal link'
 
+next_requires "docs/architecture/DECISIONS_REGISTER.md"
 inject "D-105 undefined DECISION cited" \
   'python3 scripts/ci/check_requirement_refs.py' \
   'printf "\nPer D-999 this holds.\n" >> docs/architecture/DECISIONS_REGISTER.md  # refs:test-fixture' \
@@ -92,6 +93,7 @@ inject "D-105 undefined DECISION cited" \
 # the repository (Prompt 04). Until then it is INERT in a CI checkout, and GOV-001 requires
 # that to be stated rather than silently assumed. Recorded as KGG-006.
 if ls docs/architecture/*.md >/dev/null 2>&1 && grep -qlE '^\*\*[A-Z]{2,6}-[0-9]{3}' docs/architecture/*.md 2>/dev/null; then
+    next_requires "docs/architecture/W1A_CORE_FREEZE_SCOPE.md"
     inject "D-105 undefined requirement ID cited" \
       'python3 scripts/ci/check_requirement_refs.py' \
       'printf "\nSee FAKE-999 for details.\n" >> docs/architecture/DECISIONS_REGISTER.md  # refs:test-fixture' \
@@ -100,6 +102,7 @@ else
     echo "  SKIP requirement-ID half of D-105: architecture not yet in the repository (KGG-006)"
 fi
 
+next_requires "docs/architecture/DECISIONS_REGISTER.md"
 inject "D-106 amendment cited as authority" \
   'python3 scripts/ci/check_requirement_refs.py' \
   'printf "\nPer A-042 this is authoritative.\n" >> docs/architecture/DECISIONS_REGISTER.md  # refs:test-fixture' \
@@ -110,11 +113,13 @@ inject "D-99 singular ledger.jsonl path reintroduced" \
   'printf "\nledger at /var/lib/isedraf/ledger.jsonl\n" >> CLAUDE.md' \
   "singular 'ledger.jsonl'"
 
+next_requires "docs/architecture/W1A_CORE_FREEZE_SCOPE.md"
 inject "D-105 dangling ID in a non-architecture authority tier" \
   'python3 scripts/ci/check_requirement_refs.py' \
   'printf "\nSee BOGUS-777 here.\n" >> docs/development/HEADER_POLICY.md  # refs:test-fixture' \
   'cites undefined requirement ID BOGUS-777'  # refs:test-fixture
 
+next_requires "docs/architecture/MASTER_INDEX.md"
 inject "D-89 stale MASTER_INDEX" \
   'python3 scripts/docs/master_index.py check' \
   'printf "\n**ZZZ-001 (test) SHALL** placeholder.\n" >> docs/architecture/ISEDRAF_HLD.md  # refs:test-fixture' \
@@ -154,6 +159,7 @@ PYX' \
 
 # D-90 owner decision 2026-09-19: CLAUDE.md is PUBLIC and ships in the repository and the
 # source tarball, but never in the runtime payload. Staging it into the package must fail.
+next_requires "CLAUDE.md"
 inject "D-90 contributor documentation staged into the runtime payload" \
   'bash packaging/build.sh 2>&1; bash scripts/ci/check_package_payload.sh' \
   'python3 - <<'"'"'PYX'"'"'
@@ -494,6 +500,7 @@ inject "D-12 shell syntax error" \
   'printf "\nif then fi\n" >> scripts/ci/check_paths.sh' \
   'syntax error'
 
+next_requires "docs/architecture/MASTER_INDEX.md"
 inject "D-68 frozen artifact modified after manifest" \
   'bash scripts/ci/check_freeze.sh' \
   'mkdir -p docs/architecture/freeze && sha256sum docs/architecture/MASTER_INDEX.md > docs/architecture/freeze/TEST.sha256 && printf "\ndrift\n" >> docs/architecture/MASTER_INDEX.md' \

@@ -30,7 +30,8 @@
 #   MUTATION_EXECUTED_BUT_NOT_DETECTED  mutation applied, gate passed                      -> FAIL
 #   MUTATION_TOOL_CRASHED            gate failed but produced no rejection evidence        -> FAIL
 #   HARNESS_ERROR                    the mutation never applied, or the copy failed        -> FAIL
-PASS=0; FAIL=0
+PASS=0
+SKIPPED=0; FAIL=0
 declare -a OUTCOMES=()
 
 # A witness that the mutation actually landed, computed from the WORKING TREE rather than
@@ -57,10 +58,34 @@ _record() {   # _record OUTCOME name detail
 # <scope> defaults to "tree": the mutation must leave a visible change in the working tree.
 # "external" is for the two commit-msg injections, whose subject is a file outside the repo;
 # it must be declared, never inferred, so that "nothing changed" can never pass silently.
+# <requires> (6th argument) names a path the injection's SUBJECT lives in. When it is
+# absent, the injection is SKIPPED and said to be skipped - not counted as firing, and
+# not counted as a failure either.
+#
+# This exists because the public repository publishes the specification and not the
+# internal change control. Seven injections attack documents that are deliberately not
+# published there: the decisions register, the master index, CLAUDE.md. In that checkout
+# they mutated something the gate genuinely cannot see, and reported
+# MUTATION_EXECUTED_BUT_NOT_DETECTED - technically accurate, and the wrong verdict.
+#
+# It cannot be used to hide a real failure: in the engineering repository every subject
+# exists, so nothing skips, and a skip is printed with the path that caused it.
+# Declared on the line BEFORE the injection it applies to. A sixth positional argument
+# was the obvious design and the wrong one: several injections carry a heredoc or a
+# trailing comment, so "the last argument" is not somewhere a tool can reliably append.
+# This reads the same way and cannot land inside a heredoc.
+next_requires() { NEXT_REQUIRES="$1"; }
+
 inject() {
     local name="$1" gate="$2" mutate="$3" evidence="${4:-}" scope="${5:-tree}"
+    local requires="${NEXT_REQUIRES:-}"; NEXT_REQUIRES=""
     if [ -z "$evidence" ]; then
         _record HARNESS_ERROR "$name" "no evidence pattern declared (GOV-002)"; return
+    fi
+    if [ -n "$requires" ] && [ ! -e "$requires" ]; then
+        SKIPPED=$((SKIPPED + 1))
+        echo "  SKIP subject not present in this checkout: $requires — $name"
+        return
     fi
     local t log; t="$(mktemp -d)"; log="$(mktemp)"
 
@@ -112,6 +137,11 @@ inject() {
 }
 
 harness_summary() {
-    echo "--- $PASS injections detected, $FAIL not counted as firing ---"
+    if [ "${SKIPPED:-0}" -gt 0 ]; then
+        echo "--- $PASS injections detected, $FAIL not counted as firing, $SKIPPED skipped"\
+" (subject not published in this checkout) ---"
+    else
+        echo "--- $PASS injections detected, $FAIL not counted as firing ---"
+    fi
     [ "$FAIL" -eq 0 ]
 }

@@ -433,5 +433,29 @@ publicly. It is not stale — the path is real and in scope where the gate can a
 `unpublished_paths` now declares that class. Anything **not** in that list which matches nothing is
 still stale, so the check did not lose its teeth.
 
+## An injection whose subject is not published cannot fire there
+
+Seven injections attack documents the public repository deliberately does not carry — the decisions
+register, the master index, `CLAUDE.md`. In that checkout they mutated something the gate genuinely
+cannot see and reported `MUTATION_EXECUTED_BUT_NOT_DETECTED`: technically accurate, and the wrong
+verdict. A control that has no subject has not failed.
+
+`next_requires <path>` now precedes those injections. When the path is absent the injection is
+**skipped and said to be skipped**, counted separately from both firing and failing:
+
+```text
+engineering repository   71 injections detected, 0 not counted as firing
+public repository        64 injections detected, 0 not counted as firing,
+                         7 skipped (subject not published in this checkout)
+```
+
+It cannot hide a real failure: in the engineering repository every subject exists, so nothing skips,
+and each skip prints the path that caused it.
+
+**Why it is a declaration before the call, not a sixth argument.** A sixth positional argument was
+the obvious design and broke twice — several injections carry a heredoc or a trailing comment, so
+"after the last argument" is not a place a tool can reliably append. The first attempt landed the
+argument *inside a heredoc*, silently disabling the mutation it was meant to guard.
+
 **The pattern worth keeping:** a gate that cannot run must say so. A gate that silently passes on an
 absent subject teaches the reader that the subject was checked.

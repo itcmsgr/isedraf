@@ -74,9 +74,15 @@ def contradictions():
     if m and "%s.%s" % m.groups() != floor:
         problems.append("registry floor %s disagrees with the enforced floor %s.%s"
                         % (floor, m.group(1), m.group(2)))
-    freeze = ROOT / "docs" / "architecture" / "freeze" / "W1A_CORE.sha256"
+    # Either manifest satisfies this: the full set exists only in the engineering
+    # repository, the public subset in both, and their digests are the same bytes.
+    # Requiring the full one made the page ungeneratable in a public checkout, which is
+    # a statement about which repository you are in, not about whether W1-A is certified.
+    freeze_dir = ROOT / "docs" / "architecture" / "freeze"
+    freeze = [m for m in ("W1A_CORE.sha256", "W1A_CORE_PUBLIC.sha256")
+              if (freeze_dir / m).exists()]
     certified = REGISTRY["capabilities"]["w1a_evidence_contract"]["status"] == "CERTIFIED"
-    if certified and not freeze.exists():
+    if certified and not freeze:
         problems.append("W1-A is recorded CERTIFIED but no freeze manifest exists")
     return problems
 
@@ -94,7 +100,13 @@ def counted():
         "gates": len(gates["gates"]),
         "injections": count("grep -c '^inject ' scripts/ci/falsifiable.sh"),
         "vector_cases": count("ls -d test-vectors/w1a/v1/*/ | wc -l"),
-        "frozen_artifacts": count("grep -c . docs/architecture/freeze/W1A_CORE.sha256"),
+        # The PUBLISHED freeze set, deliberately - this page describes the published
+        # project, and counting the engineering set would make the same page generate
+        # two different numbers in two checkouts of the same commit. The full set is
+        # one artifact larger; the extra one is internal and is listed in
+        # docs/architecture/INTERNAL_RECORDS.md.
+        "frozen_artifacts": count(
+            "grep -c . docs/architecture/freeze/W1A_CORE_PUBLIC.sha256"),
         "test_files": count("ls tests/test_*.py | wc -l"),
     }
 

@@ -30,7 +30,7 @@ What exists and runs today. Nothing else on this page does.
 
 | Capability | Evidence | Command |
 |---|---|---|
-| `w1a_evidence_contract` | `docs/architecture/freeze/W1A_CORE.sha256` | — |
+| `w1a_evidence_contract` | `docs/architecture/freeze/W1A_CORE_PUBLIC.sha256` | — |
 | `artifact_attestation` | `.github/workflows/release-candidate.yml` | — |
 | `clean_public_export` | `scripts/ci/release_export.sh` | — |
 | `code_scanning` | `.github/workflows/codeql.yml` | — |
@@ -107,7 +107,7 @@ Not asserted. Each number is counted at generation time.
 | Gates | 17 |
 | Falsification injections | 70 |
 | Golden vector cases | 15 |
-| Frozen artifacts | 8 |
+| Frozen artifacts | 7 |
 | Test files | 3 |
 
 ## Release blockers
