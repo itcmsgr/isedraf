@@ -181,5 +181,9 @@
     "paths": [
       "CLAUDE.md"
     ]
+  },
+  "private_only_gates": {
+    "$comment": "Gates that read material outside the repository and therefore cannot run in public CI. They are NOT in `make check` and that is deliberate, not a coverage gap. Listed so the omission is visible rather than silent.",
+    "check-provider-alignment": "reads the private provider licensing registry, located by the ISEDRAF_PROVIDER_REGISTRY environment variable and absent on a runner; skips with an explicit message and never reports a pass it did not earn"
   }
 }

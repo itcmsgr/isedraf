@@ -231,9 +231,9 @@ Three artifacts, three different strengths of claim, and they are not interchang
 
 | Artifact | Claim |
 |---|---|
-| source tarball | **bit-for-bit reproducible across tested builders** — observed |
-| `.deb` | **bit-for-bit reproducible across tested builders** — observed |
-| `.rpm` | **package semantics and payload reproducible.** *Not* claimed byte-for-byte reproducible across rpm toolchain versions |
+| source tarball | **cross-builder byte reproducibility demonstrated** |
+| `.deb` | **cross-builder byte reproducibility demonstrated.** It also rebuilt byte-identically after a source-tree documentation-only change that did not alter its package payload |
+| `.rpm` | **payload and package semantics consistent.** Byte reproducibility across rpm 4 / rpm 6 is **not claimed** |
 
 Tested builders: Fedora 44 / btrfs / rpm 6.0.2 and `ubuntu-latest` / ext4 / rpm 4.18.2. `BUILDTIME`
 was identical on both, so `SOURCE_DATE_EPOCH` taken from the commit works across toolchains; the

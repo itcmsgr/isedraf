@@ -43,6 +43,8 @@ What exists and runs today. Nothing else on this page does.
 | `package_deb` | `packaging/deb/control.in` | — |
 | `package_lifecycle_verified` | `scripts/compat/package_lifecycle.sh` | — |
 | `package_rpm` | `packaging/rpm/isedraf.spec.in` | — |
+| `provider_alignment_check` | `scripts/ci/check_provider_alignment.py` | `make check-provider-alignment` |
+| `public_licensing_boundary` | `scripts/ci/public_licensing_policy.json` | `make check-licensing` |
 | `report_json` | `lib/isedraf/report/render.py` | `isedraf report --json` |
 | `report_markdown` | `lib/isedraf/report/render.py` | `isedraf report` |
 | `reproducible_build` | `scripts/ci/check_reproducible.sh` | `make check-reproducible` |
@@ -106,7 +108,7 @@ Not asserted. Each number is counted at generation time.
 | | |
 |---|---|
 | Gates | 18 |
-| Falsification injections | 73 |
+| Falsification injections | 83 |
 | Golden vector cases | 15 |
 | Frozen artifacts | 7 |
 | Test files | 3 |

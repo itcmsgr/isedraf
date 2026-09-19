@@ -212,6 +212,69 @@ p.write_text(s.replace(old, "echo \"X-Build-Stamp: $(date +%s%N)\" >> \"$DEBROOT
 PYX' \
   'reproducible build gate FAILED|artifacts identical'
 
+# P0 LICENSING BOUNDARY. Each of these is a way the public release could ship a claim or
+# a byte it has no right to. The gate is only worth the name if it refuses every one.
+inject "D-90 README claims support for CIS Controls" \
+  'python3 scripts/ci/check_licensing.py' \
+  'printf "\nISEDRAF supports CIS Controls v8.\n" >> README.md' \
+  'CLAIM about CIS|licensing gate FAILED'
+
+inject "D-90 a document claims ISO 27001 compatibility" \
+  'python3 scripts/ci/check_licensing.py' \
+  'printf "\nISEDRAF is ISO 27001 compatible.\n" >> docs/roadmap/ROADMAP.md' \
+  'CLAIM about ISO|licensing gate FAILED'
+
+inject "D-90 a provider PDF enters the tracked tree" \
+  'python3 scripts/ci/check_licensing.py' \
+  'printf "%%PDF-1.4 fake\n" > docs/reference/benchmark.pdf && git add -f -A' \
+  'document/archive format|licensing gate FAILED'
+
+inject "D-90 a provider control matrix enters the tree" \
+  'python3 scripts/ci/check_licensing.py' \
+  'printf "PK fake\n" > docs/reference/controls.xlsx && git add -f -A' \
+  'document/archive format|licensing gate FAILED'
+
+inject "D-90 the public policy silently authorizes a framework mapping" \
+  'python3 scripts/ci/check_licensing.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import json, pathlib
+p = pathlib.Path("scripts/ci/public_licensing_policy.json"); d = json.loads(p.read_text())
+d["public_framework_mappings"].append("some-framework")
+p.write_text(json.dumps(d, indent=2))
+PYX' \
+  'Nothing is authorized|licensing gate FAILED'
+
+inject "D-90 the rpm declares a licence that is not MPL-2.0" \
+  'python3 scripts/ci/check_licensing.py' \
+  'sed -i "s|^License:        MPL-2.0|License:        Proprietary|" packaging/rpm/isedraf.spec.in' \
+  'policy expects MPL-2.0|licensing gate FAILED'
+
+inject "D-90 the deb ships no machine-readable copyright" \
+  'python3 scripts/ci/check_licensing.py' \
+  'rm -f packaging/deb/copyright' \
+  'DEP-5 copyright file|is missing|licensing gate FAILED'
+
+inject "D-90 the root LICENCE text is corrupted" \
+  'python3 scripts/ci/check_licensing.py' \
+  'printf "Not a licence.\n" > LICENSE' \
+  'does not begin with|licensing gate FAILED'
+
+inject "D-90 the SBOM misattributes the external interpreter to this project" \
+  'bash packaging/build.sh 2>&1; python3 scripts/ci/check_licensing.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("scripts/ci/generate_sbom.py"); s = p.read_text()
+old = "            \"licenseDeclared\": \"NOASSERTION\","
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "            \"licenseDeclared\": \"MPL-2.0\",", 1))
+PYX' \
+  'does not license the interpreter|licensing gate FAILED'
+
+inject "D-90 a public artifact is assembled through a symlink leaving the repository" \
+  'python3 scripts/ci/check_licensing.py' \
+  'ln -s /etc/hostname docs/reference/external-input.txt && git add -f -A' \
+  'symlink pointing OUTSIDE|licensing gate FAILED'
+
 # D-111. The native control catalog is authored first and is ISEDRAF's own. The invariant
 # is frozen; these prove the gate enforcing it can refuse.
 inject "D-111 a production module is named after a framework provider" \
