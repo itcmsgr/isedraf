@@ -11,9 +11,32 @@ Controls that are **intended but not currently in force**. Recorded here so that
 LLM — assumes protection that does not exist. A gap is never compensated for by weakening a different
 control.
 
-## KGG-001 — `main` is not branch-protected
+## KGG-001 — `main` is not branch-protected — CLOSED for the public repository 2026-09-19
 
-**State:** `NOT_AVAILABLE_CURRENT_PLAN`
+**State:** `CLOSED (public)` · `NOT_AVAILABLE_CURRENT_PLAN (private)`
+
+A ruleset is active on `itcmsgr/isedraf` (public): deletion blocked, force-push blocked, linear
+history required, and seven required status checks — `make check`, `make check-falsifiable`,
+`make check-gate-coverage`, both W1-A vector lanes, and both CodeQL language lanes.
+
+**Observed to fire, not assumed:** a force-push of a rewritten commit was attempted against `main`
+and was **refused** — *"push declined due to repository rule violations"*. A rule that has never
+been observed to refuse anything is not protection.
+
+**Consequence, stated rather than discovered later:** required checks apply to every push including
+a fast-forward, and a commit cannot have passing checks before it exists on the forge. Updates to
+the public repository therefore go through a pull request.
+
+**Not enabled, deliberately:** `required_signatures`. No signing key is configured on the
+workstation that maintains this repository, so the rule would block every push by anyone. Enabling
+a rule nobody can satisfy is an outage, not protection. It is recorded here instead of quietly
+omitted, and it closes when commit signing is set up.
+
+`itcmsgr/isedraf-dev` (private) still cannot be protected — rulesets and classic branch protection
+both require GitHub Pro or a public repository — and the original text below still describes it.
+
+### The private engineering repository
+
 
 Repository rulesets and classic branch protection both return
 *"Upgrade to GitHub Pro or make this repository public"* for a private repository on a personal account.
