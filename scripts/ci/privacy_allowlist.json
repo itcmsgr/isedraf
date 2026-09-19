@@ -9,7 +9,8 @@
     "nftban.com": "an ITCMS project with a public-facing domain; naming it is intentional",
     "python.org": "upstream Python",
     "itcmsgr": "the owner's public GitHub organization handle",
-    "anthropic.com": "same fixture as above"
+    "anthropic.com": "same fixture as above",
+    "debian.org": "the DEP-5 machine-readable copyright format specification URL, required verbatim in packaging/deb/copyright"
   },
   "synthetic_ranges": {
     "192.0.2.0/24": "RFC 5737 TEST-NET-1",

@@ -6,7 +6,7 @@
 # CI invokes these same targets rather than re-implementing them in YAML, which is
 # what prevents a gate silently degrading into a warning. There is no warning tier.
 
-.PHONY: check check-native-catalog check-licensing check-public-claims check-deb-ordering check-reproducible check-sbom check-tests check-python-floor check-packaging check-native-catalog check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-headers check-docs check-scope check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-gate-coverage check-falsifiable help
+.PHONY: check check-provider-alignment check-native-catalog check-licensing check-public-claims check-deb-ordering check-reproducible check-sbom check-tests check-python-floor check-packaging check-native-catalog check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-headers check-docs check-scope check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-gate-coverage check-falsifiable help
 
 check: check-scope check-headers check-python-floor check-packaging check-native-catalog check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-tests check-docs
 	@echo "make check: all gates passed"
@@ -88,6 +88,10 @@ check-packaging:
 ## check-native-catalog  D-111: the control catalog is ISEDRAF's own, and stays that way
 check-native-catalog:
 	@python3 scripts/ci/check_native_catalog.py
+
+## check-provider-alignment  PRIVATE: the public tree vs the provider registry (not in CI)
+check-provider-alignment:
+	@python3 scripts/ci/check_provider_alignment.py
 
 ## check-licensing  D-84/D-90: MPL covers what we own; unknown licensing is not distributable
 check-licensing:

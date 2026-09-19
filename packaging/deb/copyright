@@ -1,0 +1,19 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: isedraf
+Upstream-Contact: Antonios Voulvoulis / ITCMS <contact@itcms.gr>
+Source: https://github.com/itcmsgr/isedraf
+
+Files: *
+Copyright: 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
+License: MPL-2.0
+
+License: MPL-2.0
+ This Source Code Form is subject to the terms of the Mozilla Public License,
+ v. 2.0. If a copy of the MPL was not distributed with this file, You can
+ obtain one at https://mozilla.org/MPL/2.0/.
+ .
+ The complete licence text is installed alongside this file as
+ /usr/share/doc/isedraf/LICENSE.
+ .
+ No third-party framework content is bundled in this package. The package
+ contains only material owned by ITCMS and licensed under MPL-2.0.

@@ -179,6 +179,18 @@
       "status": "PLANNED",
       "design": "docs/architecture/NATIVE_CONTROL_CATALOG.md",
       "note": "D-111 freezes the invariant and the ISE-* namespace: 14 families, ISE-IDENT reserved and not in use. NO native criterion is authored yet - they arrive in W1-D. make check-native-catalog enforces that the registry and the catalog document agree, that criteria hold to the namespace, that no criterion is derived from a framework, and that no production module is named after a provider"
+    },
+    "public_licensing_boundary": {
+      "status": "IMPLEMENTED",
+      "evidence": "scripts/ci/public_licensing_policy.json",
+      "command": "make check-licensing",
+      "note": "one machine-readable authority for the public licensing boundary. The gate reads every text surface for provider claims in context, the built DEB/RPM/TGZ and the SBOMs - not only the templates that produced them - plus restricted document formats, symlinks leaving the repository, and MPL-2.0 application in LICENSE, rpm metadata and the DEP-5 deb copyright. Zero false positives on 16 legitimate uses of control/framework/support/ISO-substring text"
+    },
+    "provider_alignment_check": {
+      "status": "IMPLEMENTED",
+      "evidence": "scripts/ci/check_provider_alignment.py",
+      "command": "make check-provider-alignment",
+      "note": "PRIVATE-only: compares public claims against the provider licensing registry, located by ISEDRAF_PROVIDER_REGISTRY. Never required by public CI, skips with an explicit message when the registry is absent, and never quotes its contents - a failure reports provider, public file, line and authorization state only"
     }
   },
   "runtime": {

@@ -60,6 +60,11 @@ find "$STAGE/usr/lib/isedraf" -name '__pycache__' -prune -exec rm -rf {} + 2>/de
 find "$STAGE" -name '*.pyc' -delete 2>/dev/null
 install -m 0644 LICENSE "$STAGE/usr/share/doc/isedraf/LICENSE" 2>/dev/null || true
 install -m 0644 README.md "$STAGE/usr/share/doc/isedraf/README.md"
+# Debian's licence mechanism is /usr/share/doc/<pkg>/copyright in DEP-5 format, and the
+# package shipped none: the RPM declared `License: MPL-2.0` in its metadata while the DEB
+# said nothing anywhere a tool could read. A licence the packaging format cannot express
+# is a licence a package manager cannot report.
+install -m 0644 packaging/deb/copyright "$STAGE/usr/share/doc/isedraf/copyright"
 install -m 0644 docs/reference/PLATFORM_COMPATIBILITY.md \
     "$STAGE/usr/share/doc/isedraf/PLATFORM_COMPATIBILITY.md"
 install -m 0644 docs/operator/STORAGE_AND_OUTPUTS.md \

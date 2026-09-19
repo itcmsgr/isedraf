@@ -51,8 +51,14 @@ DEB="$(find "$DIST" -maxdepth 1 -name '*.deb' ! -name '*latest*' | head -1)"
 RPM="$(find "$DIST" -maxdepth 1 -name '*.rpm' ! -name '*latest*' | head -1)"
 if [ -n "$DEB" ] && [ -n "$RPM" ] && command -v rpm >/dev/null 2>&1; then
     D="$(mktemp -d)"
+    # `copyright` is excluded because it is Debian's licence MECHANISM, not documentation:
+    # DEP-5 at /usr/share/doc/<pkg>/copyright is where a .deb states its licence, and an
+    # .rpm states the same thing in its `License:` metadata field instead. Requiring both
+    # formats to carry both mechanisms would be parity for its own sake. Everything else
+    # must still match exactly.
     ar p "$DEB" data.tar.gz 2>/dev/null | tar tz 2>/dev/null \
-        | grep 'usr/share/doc/isedraf/.' | sed 's|.*/||' | sort -u > "$D/deb"
+        | grep 'usr/share/doc/isedraf/.' | sed 's|.*/||' | grep -v '^copyright$' \
+        | sort -u > "$D/deb"
     rpm -qlp "$RPM" 2>/dev/null \
         | grep 'usr/share/doc/isedraf/.' | sed 's|.*/||' | sort -u > "$D/rpm"
     if cmp -s "$D/deb" "$D/rpm"; then

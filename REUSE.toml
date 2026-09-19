@@ -67,8 +67,10 @@ SPDX-License-Identifier = "MPL-2.0"
 
 # Package metadata templates: consumed verbatim by dpkg/rpm, which reject unknown fields.
 # The built packages state MPL-2.0 in their own metadata and ship the licence text.
+# packaging/deb/copyright is itself a DEP-5 licence declaration; an SPDX comment header
+# inside it would be redundant and risks breaking the format dpkg parses.
 [[annotations]]
-path = ["packaging/deb/control.in", "packaging/rpm/isedraf.spec.in"]
+path = ["packaging/deb/control.in", "packaging/rpm/isedraf.spec.in", "packaging/deb/copyright"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
 SPDX-License-Identifier = "MPL-2.0"

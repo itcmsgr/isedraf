@@ -64,8 +64,19 @@ declare -a OUTCOMES=()
 # is never empty and can witness nothing. The index is deliberately left untouched here -
 # staging files on the harness's own initiative would change what the gate under test sees.
 _tree_digest() {
-    find . -path ./.git -prune -o -type f -print0 2>/dev/null \
-        | sort -z | xargs -0 sha256sum 2>/dev/null | sha256sum
+    # Regular files AND symlinks. `-type f` alone excludes symlinks entirely, so adding
+    # one changed nothing the harness could see and the injection that tests for a
+    # symlink escaping the repository reported "the mutation changed nothing" - a blind
+    # spot precisely where it matters, since a symlink is one of the ways restricted
+    # content reaches a public artifact without ever being committed to it.
+    #
+    # The link is recorded as name -> target rather than followed: what changed is where
+    # the path points, and following it would hash whatever happens to be outside.
+    {
+        find . -path ./.git -prune -o -type f -print0 2>/dev/null \
+            | sort -z | xargs -0 sha256sum 2>/dev/null
+        find . -path ./.git -prune -o -type l -printf '%p -> %l\n' 2>/dev/null | sort
+    } | sha256sum
 }
 
 _record() {   # _record OUTCOME name detail
@@ -162,11 +173,12 @@ inject() {
 }
 
 harness_summary() {
-    if [ "${SKIPPED:-0}" -gt 0 ]; then
-        echo "--- $PASS injections detected, $FAIL not counted as firing, $SKIPPED skipped"\
-" (subject not published in this checkout) ---"
-    else
-        echo "--- $PASS injections detected, $FAIL not counted as firing ---"
-    fi
+    # Three separate numbers, never added together. An injection that was skipped did not
+    # reach its target condition and did not falsify anything; reporting "84 injections"
+    # when 77 executed and 7 were skipped invites the reader to treat a declared
+    # non-applicable case as a negative control that passed. Z-20 exists to stop exactly
+    # that conflation, and a summary line is where it would quietly happen.
+    echo "--- falsification: $PASS executed and detected · ${SKIPPED:-0} declared skips"\
+" (subject not present in this checkout) · $FAIL unexpected non-firing ---"
     [ "$FAIL" -eq 0 ]
 }
