@@ -76,11 +76,44 @@ jobs:
             dist/packages/*.rpm
             dist/packages/*.tar.gz
 
-      - name: Attest SBOMs
+      # attest-sbom takes ONE subject and ONE sbom file; `sbom-path` is not a glob, and
+      # a glob there fails with "SBOM file not found" rather than with anything that
+      # names the real problem. The paths are resolved once, here, from what was built.
+      #
+      # The `latest` aliases are byte-identical copies of the versioned artifacts and
+      # carry no SBOM of their own - one document under two names would be the same
+      # document twice. They ARE covered by the provenance attestation above, which is
+      # keyed by digest, so `gh attestation verify isedraf-latest.tar.gz` works.
+      - name: Resolve artifact paths
+        id: art
+        run: |
+          set -eu
+          for kind in deb rpm tar.gz; do
+            f="$(find dist/packages -maxdepth 1 -name "*.$kind" ! -name '*latest*' | head -1)"
+            [ -n "$f" ] || { echo "no .$kind was built" >&2; exit 1; }
+            key="$(echo "$kind" | tr -d '.')"
+            echo "${key}=$f"
+            echo "${key}_sbom=dist/sbom/$(basename "$f").spdx.json"
+          done >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
+      - name: Attest SBOM (deb)
         uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
         with:
-          subject-path: dist/packages/*.tar.gz
-          sbom-path: dist/sbom/isedraf-*.tar.gz.spdx.json
+          subject-path: ${{ steps.art.outputs.deb }}
+          sbom-path: ${{ steps.art.outputs.deb_sbom }}
+
+      - name: Attest SBOM (rpm)
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-path: ${{ steps.art.outputs.rpm }}
+          sbom-path: ${{ steps.art.outputs.rpm_sbom }}
+
+      - name: Attest SBOM (source tarball)
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-path: ${{ steps.art.outputs.targz }}
+          sbom-path: ${{ steps.art.outputs.targz_sbom }}
 
       # GOV-002: the attestation must be shown able to REFUSE, not only to accept.
       - name: Prove the attestation binds
