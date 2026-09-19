@@ -336,13 +336,19 @@ the `D` flag. Injections 61 → 62.
 **Found by** attempting to verify a locally built artifact against the published attestation and
 noticing the digests could not match — not by review.
 
-**A second thing the runner taught us.** The first version of the injection simply dropped the `D`
-flag, and it **did not fire on CI**. Whether plain `ar rc` is deterministic depends on how the local
-binutils was *compiled*: Ubuntu enables deterministic archives by default, Fedora does not. The
-injection fired on the workstation and passed silently on the runner — which is precisely the reason
-the build writes `D` explicitly rather than trusting a default that varies by distribution. The
-injection now forces `U`, because the property under test is *"does this gate detect a
-non-reproducible build"*, so the experiment must produce one for certain.
+**A second thing the runner taught us, twice.** The first version of the injection simply dropped
+the `D` flag, and it **did not fire on CI**. Whether plain `ar rc` is deterministic depends on how
+the local binutils was *compiled*: Ubuntu enables deterministic archives by default, Fedora does
+not. The second version forced `U` — and **also passed silently on the runner**, so forcing
+non-determinism through `ar` is not portable either.
+
+Both versions fired on the workstation and passed on the runner, which is the worst possible
+failure mode: a green injection that proves nothing, on the machine that builds the release.
+
+This is precisely why the build writes `D` explicitly and never relies on a default. The injection
+now stamps a **nanosecond clock reading** into the package instead. The property under test is
+*"does this gate detect a non-reproducible build"*, so the experiment must **make** one, on every
+platform, rather than hope the environment provides it.
 
 ## KGG-016 — Reproducible on one machine is not reproducible across machines
 
