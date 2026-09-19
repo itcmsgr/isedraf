@@ -1,0 +1,93 @@
+# ISEDRAF — governance and documentation gates
+# SPDX-License-Identifier: MPL-2.0
+#
+# Every job runs the SAME `make` target a developer runs locally. CI never
+# re-implements a gate in YAML: that is how a gate silently becomes a warning.
+# There is no warning tier — a job either passes or fails.
+name: Governance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Least privilege: nothing is granted that a gate does not need.
+permissions: {}
+
+concurrency:
+  group: governance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    # U-26: CI runs the SAME aggregate target a developer runs. Per-gate jobs drifted -
+    # check-paths and check-index existed locally and were never invoked on the branch.
+    name: make check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: make check
+
+  falsifiable:
+    # GOV-002: every critical gate is proven able to fail.
+    name: make check-falsifiable
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: make check-falsifiable
+
+  coverage:
+    # U-30: prove the gates are actually wired, not merely present.
+    name: make check-gate-coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: make check-gate-coverage
+
+  vectors:
+    # Z-12 / NORM-039: the golden vectors are release-blocking ON PYTHON 3.9 AND THE
+    # CURRENT CI PYTHON. One runner-default lane proved determinism on one interpreter,
+    # which is not the requirement. Both lanes regenerate the corpus and byte-compare it
+    # against the SAME committed golden output, so agreement across lanes is transitive
+    # and automated - no result is ever copied from one interpreter to the other.
+    name: W1-A vectors (python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false        # a 3.9 failure must never be hidden by 3.12 cancelling it
+      matrix:
+        python-version: ['3.9', '3.12']
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python3 -VV
+      - run: make check-vectors check-vectors-negative check-tests
+      # Byte determinism WITHIN the lane, across every interpreter present on the runner.
+      - run: bash scripts/vectors/crossversion.sh

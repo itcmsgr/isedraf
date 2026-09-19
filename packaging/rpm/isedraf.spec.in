@@ -1,0 +1,71 @@
+Name:           isedraf
+Version:        @VERSION@
+Release:        @RELEASE@%{?dist}
+Summary:        @DESCRIPTION@
+License:        MPL-2.0
+URL:            https://github.com/itcmsgr/isedraf
+Source0:        isedraf-@FULLVERSION@.tar.gz
+BuildArch:      noarch
+
+# RPM's automatic dependency generator adds `Requires: /usr/bin/python3` on its own,
+# from the Python source it finds in the payload. That single line would break exactly
+# the platform this package was shaped around: a stock EL8 host has NO /usr/bin/python3
+# and would be forced to install one, on a machine whose vendor interpreter at
+# /usr/libexec/platform-python already runs ISEDRAF perfectly. The explicit boolean
+# Requires below states the real dependency; the generator's guess is excluded.
+%global __requires_exclude ^/usr/bin/python3$
+%global __python_requires  %{nil}
+
+# Either satisfies the runtime. A stock EL8 image ships no /usr/bin/python3 at all, yet
+# always has a working vendor interpreter at /usr/libexec/platform-python because dnf
+# itself needs one - so requiring python3 outright would install a runtime on a host that
+# already has a perfectly good one.
+Requires:       (python3 or platform-python)
+
+# Nothing is compiled, so nothing is built. The payload is interpreted source.
+BuildRequires:  coreutils
+
+%description
+ISEDRAF collects Linux host state, normalizes it into canonical bytes, commits immutable
+snapshots with a hash-chained ledger, and produces evidence that can be verified
+independently of the tool that produced it.
+
+This is an early technical preview. It collects host identity and a host inventory and
+renders a report; account, SSH, audit and comparison domains are not implemented.
+
+Python standard library only: no compiled component, no third-party runtime module, and
+no interpreter is installed, bundled or downgraded by this package.
+
+%prep
+%setup -q -n isedraf-@FULLVERSION@
+
+%build
+# Intentionally empty. There is nothing to compile, and `python -m py_compile` would
+# write .pyc files, which this project forbids shipping.
+
+%install
+install -d -m 0755 %{buildroot}%{_bindir} %{buildroot}%{_prefix}/lib/isedraf
+install -m 0755 bin/isedraf %{buildroot}%{_bindir}/isedraf
+cp -a lib/isedraf/. %{buildroot}%{_prefix}/lib/isedraf/
+find %{buildroot}%{_prefix}/lib/isedraf -name '__pycache__' -prune -exec rm -rf {} + || :
+find %{buildroot} -name '*.pyc' -delete || :
+install -d -m 0755 %{buildroot}%{_docdir}/isedraf
+install -m 0644 LICENSE %{buildroot}%{_docdir}/isedraf/LICENSE || :
+install -m 0644 README.md %{buildroot}%{_docdir}/isedraf/README.md
+# These two drifted: packaging/build.sh stages four documents, this section staged two,
+# so an EL user received half the documentation a Debian user did. The %install section
+# is a SECOND implementation of the payload and will drift again - check_package_payload.sh
+# now compares the deb and rpm documentation sets against each other so that it cannot.
+install -m 0644 docs/reference/PLATFORM_COMPATIBILITY.md \
+    %{buildroot}%{_docdir}/isedraf/PLATFORM_COMPATIBILITY.md
+install -m 0644 docs/operator/STORAGE_AND_OUTPUTS.md \
+    %{buildroot}%{_docdir}/isedraf/STORAGE_AND_OUTPUTS.md
+
+%files
+%{_bindir}/isedraf
+%{_prefix}/lib/isedraf
+%doc %{_docdir}/isedraf
+
+%changelog
+* Thu Sep 18 2026 Antonios Voulvoulis <contact@itcms.gr> - @VERSION@-@RELEASE@
+- Early technical preview: host identity, host inventory, report engine.

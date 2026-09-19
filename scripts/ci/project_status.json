@@ -1,0 +1,180 @@
+{
+  "$comment": "THE single authoritative status registry. docs/CURRENT_STATE.md is GENERATED from this file, and check_docs_truth.py validates documentation claims against it. One source, so a generated page and a gate cannot disagree \u2014 which is exactly how CURRENT_STATE.md came to announce that no product code existed while three commands worked.",
+  "project_stage": "TECHNICAL_PREVIEW_CANDIDATE",
+  "public_release": "NOT_AUTHORIZED",
+  "capabilities": {
+    "w1a_evidence_contract": {
+      "status": "CERTIFIED",
+      "evidence": "docs/architecture/freeze/W1A_CORE.sha256"
+    },
+    "identity": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/identity.py",
+      "command": "isedraf identity"
+    },
+    "inventory": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/inventory/",
+      "command": "isedraf inventory"
+    },
+    "report_json": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/report/render.py",
+      "command": "isedraf report --json"
+    },
+    "report_markdown": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/report/render.py",
+      "command": "isedraf report"
+    },
+    "snapshot": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/snapshot.py"
+    },
+    "ledger": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/ledger.py"
+    },
+    "independent_verifier": {
+      "status": "IMPLEMENTED",
+      "evidence": "scripts/vectors/verify.py"
+    },
+    "package_deb": {
+      "status": "IMPLEMENTED",
+      "evidence": "packaging/deb/control.in"
+    },
+    "package_rpm": {
+      "status": "IMPLEMENTED",
+      "evidence": "packaging/rpm/isedraf.spec.in"
+    },
+    "report_pdf": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "users_groups": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "sudo_privilege": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "ssh_state": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "pam": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "mounts": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "audit_subsystem": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "journald_recording": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "services": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "software_inventory": {
+      "status": "FUTURE",
+      "evidence": null
+    },
+    "baseline_approval": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "delta_comparison": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "export": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "signing": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "production_mode_a": {
+      "status": "DEFERRED",
+      "evidence": "SCOPE-072",
+      "note": "the privileged topology that owns /var/lib/isedraf is Freeze Set 2"
+    },
+    "arm64": {
+      "status": "NOT_TESTED",
+      "evidence": null,
+      "note": "zero campaigns have run; planned second architecture"
+    },
+    "package_lifecycle_verified": {
+      "status": "IMPLEMENTED",
+      "evidence": "scripts/compat/package_lifecycle.sh",
+      "note": "install/run/remove/reinstall proven on Debian 12, AlmaLinux 8.10 (vendor Python 3.6.8) and AlmaLinux 9.7"
+    },
+    "clean_public_export": {
+      "status": "IMPLEMENTED",
+      "evidence": "scripts/ci/release_export.sh",
+      "note": "packages are rebuilt from the exported tree, not the engineering tree"
+    },
+    "sbom": {
+      "status": "IMPLEMENTED",
+      "evidence": "scripts/ci/generate_sbom.py",
+      "note": "SPDX 2.3 JSON per artifact, generated from the FINAL package by the standard library alone; scripts/ci/check_sbom.py cross-checks the rpm SBOM against rpm's own recorded per-file digests"
+    },
+    "artifact_attestation": {
+      "status": "WRITTEN_NEVER_RUN",
+      "evidence": ".github/workflows/release-candidate.yml",
+      "note": "the workflow exists and is visibility-gated; artifact attestations are unavailable for a private repository on this plan, so it has NEVER RUN and nothing may be displayed for it (KGG-011)"
+    },
+    "code_scanning": {
+      "status": "WRITTEN_NEVER_RUN",
+      "evidence": ".github/workflows/codeql.yml",
+      "note": "CodeQL for python and actions, security-extended; requires a public repository, has NEVER RUN (KGG-011)"
+    },
+    "scorecard": {
+      "status": "WRITTEN_NEVER_RUN",
+      "evidence": ".github/workflows/scorecard.yml",
+      "note": "requires a public repository, has NEVER RUN; no score may be displayed (KGG-011)"
+    }
+  },
+  "runtime": {
+    "production_python_floor": "3.6",
+    "tooling_python_floor": "3.9",
+    "execution_model": "unprivileged, ISEDRAF_STATE_ROOT required",
+    "dependencies": "Python standard library only"
+  },
+  "platforms": {
+    "architectures_measured": [
+      "x86_64"
+    ],
+    "architectures_not_tested": [
+      "aarch64",
+      "armhf"
+    ],
+    "distributions_measured": [
+      "Debian 11",
+      "Debian 12",
+      "Debian 13",
+      "Ubuntu 22.04",
+      "Ubuntu 24.04",
+      "Ubuntu 26.04",
+      "AlmaLinux 8.10",
+      "AlmaLinux 9.7",
+      "Rocky 9.7",
+      "CentOS Stream 9",
+      "openSUSE Leap 15.6"
+    ],
+    "none_certified_because": "reboot stability and version-upgrade stability were not exercised"
+  },
+  "release_blockers": [
+    "CodeQL, Scorecard and artifact attestations are written but have never run; they activate on the public repository (KGG-011)",
+    "no GitHub Release or tag is published; publication is a separate owner decision"
+  ]
+}

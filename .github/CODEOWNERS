@@ -1,0 +1,28 @@
+# ISEDRAF — review routing
+# SPDX-License-Identifier: MPL-2.0
+#
+# The owner reviews everything. The explicit entries below exist so that the
+# governance-critical paths can never be merged without the owner, even if
+# broader rules are added later.
+
+*                                   @itcmsgr
+
+# Frozen architecture — owner only, changed only via AMENDMENTS.md (D-68)
+/docs/architecture/                 @itcmsgr
+
+# Governance files — integrity-protected by GOVERNANCE_MANIFEST.sha256 (D-83)
+/CLAUDE.md                          @itcmsgr
+/.claude/                           @itcmsgr
+/git-hooks/                         @itcmsgr
+/docs/development/GOVERNANCE_MANIFEST.sha256   @itcmsgr
+/lib/isedraf/exitcodes.json        @itcmsgr
+/lib/isedraf/runtime-imports.allow @itcmsgr
+
+# Documentation governance
+/docs/development/DOCUMENTATION_POLICY.md      @itcmsgr
+/docs/development/LLM_PROTOCOL.md              @itcmsgr
+/docs/STYLE_GUIDE.md                @itcmsgr
+
+# Supply chain
+/.github/workflows/                 @itcmsgr
+/packaging/                         @itcmsgr

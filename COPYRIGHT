@@ -1,0 +1,20 @@
+Upstream-Name: ISEDRAF (codename)
+Upstream-Contact: Antonios Voulvoulis / ITCMS <contact@itcms.gr>
+Source: local development repository (unpublished)
+
+Files: *
+Copyright: 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
+License: MPL-2.0
+
+Files: LICENSE
+Copyright: Mozilla Foundation
+License: MPL-2.0
+Comment: Canonical licence text, reproduced verbatim. Classified THIRD_PARTY.
+
+Canonical identity strings, matched verbatim by the header gate
+(docs/development/HEADER_POLICY.md):
+
+  Holder   Antonios Voulvoulis / ITCMS
+  Contact  contact@itcms.gr
+  Licence  MPL-2.0
+  Year     2026

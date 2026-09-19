@@ -1,0 +1,30 @@
+ISEDRAF (codename) — Linux Host Assurance, State Delta & Evidence Bridge
+
+Copyright (c) 2026 Antonios Voulvoulis / ITCMS
+Contact: contact@itcms.gr
+
+This product is licensed under the Mozilla Public License, v. 2.0.
+A copy of the licence is distributed with this software in the file LICENSE.
+If a copy was not distributed with this file, you can obtain one at
+https://mozilla.org/MPL/2.0/.
+
+"ISEDRAF" is an internal codename. The public project name has not been cleared
+(open decision OD-01) and will change before any public release.
+
+THIRD-PARTY CONTENT
+-------------------
+LICENSE             Mozilla Public License 2.0 text, (c) Mozilla Foundation.
+
+CODE_OF_CONDUCT.md is independently authored for ISEDRAF and is covered by the
+copyright above. It is not adapted from another project's text.
+
+ISEDRAF contains no third-party runtime code. Its runtime depends only on Bash,
+the Python standard library, coreutils, util-linux and optional subsystem tools
+discovered on the host at run time.
+
+AI ASSISTANCE
+-------------
+ISEDRAF is developed with AI assistance under human ownership. Copyright and
+responsibility remain with Antonios Voulvoulis / ITCMS; AI tools are credited
+contributors, not copyright holders or licensors.
+See AI_ASSISTED_DEVELOPMENT.md.

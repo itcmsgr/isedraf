@@ -1,0 +1,51 @@
+{
+  "$comment": "Consumed by scripts/ci/check_docs_truth.py. Every allowlist entry carries a reason: an allowlist without reasons is where findings go to be forgotten.",
+  "reference_allowlist": {
+    "docs/architecture/freeze/W1A_CORE.sha256": "exists; listed so a future rename is noticed here first",
+    "scripts/ci/release-surface.txt": "prose reference to the NFTBan equivalent, not this repository's file"
+  },
+  "authoritative_digests": {
+    "w1a_corpus": {
+      "path": "test-vectors/w1a/v1/EXPECTED.sha256",
+      "min_prefix": 16,
+      "context_keywords": [
+        "corpus digest",
+        "corpus `",
+        "corpus ",
+        "EXPECTED.sha256"
+      ],
+      "$why": "The certified corpus. A document that quotes a different value contradicts the artifact it certifies."
+    }
+  },
+  "external_projects": {
+    "$why": "C-06 forbids competitive framing ABOUT ANOTHER PROJECT. Framing words alone are not the offence: 'declared vs resolved' and 'state vs observation' are ordinary technical distinctions, and a policy document that QUOTES the prohibition must not trip it. A finding requires a named external project on the same line.",
+    "names": [
+      "openscap",
+      "complianceascode",
+      "osquery",
+      "wazuh",
+      "lynis",
+      "aide",
+      "tripwire",
+      "ossec",
+      "auditbeat",
+      "falco",
+      "nessus",
+      "openvas",
+      "qualys",
+      "rapid7",
+      "tenable",
+      "cis-cat",
+      "inspec",
+      "chef",
+      "puppet",
+      "ansible",
+      "saltstack",
+      "nftban",
+      "scap",
+      "prowler",
+      "trivy",
+      "grype"
+    ]
+  }
+}

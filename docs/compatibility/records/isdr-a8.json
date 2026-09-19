@@ -1,0 +1,100 @@
+{
+  "after": {
+    "cli_stderr": "",
+    "executable": "/usr/libexec/platform-python",
+    "exit_code": 0,
+    "pass_label": "AFTER",
+    "python": "3.6.8",
+    "raw_machine_id_in_output": false,
+    "store": {
+      "ledger": [
+        {
+          "manifest_hash": "sha256:41498b4888c136331b75330f82f4578d790718aef5da3384223e7776e471a6e7",
+          "previous_record_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "record_hash": "sha256:2a308cc14dcaa109aa1d82d6e6bdba7cf80804aea3e0bb2c1e889f58b5ecf62d",
+          "sequence": 1,
+          "snapshot_id": "SDS-20260918T163600Z-413d5a356a5b28fd"
+        },
+        {
+          "manifest_hash": "sha256:2168deb501d7f9521b57b5dcaca275466e570245aeaff19a0cdfc001128f3a81",
+          "previous_record_hash": "sha256:2a308cc14dcaa109aa1d82d6e6bdba7cf80804aea3e0bb2c1e889f58b5ecf62d",
+          "record_hash": "sha256:f682e37f2460d357eff76f4b6cb86d13c8c215eee58ca295736b8079eaaa384f",
+          "sequence": 2,
+          "snapshot_id": "SDS-20260918T163726Z-82baafc49a47b163"
+        }
+      ],
+      "snapshots": [
+        {
+          "collection_status": "COLLECTED",
+          "host_id": "sha256:41518e9ea688353c5013ee918f67f05e0fcc295732deebbe83767aafa36d314e",
+          "manifest_hash": "sha256:41498b4888c136331b75330f82f4578d790718aef5da3384223e7776e471a6e7",
+          "snapshot_id": "SDS-20260918T163600Z-413d5a356a5b28fd",
+          "state_canonical": "{\"host_id\":\"sha256:41518e9ea688353c5013ee918f67f05e0fcc295732deebbe83767aafa36d314e\"}\n",
+          "state_hash": "sha256:ae58e7cf9212b81c0442ea4a1c9b38ce0e82d53c1fb5764f8307dd0306d788d8",
+          "state_root": "DEV"
+        },
+        {
+          "collection_status": "COLLECTED",
+          "host_id": "sha256:41518e9ea688353c5013ee918f67f05e0fcc295732deebbe83767aafa36d314e",
+          "manifest_hash": "sha256:2168deb501d7f9521b57b5dcaca275466e570245aeaff19a0cdfc001128f3a81",
+          "snapshot_id": "SDS-20260918T163726Z-82baafc49a47b163",
+          "state_canonical": "{\"host_id\":\"sha256:41518e9ea688353c5013ee918f67f05e0fcc295732deebbe83767aafa36d314e\"}\n",
+          "state_hash": "sha256:ae58e7cf9212b81c0442ea4a1c9b38ce0e82d53c1fb5764f8307dd0306d788d8",
+          "state_root": "DEV"
+        }
+      ],
+      "verifier_problems": []
+    }
+  },
+  "before": {
+    "cli_stderr": "",
+    "executable": "/usr/libexec/platform-python",
+    "exit_code": 0,
+    "pass_label": "BEFORE",
+    "python": "3.6.8",
+    "raw_machine_id_in_output": false,
+    "store": {
+      "ledger": [
+        {
+          "manifest_hash": "sha256:41498b4888c136331b75330f82f4578d790718aef5da3384223e7776e471a6e7",
+          "previous_record_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "record_hash": "sha256:2a308cc14dcaa109aa1d82d6e6bdba7cf80804aea3e0bb2c1e889f58b5ecf62d",
+          "sequence": 1,
+          "snapshot_id": "SDS-20260918T163600Z-413d5a356a5b28fd"
+        }
+      ],
+      "snapshots": [
+        {
+          "collection_status": "COLLECTED",
+          "host_id": "sha256:41518e9ea688353c5013ee918f67f05e0fcc295732deebbe83767aafa36d314e",
+          "manifest_hash": "sha256:41498b4888c136331b75330f82f4578d790718aef5da3384223e7776e471a6e7",
+          "snapshot_id": "SDS-20260918T163600Z-413d5a356a5b28fd",
+          "state_canonical": "{\"host_id\":\"sha256:41518e9ea688353c5013ee918f67f05e0fcc295732deebbe83767aafa36d314e\"}\n",
+          "state_hash": "sha256:ae58e7cf9212b81c0442ea4a1c9b38ce0e82d53c1fb5764f8307dd0306d788d8",
+          "state_root": "DEV"
+        }
+      ],
+      "verifier_problems": []
+    }
+  },
+  "checks": {
+    "host_id": "sha256:41518e9ea688353c5013ee918f67f05e0fcc295732deebbe83767aafa36d314e",
+    "host_id_identical": true,
+    "interpreter": "/usr/libexec/platform-python",
+    "ledger_chain_valid": true,
+    "ledger_records_after": 2,
+    "new_snapshot_created": true,
+    "python_after": "3.6.8",
+    "python_before": "3.6.8",
+    "reboot_observed": true,
+    "snapshot_ids_distinct": true,
+    "snapshots_after": 2,
+    "snapshots_before": 1,
+    "state_canonical_identical": true,
+    "state_hash_identical": true,
+    "verifier_pass": true,
+    "verifier_problems_after": []
+  },
+  "uptime_after_reboot_seconds": "26",
+  "verdict": "PASS"
+}

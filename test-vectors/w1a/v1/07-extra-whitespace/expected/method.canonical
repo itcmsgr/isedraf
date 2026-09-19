@@ -1,0 +1,1 @@
+{"classification_table_version":1,"collector_id":"host_identity","collector_version":1,"identity_scheme":"machine-id-sha256-v1","parser_version":1,"source_id":"file:/etc/machine-id"}

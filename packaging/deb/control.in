@@ -1,0 +1,19 @@
+Package: isedraf
+Version: @VERSION@
+Section: admin
+Priority: optional
+Architecture: all
+Installed-Size: @INSTALLED_SIZE@
+Maintainer: @MAINTAINER@
+Depends: python3 (>= 3.6)
+Homepage: https://github.com/itcmsgr/isedraf
+Description: @DESCRIPTION@
+ ISEDRAF collects Linux host state, normalizes it into canonical bytes, commits
+ immutable snapshots with a hash-chained ledger, and produces evidence that can be
+ verified independently of the tool that produced it.
+ .
+ This is an early technical preview. It collects host identity and a host inventory
+ and renders a report; account, SSH, audit and comparison domains are not implemented.
+ .
+ Python standard library only: no compiled component, no third-party runtime module,
+ and no interpreter is installed, bundled or downgraded by this package.

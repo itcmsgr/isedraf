@@ -1,0 +1,38 @@
+# The PUBLICATION SURFACE: what a user actually receives or reads.
+#
+# check_privacy.py --scope release treats every path matching these globs as shipped and
+# blocks on any real operator identifier found there.
+#
+# This list used to name only the trees someone remembered were published. That was wrong
+# from the moment a SOURCE TARBALL became a release artifact: `git archive HEAD` ships
+# EVERY tracked file, so scripts/, tests/ and git-hooks/ were reaching users while the
+# blocking scope did not cover them. Only the advisory repository scope did.
+#
+# The list is therefore complete by construction, and check_privacy.py ASSERTS that it is
+# complete: any tracked file matching no glob below fails the gate. A new top-level tree
+# cannot quietly appear outside the blocking scope again.
+#
+# One glob per line. Comments and blank lines are ignored.
+
+# --- root documents and metadata a reader sees first ---------------------------------
+*.md
+LICENSE
+COPYRIGHT
+NOTICE
+REUSE.toml
+VERSION
+Makefile
+.gitignore
+
+# --- what the packages install ---------------------------------------------------------
+bin/**
+lib/**
+
+# --- what the source tarball additionally carries --------------------------------------
+docs/**
+packaging/**
+scripts/**
+tests/**
+test-vectors/**
+git-hooks/**
+.github/**

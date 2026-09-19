@@ -1,0 +1,62 @@
+name: False positive — ISEDRAF reported a change or failure that is not real
+description: ISEDRAF reported a security regression, change or failure that does not reflect the host.
+labels: ["false-positive", "needs-evidence"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Redact first.** Use `--redact` and review what remains. Never paste an unredacted identity or
+        evidence bundle. See `SUPPORT.md`.
+  - type: input
+    id: version
+    attributes: {label: ISEDRAF version, description: "Output of `isedraf --version`"}
+    validations: {required: true}
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options: ["Debian 12", "Ubuntu 24.04", "Rocky Linux 9", "AlmaLinux 9", "Other (unsupported)"]
+    validations: {required: true}
+  - type: dropdown
+    id: privilege
+    attributes: {label: Privilege level of the run, options: ["unprivileged", "root / sudo"]}
+    validations: {required: true}
+  - type: textarea
+    id: reported
+    attributes:
+      label: What ISEDRAF reported
+      description: "The change ID, classification and entity. Redacted output is fine."
+    validations: {required: true}
+  - type: textarea
+    id: actual
+    attributes:
+      label: What the host actually shows
+      description: "The manual verification you ran and its redacted output."
+    validations: {required: true}
+  - type: textarea
+    id: explain
+    attributes:
+      label: Output of `isedraf explain <id>`
+      description: "This is usually the fastest route to the cause."
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Before submitting
+      options:
+        - {label: "I redacted the output", required: true}
+        - {label: "This is not a vulnerability report (those go to SECURITY.md)", required: true}
+  - type: input
+    id: requirement
+    attributes:
+      label: Affected requirement or control ID (if known)
+      description: "e.g. IDENT-004, D-46. Leave blank if unknown."
+  - type: textarea
+    id: expected
+    attributes: {label: Expected behaviour}
+    validations: {required: true}
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: "Exact commands, so the case can be added to the corpus."
+    validations: {required: true}

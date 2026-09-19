@@ -1,0 +1,133 @@
+# ISEDRAF — release candidate: build, SBOM, attest, prove the attestation binds
+# SPDX-License-Identifier: MPL-2.0
+#
+# This workflow BUILDS and ATTESTS. It deliberately does NOT create a GitHub
+# Release, upload release assets, or publish anything outward-facing. Publication
+# is the owner's act, not a side effect of a green pipeline.
+#
+# Order matters and is not arbitrary:
+#   build -> payload gate -> SBOM -> attest -> VERIFY -> FALSIFY
+# The payload gate runs before anything is attested, because attesting a wrong
+# package only proves who built the wrong package. The DEB once staged to the
+# wrong prefix and built cleanly; provenance would have been perfectly truthful
+# about an artifact that did nothing.
+#
+# The last step is the one that matters: after attesting, a copy with one flipped
+# byte MUST be refused. An attestation only ever run against a good artifact has
+# demonstrated nothing.
+#
+# Conditional on public visibility: artifact attestations are not available for a
+# private repository on this plan - verified, not assumed. Until the public
+# repository exists, this workflow has NEVER RUN, and no provenance or SBOM claim
+# may be displayed anywhere. See docs/development/GOVERNANCE_GAPS.md.
+name: Release candidate
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions: {}
+
+concurrency:
+  group: release-candidate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build, attest and falsify
+    if: github.event.repository.visibility == 'public'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write        # keyless signing identity for the attestation
+      attestations: write    # write the attestation to the repository
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # The same gates a developer runs. CI never re-implements a gate in YAML.
+      - name: make check
+        run: make check
+
+      - name: Build packages
+        run: bash packaging/build.sh
+
+      # Before any attestation: is what we built actually correct INSIDE?
+      - name: Package payload gate
+        run: make check-package-payload
+
+      # SHA256SUMS.build and the per-artifact SBOMs are produced by packaging/build.sh
+      # itself, so CI consumes exactly what a local build produces. Recomputing them
+      # here would be a second implementation that is free to drift from the first.
+      - name: Show the build ground truth
+        run: |
+          cat dist/SHA256SUMS.build
+          ls -1 dist/sbom/
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/packages/*.deb
+            dist/packages/*.rpm
+            dist/packages/*.tar.gz
+
+      - name: Attest SBOMs
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-path: dist/packages/*.tar.gz
+          sbom-path: dist/sbom/isedraf-*.tar.gz.spdx.json
+
+      # GOV-002: the attestation must be shown able to REFUSE, not only to accept.
+      - name: Prove the attestation binds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for a in dist/packages/*.deb dist/packages/*.rpm dist/packages/*.tar.gz; do
+            [ -e "$a" ] || continue
+            echo "== $a"
+            bash scripts/ci/check_attestation_falsifiable.sh "$a" "${{ github.repository }}"
+          done
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-candidate
+          path: |
+            dist/packages/
+            dist/sbom/
+          retention-days: 14
+
+  # A skipped job reports green. That is the exact failure mode this project keeps
+  # finding: a control that never fires looks identical to a control that passed.
+  # This job ALWAYS runs. If the repository is public - so the analysis was due -
+  # and the analysis did not actually run, it fails loudly instead of skipping quietly.
+  guard:
+    name: analysis was due and ran
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    needs: [build]
+    if: always()
+    permissions: {}
+    steps:
+      - name: Attribute the outcome
+        run: |
+          visibility='${{ github.event.repository.visibility }}'
+          result='${{ needs.build.result }}'
+          echo "repository visibility : ${visibility:-<unset>}"
+          echo "build job result      : $result"
+          if [ "$visibility" = public ] && [ "$result" = skipped ]; then
+            echo "FAIL  the repository is public, so this analysis was due, and it did not run." >&2
+            exit 1
+          fi
+          if [ "$result" = failure ] || [ "$result" = cancelled ]; then
+            echo "FAIL  the analysis ran and did not pass." >&2
+            exit 1
+          fi
+          if [ "$result" = skipped ]; then
+            echo "SKIPPED  not a pass: this analysis requires a public repository and has"
+            echo "         NEVER RUN. Nothing may be displayed for it. See KGG-011."
+          fi

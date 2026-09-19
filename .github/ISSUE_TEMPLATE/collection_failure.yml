@@ -1,0 +1,66 @@
+name: Collection failure
+description: A collector returned ERROR, or NOT_TESTED where collection should have been possible.
+labels: ["collection-failure", "needs-evidence"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        `NOT_TESTED` is often correct — it is how ISEDRAF reports what it could not observe. Use this
+        form when collection *should* have succeeded. **Redact first.**
+  - type: input
+    id: version
+    attributes: {label: ISEDRAF version}
+    validations: {required: true}
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options: ["Debian 12", "Ubuntu 24.04", "Rocky Linux 9", "AlmaLinux 9", "Other (unsupported)"]
+    validations: {required: true}
+  - type: dropdown
+    id: privilege
+    attributes: {label: Privilege level, options: ["unprivileged", "root / sudo"]}
+    validations: {required: true}
+  - type: input
+    id: collector
+    attributes: {label: Collector or domain, description: "e.g. identity.sources, ssh, mounts, recording"}
+    validations: {required: true}
+  - type: textarea
+    id: status
+    attributes: {label: Reported collection status and reason}
+    validations: {required: true}
+  - type: dropdown
+    id: mac
+    attributes:
+      label: Mandatory access control state
+      options: ["SELinux enforcing", "SELinux permissive", "SELinux disabled", "AppArmor", "None", "Unsure"]
+  - type: textarea
+    id: mac_denial
+    attributes:
+      label: Possible MAC denial
+      description: "If SELinux is enforcing, the output of `ausearch -m AVC -ts recent` (redacted)."
+  - type: input
+    id: requirement
+    attributes:
+      label: Affected requirement or control ID (if known)
+      description: "e.g. IDENT-004, D-46. Leave blank if unknown."
+  - type: textarea
+    id: expected
+    attributes: {label: Expected behaviour}
+    validations: {required: true}
+  - type: textarea
+    id: observed
+    attributes: {label: Observed behaviour}
+    validations: {required: true}
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: "Exact commands, so the case can be added to the corpus."
+    validations: {required: true}
+  - type: textarea
+    id: sanitized
+    attributes:
+      label: Sanitized evidence
+      description: "Redacted output (`--redact`). Never paste an unredacted identity or evidence bundle."
+    validations: {required: true}

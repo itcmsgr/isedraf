@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Bridge (codename)
+#
+# Copyright © 2026 Antonios Voulvoulis / ITCMS
+# SPDX-License-Identifier: MPL-2.0
+#
+# This file is part of ISEDRAF.
+# Install: cp git-hooks/* .git/hooks/ && chmod 0755 .git/hooks/*
+set -u
+root="$(git rev-parse --show-toplevel)" || exit 1
+cd "$root" || exit 1
+# D-107 replaced the single global FROZEN_MANIFEST.sha256 with per-set freeze manifests,
+# and this hook was not updated with it: it referenced two files that no longer exist, so
+# it could not succeed if it were installed. Found while committing the Z-10/Z-12 lane and
+# recorded as Z-22 - a hook nobody runs cannot be observed failing (GOV-002). The freeze
+# check now goes through the one mechanism that implements D-68 today.
+bash scripts/ci/check_freeze.sh \
+  || { echo "pre-commit: a frozen set changed without an explicit re-freeze (D-68, D-107)" >&2; exit 1; }
+for h in pre-commit pre-push commit-msg; do
+  cmp -s "git-hooks/$h" ".git/hooks/$h" \
+    || { echo "pre-commit: installed hook $h differs from git-hooks/$h (D-83)" >&2; exit 1; }
+done
+make check || { echo "pre-commit: make check failed" >&2; exit 1; }

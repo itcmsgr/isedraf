@@ -1,0 +1,83 @@
+#!/bin/sh
+# =============================================================================
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Bridge (codename)
+# =============================================================================
+# SPDX-License-Identifier: MPL-2.0
+# SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
+#
+# Purpose: Find a suitable interpreter the host ALREADY has, then hand over to it.
+# Implements: EXEC-016, D-12
+#
+# This is a shell script, not `#!/usr/bin/env python3`, for one measured reason: a stock
+# EL8 image ships NO python3 on PATH at all, yet always has a working vendor interpreter
+# at /usr/libexec/platform-python, because dnf itself is written in Python. A shebang
+# would fail there on a host that can run ISEDRAF perfectly.
+#
+# EXEC-016: never install, bundle, pin or downgrade an interpreter. Prefer the newest
+# suitable one the host already has, and if there is none, say so plainly.
+#
+# meta:type="cli"
+# meta:owner="Antonios Voulvoulis / ITCMS"
+# meta:stability="EXPERIMENTAL"
+# meta:privilege="unprivileged"
+# meta:mutates="state-root only"
+# meta:binaries="sh,python3"
+# =============================================================================
+set -u
+
+# Newest first: the vendor interpreter with the best lifecycle and security support wins,
+# and the 3.6 floor is a compatibility level rather than a version to prefer.
+CANDIDATES="python3.14 python3.13 python3.12 python3.11 python3.10 python3.9 python3.8
+            python3.7 python3 /usr/libexec/platform-python python3.6"
+
+suitable() {
+    "$1" -c 'import sys; sys.exit(0 if sys.version_info[:2] >= (3, 6) else 1)' \
+        >/dev/null 2>&1
+}
+
+PY=""
+if [ -n "${ISEDRAF_PYTHON:-}" ]; then
+    if suitable "$ISEDRAF_PYTHON"; then
+        PY="$ISEDRAF_PYTHON"
+    else
+        echo "isedraf: ISEDRAF_PYTHON=$ISEDRAF_PYTHON is not a usable Python 3.6+" >&2
+        exit 64
+    fi
+else
+    for c in $CANDIDATES; do
+        case "$c" in
+            /*) [ -x "$c" ] || continue; b="$c" ;;
+            *)  b="$(command -v "$c" 2>/dev/null)" || continue ;;
+        esac
+        [ -n "$b" ] || continue
+        if suitable "$b"; then PY="$b"; break; fi
+    done
+fi
+
+if [ -z "$PY" ]; then
+    echo "isedraf: no supported Python runtime found." >&2
+    echo "  ISEDRAF needs Python 3.6 or later and uses the interpreter this host already" >&2
+    echo "  has. It does not install, bundle or download one." >&2
+    echo "  Install your distribution's python3 package, or set ISEDRAF_PYTHON to the" >&2
+    echo "  absolute path of a suitable interpreter." >&2
+    exit 64
+fi
+
+# Resolve the package next to this launcher: /usr/bin/isedraf -> /usr/lib/isedraf, and a
+# repository checkout -> <repo>/lib/isedraf. Symlinks are followed one level so that a
+# launcher linked into ~/bin still finds its package.
+SELF="$0"
+[ -L "$SELF" ] && SELF="$(readlink "$SELF")"
+case "$SELF" in /*) ;; *) SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$SELF")" ;; esac
+BINDIR="$(cd "$(dirname "$SELF")" && pwd)"
+PREFIX="$(dirname "$BINDIR")"
+
+for lib in "$PREFIX/lib" "$PREFIX/lib/isedraf/.."; do
+    if [ -d "$lib/isedraf" ]; then
+        PYTHONPATH="$lib${PYTHONPATH:+:$PYTHONPATH}"
+        export PYTHONPATH
+        break
+    fi
+done
+
+exec "$PY" -c 'import sys; from isedraf.cli import main; sys.exit(main())' "$@"

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability — do not open an issue
+    url: https://github.com/itcmsgr/isedraf/blob/main/SECURITY.md
+    about: "Report privately to contact@itcms.gr. A false PASS, unsafe privileged execution, evidence corruption or incorrect delta logic is security-sensitive."
+  - name: Support, supported platforms and how to redact
+    url: https://github.com/itcmsgr/isedraf/blob/main/SUPPORT.md
+    about: "What is safe to share, how to use --redact, and how collection failure differs from product failure."
+  - name: Is it in scope? Check the host evidence boundary
+    url: https://github.com/itcmsgr/isedraf/blob/main/docs/roadmap/ROADMAP.md
+    about: "Firewalls, AV/EDR, IDS/IPS, WAF, SIEM, cloud controls, CVE correlation and whole-filesystem FIM are deliberately out of scope."

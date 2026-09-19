@@ -1,0 +1,26 @@
+version = 1
+SPDX-PackageName = "ISEDRAF"
+SPDX-PackageSupplier = "Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
+SPDX-PackageDownloadLocation = "https://github.com/itcmsgr/isedraf"
+
+# Root governance and metadata files carry no inline SPDX header:
+# NON_HEADER_FORMAT or prose-first documents (docs/development/HEADER_POLICY.md §7).
+[[annotations]]
+path = ["README.md", "NOTICE", "COPYRIGHT", "VERSION", "CHANGELOG.md", ".gitignore", "REUSE.toml"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
+SPDX-License-Identifier = "MPL-2.0"
+
+# JSON and YAML: no comment syntax / strict schema. A synthetic _license key is a gate failure.
+[[annotations]]
+path = [".github/**", "schemas/**", "rules/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
+SPDX-License-Identifier = "MPL-2.0"
+
+# THIRD_PARTY: reproduced verbatim, never re-stamped.
+[[annotations]]
+path = ["LICENSE"]
+precedence = "override"
+SPDX-FileCopyrightText = "Mozilla Foundation"
+SPDX-License-Identifier = "MPL-2.0"
