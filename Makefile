@@ -6,9 +6,9 @@
 # CI invokes these same targets rather than re-implementing them in YAML, which is
 # what prevents a gate silently degrading into a warning. There is no warning tier.
 
-.PHONY: check check-deb-ordering check-reproducible check-sbom check-tests check-python-floor check-packaging check-privacy check-docs-truth check-current-state check-headers check-docs check-scope check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-gate-coverage check-falsifiable help
+.PHONY: check check-licensing check-public-claims check-deb-ordering check-reproducible check-sbom check-tests check-python-floor check-packaging check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-headers check-docs check-scope check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-gate-coverage check-falsifiable help
 
-check: check-scope check-headers check-python-floor check-packaging check-privacy check-docs-truth check-current-state check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-tests check-docs
+check: check-scope check-headers check-python-floor check-packaging check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-tests check-docs
 	@echo "make check: all gates passed"
 
 ## check-scope   D-96: no product implementation before architecture freeze
@@ -84,6 +84,14 @@ check-python-floor:
 ## check-packaging  D-86/EXEC-016: packaging metadata, without needing every builder
 check-packaging:
 	@python3 scripts/ci/check_packaging.py
+
+## check-licensing  D-84/D-90: MPL covers what we own; unknown licensing is not distributable
+check-licensing:
+	@python3 scripts/ci/check_licensing.py
+
+## check-public-claims  C-01/D-88/D-90: a badge is a claim, and a claim must be backed
+check-public-claims:
+	@python3 scripts/ci/check_public_claims.py
 
 ## check-privacy D-90: no real operator identifier reaches the publication surface
 check-privacy:

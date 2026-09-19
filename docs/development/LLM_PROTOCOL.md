@@ -21,7 +21,7 @@ decisions, reviews output, and is responsible for the project.
 ## 1. Authority order
 
 1. Frozen architecture documents — `docs/architecture/` (hash-locked by `FROZEN_MANIFEST.sha256`)
-2. `docs/architecture/DECISIONS_REGISTER.md` — the only repository copy
+2. `docs/architecture/INTERNAL_RECORDS.md` — the only repository copy
 3. `CLAUDE.md` (or the tool-specific entry point) and this protocol
 4. Canonical documentation under `/docs`
 5. `README.md`
@@ -37,7 +37,7 @@ Before proposing or making any change, read in this order:
 
 1. `CLAUDE.md` — or the tool-specific entry point
 2. **this file**
-3. `docs/architecture/DECISIONS_REGISTER.md`
+3. `docs/architecture/INTERNAL_RECORDS.md`
 4. `docs/architecture/FROZEN_MANIFEST.sha256` *(PLANNED — not yet created)*
 5. the relevant frozen architecture documents
 6. `docs/CURRENT_STATE.md` — what exists *right now*

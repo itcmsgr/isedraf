@@ -57,15 +57,32 @@ def contradictions():
                 and (ROOT / evidence).exists():
             problems.append("%s is %s yet %s exists — one of the two is wrong"
                             % (name, cap["status"], evidence))
+        # `design` is deliberately NOT `evidence`. A document describing what is intended
+        # is not evidence that it was built - and a PLANNED capability whose design is
+        # written down is the honest case, not a contradiction. Recording them under the
+        # same key made writing the design read as having implemented it.
+        if cap.get("design") and not (ROOT / cap["design"]).exists():
+            problems.append("%s names a design document that does not exist: %s"
+                            % (name, cap["design"]))
+        if cap.get("design") and cap["status"] in ("IMPLEMENTED", "CERTIFIED"):
+            problems.append("%s is %s but carries a `design` path; an implemented "
+                            "capability is recorded with `evidence`"
+                            % (name, cap["status"]))
     floor = REGISTRY["runtime"]["production_python_floor"]
     gate = (ROOT / "scripts" / "ci" / "check_python_floor.py").read_text()
     m = re.search(r"FLOOR = \((\d+), (\d+)\)", gate)
     if m and "%s.%s" % m.groups() != floor:
         problems.append("registry floor %s disagrees with the enforced floor %s.%s"
                         % (floor, m.group(1), m.group(2)))
-    freeze = ROOT / "docs" / "architecture" / "freeze" / "W1A_CORE.sha256"
+    # Either manifest satisfies this: the full set exists only in the engineering
+    # repository, the public subset in both, and their digests are the same bytes.
+    # Requiring the full one made the page ungeneratable in a public checkout, which is
+    # a statement about which repository you are in, not about whether W1-A is certified.
+    freeze_dir = ROOT / "docs" / "architecture" / "freeze"
+    freeze = [m for m in ("W1A_CORE.sha256", "W1A_CORE_PUBLIC.sha256")
+              if (freeze_dir / m).exists()]
     certified = REGISTRY["capabilities"]["w1a_evidence_contract"]["status"] == "CERTIFIED"
-    if certified and not freeze.exists():
+    if certified and not freeze:
         problems.append("W1-A is recorded CERTIFIED but no freeze manifest exists")
     return problems
 
@@ -83,7 +100,13 @@ def counted():
         "gates": len(gates["gates"]),
         "injections": count("grep -c '^inject ' scripts/ci/falsifiable.sh"),
         "vector_cases": count("ls -d test-vectors/w1a/v1/*/ | wc -l"),
-        "frozen_artifacts": count("grep -c . docs/architecture/freeze/W1A_CORE.sha256"),
+        # The PUBLISHED freeze set, deliberately - this page describes the published
+        # project, and counting the engineering set would make the same page generate
+        # two different numbers in two checkouts of the same commit. The full set is
+        # one artifact larger; the extra one is internal and is listed in
+        # docs/architecture/INTERNAL_RECORDS.md.
+        "frozen_artifacts": count(
+            "grep -c . docs/architecture/freeze/W1A_CORE_PUBLIC.sha256"),
         "test_files": count("ls tests/test_*.py | wc -l"),
     }
 
@@ -141,8 +164,10 @@ def render():
         out += ["## %s" % heading, "", note, ""]
         for name in names:
             cap = r["capabilities"][name]
-            out.append("- `%s`%s" % (name,
-                                     " — %s" % cap["note"] if cap.get("note") else ""))
+            design = " (design: `%s`)" % cap["design"] if cap.get("design") else ""
+            out.append("- `%s`%s%s" % (name,
+                                       " — %s" % cap["note"] if cap.get("note") else "",
+                                       design))
         out += [""]
 
     p = r["platforms"]

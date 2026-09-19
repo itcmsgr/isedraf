@@ -104,11 +104,21 @@ for entry in spec["ci_entrypoints"]:
         fail.append(f"CI does not invoke {entry!r} [U-26]")
 
 # Declared eligible classes must not be empty when files of that class exist.
+#
+# A path that is DELIBERATELY not published is absent by design, not a stale declaration.
+# CLAUDE.md governs the engineering repository and is in scope for the path and reference
+# gates there; in a public checkout it does not exist. Calling that stale would push
+# someone to delete a correct declaration in order to make a public build go green.
+# Anything not listed in unpublished_paths that matches nothing is still stale.
+UNPUBLISHED = set(spec.get("unpublished_paths", {}).get("paths", []))
 for name, g in spec["gates"].items():
     reason = g.get("eligible_may_be_empty_reason")
     for pat in g.get("eligible", []):
         if not any(ROOT.glob(pat)):
-            if reason:
+            if pat in UNPUBLISHED:
+                print(f"  NOTE  {name}: scope {pat!r} is not present in this checkout - "
+                      f"it is not published, and is in scope where it exists.")
+            elif reason:
                 print(f"  NOTE  {name}: scope {pat!r} is empty - {reason.split('.')[0]}.")
             else:
                 fail.append(f"{name}: declared scope {pat!r} matches no files - stale declaration")

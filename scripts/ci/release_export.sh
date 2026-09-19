@@ -32,7 +32,37 @@ FAIL=0
 bad() { echo "  FAIL  $*" >&2; FAIL=1; }
 
 # Paths that exist in the engineering tree and must never reach the public one.
-EXCLUDE_PREFIXES="planning/"
+# Paths that exist in the engineering repository and must NEVER reach the public one.
+#
+# CLAUDE.md is the owner's decision, reversed on 2026-09-19 after it shipped once: it is
+# the instruction file that governs how this repository is worked on, not documentation a
+# user or contributor of the published project needs. It stays in the engineering
+# repository, where it is authority, and out of the public one, where it is noise at best
+# and an invitation to argue with the process at worst.
+# Owner decision 2026-09-19. The published repository carries the SPECIFICATION - what the
+# tool guarantees, what its evidence means, how state and delta are defined - and not the
+# internal change control that produced it. A reader of a public project is served by
+# "ISEDRAF assesses only state observable on the local operating system"; they are not
+# served by 124 numbered internal decisions, a register of unresolved questions with
+# deadlines, or the lane scoping that drove implementation order.
+#
+# The freeze set is split the same way: docs/architecture/freeze/W1A_CORE_PUBLIC.sha256
+# holds the digests of the published subset, COPIED from the full set rather than
+# recomputed, so both repositories verify the same bytes and neither gate is weakened.
+#
+# V0_1_IMPLEMENTATION_SCOPE.md was in this list and was taken out on evidence. It looked
+# like lane planning; it is the document that DEFINES 54 requirement IDs, and 52 published
+# files cite them - including lib/isedraf/identity.py, cli.py, inventory/model.py and the
+# tests. Every `Implements: SCOPE-045` in the shipped source would have pointed at a
+# document the reader cannot open. A specification that the published code cites is not
+# internal change control.
+EXCLUDE_PREFIXES="planning/ CLAUDE.md
+docs/architecture/DECISIONS_REGISTER.md
+docs/architecture/OPEN_DECISIONS.md
+docs/architecture/AMENDMENTS.md
+docs/architecture/W1A_CORE_FREEZE_SCOPE.md
+docs/architecture/MASTER_INDEX.md
+docs/architecture/freeze/W1A_CORE.sha256"
 
 rm -rf "$OUT"; mkdir -p "$OUT"
 
@@ -52,7 +82,9 @@ done
 
 echo "  exported $(find "$OUT" -type f | wc -l) files to $OUT"
 
-for forbidden in planning .git GITHUB_CONNECT.md; do
+for forbidden in planning .git GITHUB_CONNECT.md CLAUDE.md \
+                 DECISIONS_REGISTER.md OPEN_DECISIONS.md AMENDMENTS.md \
+                 W1A_CORE.sha256; do
     found="$(find "$OUT" -name "$forbidden" -print -quit 2>/dev/null)"
     [ -n "$found" ] && bad "forbidden path in the export: ${found#$OUT/}"
 done

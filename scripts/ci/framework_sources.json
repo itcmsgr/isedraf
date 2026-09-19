@@ -1,0 +1,23 @@
+{
+  "$comment": "AUTHORITATIVE framework-source registry. Consumed by scripts/ci/check_licensing.py. Deny by default: content whose licensing state is not recorded here as BUNDLED_OPEN does not enter the public repository, the export, the packages or the SBOM. An empty `sources` list is the correct state today and is NOT a pass by omission - the gate separately proves that no framework content exists anywhere in the tree.",
+  "policy": {
+    "default_disposition": "UNDER_REVIEW",
+    "public_export_allows": ["BUNDLED_OPEN"],
+    "dispositions": {
+      "BUNDLED_OPEN": "Redistribution and commercial use verified in writing. May ship in the public repository and packages.",
+      "REFERENCE_ONLY": "May be named and cited. Content is NOT reproduced or bundled.",
+      "PRIVATE_RESEARCH_ONLY": "Owner may study it privately. Never enters the public export, packages, SBOM, fixtures or docs.",
+      "LICENSE_REQUIRED": "Distribution needs a provider agreement that does not yet exist.",
+      "PROHIBITED": "Determined not redistributable by ISEDRAF under any current model.",
+      "UNDER_REVIEW": "Licensing not yet established. Treated as PROHIBITED until it is."
+    },
+    "record_fields": [
+      "provider", "framework", "framework_version", "official_source", "license",
+      "commercial_redistribution_allowed", "derivatives_allowed",
+      "machine_readable_redistribution_allowed", "attribution_required",
+      "trademark_restrictions", "review_date", "review_evidence", "disposition"
+    ]
+  },
+  "sources": [],
+  "$sources_comment": "No third-party framework source has been reviewed, registered or bundled. This is the accurate state of the project on 2026-09-19, not a placeholder awaiting content."
+}

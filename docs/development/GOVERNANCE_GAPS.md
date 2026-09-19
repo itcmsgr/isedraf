@@ -127,7 +127,7 @@ Falsifying that history would be worse than an inconsistent string.
 | `planning/blueprint/00_nftban/**` | `HISTORICAL_RECORD` | read-only NFTBan inventory, quotes the old name |
 | `planning/blueprint/20_review/**` | `HISTORICAL_RECORD` | review findings quote the text they reviewed |
 | `planning/bootstrap/**` | `HISTORICAL_RECORD` | superseded bootstrap staging |
-| `docs/architecture/AMENDMENTS.md` | `HISTORICAL_RECORD` | amendment history is provenance (D-106) |
+| `docs/architecture/INTERNAL_RECORDS.md` | `HISTORICAL_RECORD` | amendment history is provenance (D-106) |
 
 Active instructions never treat the old name as current product identity, and `check-refs`/`check-paths`
 scan only the active tree. The earlier name was an internal codename; ISEDRAF is the project name (D-108).
@@ -394,3 +394,68 @@ not attempted. No artifact may be described as "reproducible" without saying whi
 **Note on the `du` defect:** neither the privacy gate nor the payload gate could have caught it.
 Both read the repository, the publication surface and the payload file list — not a metadata field
 whose value is a property of the machine that computed it.
+
+## KGG-017 — The public/private documentation split, and what measurement corrected
+
+**State:** `IMPLEMENTED`
+
+Owner decision, 2026-09-19: the public repository publishes the **specification**; the internal
+**change control** stays in the engineering repository.
+
+| Stays public | Moved private |
+|---|---|
+| `ISEDRAF_HLD.md`, `EVIDENCE_AND_TRUST_MODEL.md`, `SNAPSHOT_BASELINE_DELTA_MODEL.md`, `NORMATIVE_SOURCES.md`, `V0_1_IMPLEMENTATION_SCOPE.md` | `DECISIONS_REGISTER.md`, `OPEN_DECISIONS.md`, `AMENDMENTS.md`, `W1A_CORE_FREEZE_SCOPE.md`, `MASTER_INDEX.md`, `CLAUDE.md` |
+
+**One document changed sides on evidence, not on opinion.** `V0_1_IMPLEMENTATION_SCOPE.md` was
+classified as lane planning and excluded. Measuring the references showed it **defines 54 requirement
+IDs that 52 published files cite** — `lib/isedraf/identity.py`, `cli.py`, `inventory/model.py` and the
+production tests among them. Every `Implements: SCOPE-045` in the shipped source would have pointed
+at a document the reader cannot open. A specification the published code cites is not internal
+change control, and it was published again.
+
+## Three gates had to learn the difference between absent and wrong
+
+None of them was weakened; each was taught to distinguish *"this does not exist"* from *"this is
+missing"*, and to say which.
+
+**`check-index`** skips where `MASTER_INDEX.md` is not published, and states that a skip is not a
+pass. Freshness is enforced where the document can be edited.
+
+**`check-refs`** first tried prefix families — resolve `IDENT-*` if any `IDENT-nnn` is defined here.
+That was wrong: `IDENT-001` is defined in a published document and `IDENT-003` was not, so the family
+looked resolvable while half of it was not. The honest test is whether **every defining document is
+present**. It now names the absent ones, counts what it could not resolve, and reports the mode. In
+the public checkout all 244 IDs resolve; the mode still says `reduced`, because the decisions
+register is absent and one defining document is not published.
+
+**`check-gate-coverage`** called `CLAUDE.md` a *stale declaration* because it matches no file
+publicly. It is not stale — the path is real and in scope where the gate can act on it.
+`unpublished_paths` now declares that class. Anything **not** in that list which matches nothing is
+still stale, so the check did not lose its teeth.
+
+## An injection whose subject is not published cannot fire there
+
+Seven injections attack documents the public repository deliberately does not carry — the decisions
+register, the master index, `CLAUDE.md`. In that checkout they mutated something the gate genuinely
+cannot see and reported `MUTATION_EXECUTED_BUT_NOT_DETECTED`: technically accurate, and the wrong
+verdict. A control that has no subject has not failed.
+
+`next_requires <path>` now precedes those injections. When the path is absent the injection is
+**skipped and said to be skipped**, counted separately from both firing and failing:
+
+```text
+engineering repository   71 injections detected, 0 not counted as firing
+public repository        64 injections detected, 0 not counted as firing,
+                         7 skipped (subject not published in this checkout)
+```
+
+It cannot hide a real failure: in the engineering repository every subject exists, so nothing skips,
+and each skip prints the path that caused it.
+
+**Why it is a declaration before the call, not a sixth argument.** A sixth positional argument was
+the obvious design and broke twice — several injections carry a heredoc or a trailing comment, so
+"after the last argument" is not a place a tool can reliably append. The first attempt landed the
+argument *inside a heredoc*, silently disabling the mutation it was meant to guard.
+
+**The pattern worth keeping:** a gate that cannot run must say so. A gate that silently passes on an
+absent subject teaches the reader that the subject was checked.

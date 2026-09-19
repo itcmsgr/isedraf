@@ -19,9 +19,9 @@ instead of reverse-engineering the project from whatever source file it happens 
 | `CLAUDE.md` | Claude Code entry point, hard stops | **owner only** |
 | `docs/development/LLM_PROTOCOL.md` | tool-neutral AI contract | **owner only** |
 | `docs/architecture/` | frozen architecture + requirement IDs | **owner only, via AMENDMENTS.md** |
-| `docs/architecture/DECISIONS_REGISTER.md` | D-/OD- decisions; the **only** repository copy | **owner only** |
+| `docs/architecture/INTERNAL_RECORDS.md` | D-/OD- decisions; the **only** repository copy | **owner only** |
 | `docs/architecture/FROZEN_MANIFEST.sha256` *(PLANNED — not yet created)* | hash lock over the above | regenerated per amendment |
-| `docs/architecture/AMENDMENTS.md` | the **only** way frozen material changes | **owner only** |
+| `docs/architecture/INTERNAL_RECORDS.md` | the **only** way frozen material changes | **owner only** |
 
 ## Governance — integrity-protected
 

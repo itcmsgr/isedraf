@@ -5,7 +5,8 @@
   "capabilities": {
     "w1a_evidence_contract": {
       "status": "CERTIFIED",
-      "evidence": "docs/architecture/freeze/W1A_CORE.sha256"
+      "evidence": "docs/architecture/freeze/W1A_CORE_PUBLIC.sha256",
+      "note": "The published freeze manifest is the public subset; its digests are copied from the full set in the engineering repository, never recomputed, so both verify the same bytes"
     },
     "identity": {
       "status": "IMPLEMENTED",
@@ -148,6 +149,31 @@
       "evidence": "scripts/ci/check_reproducible.sh",
       "command": "make check-reproducible",
       "note": "the source tarball and the .deb rebuild BIT-IDENTICALLY on a different distribution (Fedora 44/btrfs/rpm 6.0.2 vs ubuntu-latest/ext4/rpm 4.18.2) and the locally rebuilt files verify against the published attestation; the .rpm differs because rpm 6 writes a zstd payload and rpm 4 writes gzip - a property of rpm, recorded in KGG-016 rather than papered over"
+    },
+    "framework_neutral_core": {
+      "status": "IMPLEMENTED",
+      "evidence": "docs/licensing/FRAMEWORK_MAPPING_POLICY.md",
+      "note": "collectors and criteria are authored by ISEDRAF and do not derive from any framework; there is no cis_collector, iso_collector or scf_collector, and removing every framework would leave the collectors unchanged"
+    },
+    "framework_source_registry": {
+      "status": "IMPLEMENTED",
+      "evidence": "scripts/ci/framework_sources.json",
+      "command": "make check-licensing",
+      "note": "deny by default: 0 sources registered, and the gate separately proves no framework content exists anywhere in the tree, so 'nothing registered' and 'nothing present' must agree"
+    },
+    "framework_mapping_packs": {
+      "status": "PLANNED",
+      "design": "docs/licensing/FRAMEWORK_PACK_ARCHITECTURE.md",
+      "note": "design only - no pack loader, no manifest reader, no entitlement mechanism and no signing exists; no third-party mapping is licensed, reviewed or bundled"
+    },
+    "framework_entitlement": {
+      "status": "PLANNED",
+      "design": "docs/licensing/FRAMEWORK_PACK_ARCHITECTURE.md",
+      "note": "intended boundary recorded (signed pack plus signed local entitlement file, verified offline); no cryptography and no licensing server is implemented or designed, because a protocol written before its legal constraints are known is one that will be rewritten"
+    },
+    "framework_specific_reports": {
+      "status": "NOT_TESTED",
+      "note": "not available: framework-specific output does not exist, and core reports are complete without it"
     }
   },
   "runtime": {

@@ -24,3 +24,51 @@ path = ["LICENSE"]
 precedence = "override"
 SPDX-FileCopyrightText = "Mozilla Foundation"
 SPDX-License-Identifier = "MPL-2.0"
+
+# ---------------------------------------------------------------------------------------
+# Data files with no comment syntax. 182 files carried no licence statement at all -
+# neither an inline header nor an annotation here - which is not a defensible state for a
+# published repository, whatever the file format. Each class is named explicitly rather
+# than covered by one wildcard, so that a NEW class of unlicensed file is visible as a gap
+# instead of silently absorbed.
+# ---------------------------------------------------------------------------------------
+
+# Golden test vectors: raw bytes, digests and canonical serializations. A comment inside
+# any of these would change the bytes being tested, which is the whole point of them.
+[[annotations]]
+path = ["test-vectors/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
+SPDX-License-Identifier = "MPL-2.0"
+
+# Measured compatibility records and rendered report samples: generated evidence, strict
+# JSON, no comment syntax.
+[[annotations]]
+path = ["docs/compatibility/records/**", "docs/reference/samples/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
+SPDX-License-Identifier = "MPL-2.0"
+
+# Freeze manifests and the marker that keeps the directory in git: digest lists, where a
+# stray line would break `sha256sum -c`.
+[[annotations]]
+path = ["docs/architecture/freeze/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
+SPDX-License-Identifier = "MPL-2.0"
+
+# Gate registries and allowlists: strict JSON consumed by the gates themselves. A synthetic
+# _license key would be a schema violation and, in two of these, a gate failure.
+[[annotations]]
+path = ["scripts/ci/*.json", "scripts/ci/*.txt", "scripts/ci/*.allow"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
+SPDX-License-Identifier = "MPL-2.0"
+
+# Package metadata templates: consumed verbatim by dpkg/rpm, which reject unknown fields.
+# The built packages state MPL-2.0 in their own metadata and ship the licence text.
+[[annotations]]
+path = ["packaging/deb/control.in", "packaging/rpm/isedraf.spec.in"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
+SPDX-License-Identifier = "MPL-2.0"

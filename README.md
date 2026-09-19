@@ -5,15 +5,17 @@
 > Measure once. Map everywhere. Fix only the delta.
 
 [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.0.0--pre-lightgrey)](VERSION)
-[![Status](https://img.shields.io/badge/status-prototype-orange)](docs/CURRENT_STATE.md)
-[![Platforms](https://img.shields.io/badge/platforms-Debian%2012%20%C2%B7%20Ubuntu%2024.04%20%C2%B7%20Rocky%2FAlma%209-informational)](docs/reference/SUPPORTED_PLATFORMS.md)
+[![Version](https://img.shields.io/badge/version-0.1.0--alpha1-lightgrey)](VERSION)
+[![Status](https://img.shields.io/badge/status-technical%20preview-orange)](docs/CURRENT_STATE.md)
+[![Platforms](https://img.shields.io/badge/platforms-11%20Linux%20distributions%20measured-informational)](docs/reference/PLATFORM_COMPATIBILITY.md)
 
 **CI / Correctness**
 
 [![Governance](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml/badge.svg)](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml)
 
-> **Status:** Private pre-release development. ISEDRAF is currently a codename and is not yet a public release.
+> **Status:** Public technical preview. ISEDRAF is a codename. The source is published and the
+> supply-chain controls run against it; **no release has been published**, so there is nothing to
+> download from a releases page yet. Build from source if you want to try it.
 
 > **Every mark above is backed by a control that runs, or by a file in this repository.** Decorative trust
 > badges are not used. Badges that cannot yet be earned are listed in
@@ -108,6 +110,26 @@ ISEDRAF is designed around:
 - declared / resolved / active state where applicable;
 - operator and auditor views derived from the same evidence.
 
+## Framework mappings
+
+**None exist, none are bundled, and none are licensed.** No third-party control text, identifier set
+or mapping dataset is present in this repository, in the packages or in the SBOM.
+
+The evidence model is designed to support optional, independently versioned framework mappings where
+licensing and scope permit. That is a statement about architecture, not about availability.
+
+ISEDRAF's collectors and criteria are framework-neutral: they describe the Linux host, they are
+authored by this project, and removing every framework would leave them exactly as useful. A mapping,
+when one exists, is a downstream overlay on evidence that was already collected — never a reason a
+collector was written.
+
+Licensing is decided before content arrives. `scripts/ci/framework_sources.json` is **deny by
+default**, `make check-licensing` enforces it, and five defect injections prove it can refuse. See
+[Framework mapping policy](docs/licensing/FRAMEWORK_MAPPING_POLICY.md).
+
+A mapping is not a certification, and host evidence is supporting technical evidence rather than
+organisational compliance.
+
 ## Scope
 
 ISEDRAF's scope is its own host-state, evidence, baseline and delta model. It does not implement
@@ -140,6 +162,7 @@ What is true today, and verifiable from this repository:
 | Packaging metadata is checked as text, on any machine, before a commit — a package that builds on the author's distribution is not a package | `make check-packaging` |
 | The source tarball and the `.deb` rebuild **bit-identically on a different distribution**, and the locally rebuilt files verify against the attestation GitHub produced | `make check-reproducible`, `make check-deb-ordering`, [`KGG-016`](docs/development/GOVERNANCE_GAPS.md) |
 | A machine-readable SBOM describes each artifact, generated from the **final package** and checked against it — for the RPM, against `rpm`'s own recorded per-file digests | `scripts/ci/generate_sbom.py`, `make check-sbom` |
+| Every tracked file carries a licence statement, and third-party framework content is deny-by-default: unknown licensing state means not distributable | `make check-licensing`, [`FRAMEWORK_SOURCE_REGISTRY`](docs/licensing/FRAMEWORK_SOURCE_REGISTRY.md) |
 | Controls that are intended but **not** in force are written down, not glossed over | [`docs/development/GOVERNANCE_GAPS.md`](docs/development/GOVERNANCE_GAPS.md) |
 
 ### Planned, not yet displayed

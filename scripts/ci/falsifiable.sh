@@ -83,6 +83,7 @@ inject "C-01 broken internal link" \
   'printf "\n[x](docs/NOPE.md)\n" >> docs/README.md' \
   'broken internal link'
 
+next_requires "docs/architecture/DECISIONS_REGISTER.md"
 inject "D-105 undefined DECISION cited" \
   'python3 scripts/ci/check_requirement_refs.py' \
   'printf "\nPer D-999 this holds.\n" >> docs/architecture/DECISIONS_REGISTER.md  # refs:test-fixture' \
@@ -92,6 +93,7 @@ inject "D-105 undefined DECISION cited" \
 # the repository (Prompt 04). Until then it is INERT in a CI checkout, and GOV-001 requires
 # that to be stated rather than silently assumed. Recorded as KGG-006.
 if ls docs/architecture/*.md >/dev/null 2>&1 && grep -qlE '^\*\*[A-Z]{2,6}-[0-9]{3}' docs/architecture/*.md 2>/dev/null; then
+    next_requires "docs/architecture/W1A_CORE_FREEZE_SCOPE.md"
     inject "D-105 undefined requirement ID cited" \
       'python3 scripts/ci/check_requirement_refs.py' \
       'printf "\nSee FAKE-999 for details.\n" >> docs/architecture/DECISIONS_REGISTER.md  # refs:test-fixture' \
@@ -100,6 +102,7 @@ else
     echo "  SKIP requirement-ID half of D-105: architecture not yet in the repository (KGG-006)"
 fi
 
+next_requires "docs/architecture/DECISIONS_REGISTER.md"
 inject "D-106 amendment cited as authority" \
   'python3 scripts/ci/check_requirement_refs.py' \
   'printf "\nPer A-042 this is authoritative.\n" >> docs/architecture/DECISIONS_REGISTER.md  # refs:test-fixture' \
@@ -110,11 +113,13 @@ inject "D-99 singular ledger.jsonl path reintroduced" \
   'printf "\nledger at /var/lib/isedraf/ledger.jsonl\n" >> CLAUDE.md' \
   "singular 'ledger.jsonl'"
 
+next_requires "docs/architecture/W1A_CORE_FREEZE_SCOPE.md"
 inject "D-105 dangling ID in a non-architecture authority tier" \
   'python3 scripts/ci/check_requirement_refs.py' \
   'printf "\nSee BOGUS-777 here.\n" >> docs/development/HEADER_POLICY.md  # refs:test-fixture' \
   'cites undefined requirement ID BOGUS-777'  # refs:test-fixture
 
+next_requires "docs/architecture/MASTER_INDEX.md"
 inject "D-89 stale MASTER_INDEX" \
   'python3 scripts/docs/master_index.py check' \
   'printf "\n**ZZZ-001 (test) SHALL** placeholder.\n" >> docs/architecture/ISEDRAF_HLD.md  # refs:test-fixture' \
@@ -154,6 +159,7 @@ PYX' \
 
 # D-90 owner decision 2026-09-19: CLAUDE.md is PUBLIC and ships in the repository and the
 # source tarball, but never in the runtime payload. Staging it into the package must fail.
+next_requires "CLAUDE.md"
 inject "D-90 contributor documentation staged into the runtime payload" \
   'bash packaging/build.sh 2>&1; bash scripts/ci/check_package_payload.sh' \
   'python3 - <<'"'"'PYX'"'"'
@@ -205,6 +211,62 @@ assert old in s, "mutation anchor miss"
 p.write_text(s.replace(old, "echo \"X-Build-Stamp: $(date +%s%N)\" >> \"$DEBROOT/DEBIAN/control.stamp\"\n" + old, 1))
 PYX' \
   'reproducible build gate FAILED|artifacts identical'
+
+# D-84/D-90. Third-party framework content is not relicensed by sitting in this
+# repository. The registry is deny-by-default, and "deny by default" is a claim that has
+# to be shown to deny something.
+inject "D-90 an unregistered framework pack enters the tree" \
+  'python3 scripts/ci/check_licensing.py' \
+  'mkdir -p frameworks/cis-controls-8 && echo "{}" > frameworks/cis-controls-8/pack.json && git add -f -A' \
+  'NOT registered|licensing gate FAILED'
+
+inject "D-90 a LICENSE_REQUIRED framework is bundled anyway" \
+  'python3 scripts/ci/check_licensing.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import json, pathlib
+p = pathlib.Path("scripts/ci/framework_sources.json"); d = json.loads(p.read_text())
+d["sources"].append({f: "x" for f in d["policy"]["record_fields"]})
+d["sources"][0]["framework"] = "acme-framework"
+d["sources"][0]["disposition"] = "LICENSE_REQUIRED"
+p.write_text(json.dumps(d, indent=2))
+pathlib.Path("frameworks/acme-framework").mkdir(parents=True)
+pathlib.Path("frameworks/acme-framework/pack.json").write_text("{}")
+PYX
+git add -f -A' \
+  'does not allow|licensing gate FAILED'
+
+inject "D-90 private licensing research is committed into the tree" \
+  'python3 scripts/ci/check_licensing.py' \
+  'mkdir -p docs/licensed-framework-research && echo x > docs/licensed-framework-research/notes.md && git add -f -A' \
+  'private licensing research|licensing gate FAILED'
+
+inject "D-90 a public document claims support for a restricted framework" \
+  'python3 scripts/ci/check_licensing.py' \
+  'printf "\nISEDRAF supports CIS Controls v8.\n" >> docs/roadmap/ROADMAP.md' \
+  'claims support for|licensing gate FAILED'
+
+inject "D-84 a tracked file carries no licence statement at all" \
+  'python3 scripts/ci/check_licensing.py' \
+  'printf "amount,currency\n1,EUR\n" > pricing.csv && git add -f -A' \
+  'no licence statement|licensing gate FAILED'
+
+# C-01/D-88. A badge is a claim. On the day this repository went public, all four of its
+# badges were wrong and its status line still said the project was private. Nothing
+# checked them, so they aged while everything around them was gated.
+inject "D-88 the README version badge disagrees with VERSION" \
+  'python3 scripts/ci/check_public_claims.py' \
+  'sed -i "s|badge/version-0.1.0--alpha1|badge/version-9.9.9|" README.md' \
+  'version badge says|public claims gate FAILED'
+
+inject "D-90 the README tells a public reader the project is private" \
+  'python3 scripts/ci/check_public_claims.py' \
+  'printf "\n> **Status:** Private pre-release development.\n" >> README.md' \
+  'says the project is private|public claims gate FAILED'
+
+inject "C-01 a public document links to a file that does not exist" \
+  'python3 scripts/ci/check_docs_truth.py' \
+  'printf "\n[platforms](docs/reference/SUPPORTED_PLATFORMS.md)\n" >> README.md' \
+  'DANGLING_LINK|documentation truth gate FAILED'
 
 # D-86/EXEC-016. Both of these got past a green local build and were caught only by a
 # runner: BuildRequires resolved on Fedora and failed on Ubuntu, and rpmbuild merely
@@ -438,6 +500,7 @@ inject "D-12 shell syntax error" \
   'printf "\nif then fi\n" >> scripts/ci/check_paths.sh' \
   'syntax error'
 
+next_requires "docs/architecture/MASTER_INDEX.md"
 inject "D-68 frozen artifact modified after manifest" \
   'bash scripts/ci/check_freeze.sh' \
   'mkdir -p docs/architecture/freeze && sha256sum docs/architecture/MASTER_INDEX.md > docs/architecture/freeze/TEST.sha256 && printf "\ndrift\n" >> docs/architecture/MASTER_INDEX.md' \

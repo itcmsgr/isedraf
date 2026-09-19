@@ -156,4 +156,4 @@ The absence of a locally detectable external agent is never reported as the abse
 
 **OD-01 — public project name.** Blocks any public release; an existing cybersecurity company uses
 "ISEDRAF". **OD-07** repository hosting and package signing-key custody · **OD-09** release signing ·
-**OD-11** documentation publishing. Full list in `../architecture/DECISIONS_REGISTER.md`.
+**OD-11** documentation publishing. Full list in `../architecture/INTERNAL_RECORDS.md`.
