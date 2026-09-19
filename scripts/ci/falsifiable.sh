@@ -182,20 +182,28 @@ p.write_text(head + "( cd \"$DEBROOT\" && find usr -type f -exec sha256sum {} + 
 PYX' \
   'not sorted|ordering gate FAILED'
 
-# D-86. Two builds of the same tree must produce the same bytes. A deb built without
-# the deterministic flag writes the clock and the builder's numeric uid into every
-# member header - both non-determinism and a disclosure leak, in every package built
-# before 2026-09-19.
+# D-86. Two builds of the same tree must produce the same bytes.
 #
-# The injection forces `U` rather than merely dropping `D`, because whether plain
-# `ar rc` is deterministic depends on how the local binutils was COMPILED: Ubuntu
-# enables deterministic archives by default and Fedora does not. Dropping `D` therefore
-# fires on one distribution and silently passes on the other - which is exactly why the
-# build writes `D` explicitly instead of trusting the default. The gate under test is
-# "does this detect a non-reproducible build", so the injection makes one for certain.
-inject "D-86 the deb archive records the clock and the builder's uid" \
+# The injection stamps a nanosecond clock reading into the package, rather than removing
+# the `ar` deterministic flag. Two earlier versions of this injection both passed
+# SILENTLY on the CI runner while firing on the workstation: dropping `D` does nothing
+# where binutils was COMPILED with deterministic archives on by default (Ubuntu), and
+# forcing `U` did not restore non-determinism there either. Whether `ar` records the
+# clock is a property of the local toolchain - which is exactly why the build writes `D`
+# explicitly and never relies on a default.
+#
+# The property under test is "does this gate detect a non-reproducible build", so the
+# experiment must MAKE one, on every platform, rather than hope the environment provides
+# it. A nanosecond timestamp differs between two builds anywhere.
+inject "D-86 a build stamps the clock into the package" \
   'bash scripts/ci/check_reproducible.sh' \
-  'sed -i "s|ar rcD |ar rcU |" packaging/build.sh' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("packaging/build.sh"); s = p.read_text()
+old = "INSTALLED_KB=$(find"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "echo \"X-Build-Stamp: $(date +%s%N)\" >> \"$DEBROOT/DEBIAN/control.stamp\"\n" + old, 1))
+PYX' \
   'reproducible build gate FAILED|artifacts identical'
 
 # D-86/EXEC-016. Both of these got past a green local build and were caught only by a

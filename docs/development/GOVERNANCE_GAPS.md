@@ -336,17 +336,23 @@ the `D` flag. Injections 61 → 62.
 **Found by** attempting to verify a locally built artifact against the published attestation and
 noticing the digests could not match — not by review.
 
-**A second thing the runner taught us.** The first version of the injection simply dropped the `D`
-flag, and it **did not fire on CI**. Whether plain `ar rc` is deterministic depends on how the local
-binutils was *compiled*: Ubuntu enables deterministic archives by default, Fedora does not. The
-injection fired on the workstation and passed silently on the runner — which is precisely the reason
-the build writes `D` explicitly rather than trusting a default that varies by distribution. The
-injection now forces `U`, because the property under test is *"does this gate detect a
-non-reproducible build"*, so the experiment must produce one for certain.
+**A second thing the runner taught us, twice.** The first version of the injection simply dropped
+the `D` flag, and it **did not fire on CI**. Whether plain `ar rc` is deterministic depends on how
+the local binutils was *compiled*: Ubuntu enables deterministic archives by default, Fedora does
+not. The second version forced `U` — and **also passed silently on the runner**, so forcing
+non-determinism through `ar` is not portable either.
+
+Both versions fired on the workstation and passed on the runner, which is the worst possible
+failure mode: a green injection that proves nothing, on the machine that builds the release.
+
+This is precisely why the build writes `D` explicitly and never relies on a default. The injection
+now stamps a **nanosecond clock reading** into the package instead. The property under test is
+*"does this gate detect a non-reproducible build"*, so the experiment must **make** one, on every
+platform, rather than hope the environment provides it.
 
 ## KGG-016 — Reproducible on one machine is not reproducible across machines
 
-**State:** `PARTIALLY_CLOSED`
+**State:** `PARTIALLY_CLOSED` — tarball and `.deb` closed, `.rpm` open by toolchain
 
 `make check-reproducible` builds twice and compares, which proves the build is **deterministic**.
 It says nothing about whether a different machine gets the same bytes — and that is the property a
@@ -364,6 +370,20 @@ the artifacts `ubuntu-latest` produced from the same commit:
 
 `BUILDTIME` was **identical** on both machines (`1789794254`), so `SOURCE_DATE_EPOCH` taken from the
 commit works exactly as intended across toolchains.
+
+**Measured again after both fixes, on 2026-09-19, and this is the result that matters:** the public
+commit was rebuilt on a Fedora 44 / btrfs / rpm 6.0.2 workstation and compared against what
+`ubuntu-latest` / ext4 / rpm 4.18.2 produced from the same commit.
+
+| Artifact | Cross-machine | Verified against the published attestation |
+|---|---|---|
+| source tarball | **bit-identical** | **yes** — `gh attestation verify` accepts the locally rebuilt file |
+| `.deb` | **bit-identical** | **yes** — same |
+| `.rpm` | differs | **correctly refused** — no attestation exists for the digest this machine produces |
+
+An independent rebuild on a different distribution produces bytes that GitHub's own attestation
+accepts. The `.rpm` refusal is the honest outcome, not a failure: the artifact genuinely differs, and
+the verifier says so rather than being lenient.
 
 **What may be said, and what may not.** The source tarball is reproducible across machines and
 distributions — observed. The `.deb` is expected to be, now that the filesystem dependency is

@@ -138,6 +138,7 @@ What is true today, and verifiable from this repository:
 | OpenSSF Scorecard runs against this repository; results go to code scanning, and **no score is published or displayed** | [`scorecard.yml`](.github/workflows/scorecard.yml) |
 | Release artifacts carry build provenance and an SBOM attestation, and the attestation has been **observed to refuse a forgery** — each artifact verifies, a copy with one flipped byte does not | [`check_attestation_falsifiable.sh`](scripts/ci/check_attestation_falsifiable.sh) |
 | Packaging metadata is checked as text, on any machine, before a commit — a package that builds on the author's distribution is not a package | `make check-packaging` |
+| The source tarball and the `.deb` rebuild **bit-identically on a different distribution**, and the locally rebuilt files verify against the attestation GitHub produced | `make check-reproducible`, `make check-deb-ordering`, [`KGG-016`](docs/development/GOVERNANCE_GAPS.md) |
 | A machine-readable SBOM describes each artifact, generated from the **final package** and checked against it — for the RPM, against `rpm`'s own recorded per-file digests | `scripts/ci/generate_sbom.py`, `make check-sbom` |
 | Controls that are intended but **not** in force are written down, not glossed over | [`docs/development/GOVERNANCE_GAPS.md`](docs/development/GOVERNANCE_GAPS.md) |
 
