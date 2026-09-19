@@ -134,20 +134,27 @@ What is true today, and verifiable from this repository:
 | Security-sensitive failures are tested with deliberate negative cases | corpus acceptance tests |
 | No real operator identifier reaches the publication surface | `make check-privacy` |
 | Documentation references, action pins, competitive framing and quoted digests are checked mechanically | `make check-docs-truth` |
+| CodeQL analyses both the Python **and** the GitHub Actions workflows, with the security-extended query suite | [`codeql.yml`](.github/workflows/codeql.yml) |
+| OpenSSF Scorecard runs against this repository; results go to code scanning, and **no score is published or displayed** | [`scorecard.yml`](.github/workflows/scorecard.yml) |
+| Release artifacts carry build provenance and an SBOM attestation, and the attestation has been **observed to refuse a forgery** — each artifact verifies, a copy with one flipped byte does not | [`check_attestation_falsifiable.sh`](scripts/ci/check_attestation_falsifiable.sh) |
+| Packaging metadata is checked as text, on any machine, before a commit — a package that builds on the author's distribution is not a package | `make check-packaging` |
 | A machine-readable SBOM describes each artifact, generated from the **final package** and checked against it — for the RPM, against `rpm`'s own recorded per-file digests | `scripts/ci/generate_sbom.py`, `make check-sbom` |
 | Controls that are intended but **not** in force are written down, not glossed over | [`docs/development/GOVERNANCE_GAPS.md`](docs/development/GOVERNANCE_GAPS.md) |
 
 ### Planned, not yet displayed
 
-These are deliberately absent until they are earned. Several are also unavailable on the current GitHub
-plan for a private repository — verified, not assumed: CodeQL, artifact attestations and secret scanning
-all return "not available" today.
+These are deliberately absent until they are earned.
 
-`SLSA Build L3` — only once release artifacts genuinely meet the build-platform and provenance
+Secret scanning remains unavailable on this plan — verified, not assumed — and a deterministic local
+secret-pattern gate stands in for it, which is **not** equivalent: no partner-token feed, no historical
+scan, no push-time enforcement. That substitution is written down in
+[`KGG-002`](docs/development/GOVERNANCE_GAPS.md) rather than glossed over.
+
+`SLSA Build L3` — **not claimed**, and deliberately not claimed even though provenance now
+exists: only once release artifacts genuinely meet the build-platform and provenance
 requirements; the SLSA generator's own documentation states that using its workflows alone does not
-satisfy every L3 obligation · `OpenSSF Scorecard` (needs a public repository) ·
-`OpenSSF Best Practices` (earned by satisfying the criteria, not by inserting the image) · `CodeQL` ·
-`OSV-Scanner` · `Gitleaks` · `REUSE compliance` · `provenance / attestation` ·
+satisfy every L3 obligation · `OpenSSF Best Practices` (earned by satisfying the criteria, not by inserting the image) ·
+`OSV-Scanner` · `Gitleaks` · `REUSE compliance` ·
 `SHA-256 release checksums` · `signed release artifacts` ·
 **`Baseline & delta invariants`** — the ISEDRAF-specific one: ten unchanged runs produce zero changes,
 `NOT_TESTED` never becomes `REMOVED`, an engine upgrade produces zero false security changes, snapshots
@@ -158,16 +165,15 @@ stay immutable, and a new privileged user is detected.
 A third state, between *in force* and *planned*, which this project needs a word for because
 collapsing it into either one would be a claim the evidence has not earned:
 
-| Control | State |
-|---|---|
-| CodeQL (`python` and `actions`, security-extended) | committed, **never executed** — needs a public repository |
-| OpenSSF Scorecard | committed, **never executed** — needs a public repository |
-| Artifact build provenance and SBOM attestation | committed, **never executed** — needs a public repository on this plan |
-| The control that proves an attestation refuses a forgery | committed, **never executed** — it runs only after an attestation exists |
+Nothing currently sits in this state: CodeQL, Scorecard, build provenance, SBOM attestation and
+the control that proves an attestation refuses a forgery all ran for the first time on 2026-09-19
+and are listed in the table above instead. `KGG-011` records what they were before that, and is
+closed.
 
-Each of those jobs is conditional on the repository being public. A skipped job reports green, so
-every one of them is paired with a `guard` job that **fails** if the analysis was due and did not run.
-Nothing is displayed for any of them. See [`KGG-011`](docs/development/GOVERNANCE_GAPS.md).
+The mechanism stays, because it is what made the distinction honest while it lasted: each of those
+jobs is conditional on the repository being public, a skipped job reports **green**, and so every
+one of them is paired with a `guard` job that **fails** if the analysis was due and did not run.
+`docs/CURRENT_STATE.md` still understands `WRITTEN_NEVER_RUN` as a status, and will use it again.
 
 ### The rule
 

@@ -31,7 +31,9 @@ What exists and runs today. Nothing else on this page does.
 | Capability | Evidence | Command |
 |---|---|---|
 | `w1a_evidence_contract` | `docs/architecture/freeze/W1A_CORE.sha256` | — |
+| `artifact_attestation` | `.github/workflows/release-candidate.yml` | — |
 | `clean_public_export` | `scripts/ci/release_export.sh` | — |
+| `code_scanning` | `.github/workflows/codeql.yml` | — |
 | `identity` | `lib/isedraf/identity.py` | `isedraf identity` |
 | `independent_verifier` | `scripts/vectors/verify.py` | — |
 | `inventory` | `lib/isedraf/inventory/` | `isedraf inventory` |
@@ -42,6 +44,7 @@ What exists and runs today. Nothing else on this page does.
 | `report_json` | `lib/isedraf/report/render.py` | `isedraf report --json` |
 | `report_markdown` | `lib/isedraf/report/render.py` | `isedraf report` |
 | `sbom` | `scripts/ci/generate_sbom.py` | — |
+| `scorecard` | `.github/workflows/scorecard.yml` | — |
 | `snapshot` | `lib/isedraf/snapshot.py` | — |
 
 ## Planned
@@ -67,14 +70,6 @@ Designed, not built. No part of this runs.
 Deliberately postponed to a later freeze set.
 
 - `production_mode_a` — the privileged topology that owns /var/lib/isedraf is Freeze Set 2
-
-## Written, never run
-
-The code is committed and has never executed. Nothing may be displayed for these: an unexecuted control has produced no evidence in either direction. See docs/development/GOVERNANCE_GAPS.md.
-
-- `artifact_attestation` — the workflow exists and is visibility-gated; artifact attestations are unavailable for a private repository on this plan, so it has NEVER RUN and nothing may be displayed for it (KGG-011)
-- `code_scanning` — CodeQL for python and actions, security-extended; requires a public repository, has NEVER RUN (KGG-011)
-- `scorecard` — requires a public repository, has NEVER RUN; no score may be displayed (KGG-011)
 
 ## Not tested
 
@@ -113,5 +108,4 @@ Not asserted. Each number is counted at generation time.
 
 The public repository is **not** authorized while any of these is open.
 
-- CodeQL, Scorecard and artifact attestations are written but have never run; they activate on the public repository (KGG-011)
 - no GitHub Release or tag is published; publication is a separate owner decision

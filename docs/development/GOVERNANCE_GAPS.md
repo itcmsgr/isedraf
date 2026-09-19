@@ -151,9 +151,29 @@ The matrix declaration is itself gated (`check-gate-coverage`) and falsifiable (
 the 3.9 lane, and a lane that boots an interpreter without running the vectors), so the obligation cannot
 be silently dropped — but a local green `make check` is **not** evidence for it.
 
-## KGG-011 — CodeQL, Scorecard and artifact attestations are written and have never run
+## KGG-011 — CodeQL, Scorecard and artifact attestations are written and have never run — CLOSED 2026-09-19
 
-**State:** `WRITTEN_NEVER_RUN`
+**State:** `CLOSED`
+
+All three ran for the first time on 2026-09-19, on the public repository, and passed:
+
+| Control | First observed run |
+|---|---|
+| CodeQL `python` and `actions`, security-extended | both language lanes analysed and passed |
+| OpenSSF Scorecard | ran; results go to code scanning, **not** to the public Scorecard API, so no score is displayed |
+| Build provenance | created for 6 subjects |
+| SBOM attestation | one per versioned artifact (deb, rpm, source tarball) |
+| **The attestation is binding** | each artifact verified, then a copy with one flipped byte was **refused** — `ATTESTATION_REJECTED_TAMPERED` at 6/6 artifacts |
+
+The last row is the one that matters. An attestation only ever run against a good artifact has
+demonstrated nothing; this one has now been observed to refuse a forgery.
+
+Still not claimed: any SLSA level, and no release is published.
+
+The text below records the state before that first run, because it is the reasoning that
+produced the `WRITTEN_NEVER_RUN` status and the guard jobs, both of which remain in force.
+
+### Before the first run
 
 Three workflows exist in the repository and none of them has executed once:
 

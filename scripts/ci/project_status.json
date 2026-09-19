@@ -129,19 +129,19 @@
       "note": "SPDX 2.3 JSON per artifact, generated from the FINAL package by the standard library alone; scripts/ci/check_sbom.py cross-checks the rpm SBOM against rpm's own recorded per-file digests"
     },
     "artifact_attestation": {
-      "status": "WRITTEN_NEVER_RUN",
+      "status": "IMPLEMENTED",
       "evidence": ".github/workflows/release-candidate.yml",
-      "note": "the workflow exists and is visibility-gated; artifact attestations are unavailable for a private repository on this plan, so it has NEVER RUN and nothing may be displayed for it (KGG-011)"
+      "note": "build provenance over 6 subjects plus an SBOM attestation per versioned artifact; proven BINDING on 2026-09-19 - each artifact verified, then a copy with one flipped byte was refused (ATTESTATION_REJECTED_TAMPERED)"
     },
     "code_scanning": {
-      "status": "WRITTEN_NEVER_RUN",
+      "status": "IMPLEMENTED",
       "evidence": ".github/workflows/codeql.yml",
-      "note": "CodeQL for python and actions, security-extended; requires a public repository, has NEVER RUN (KGG-011)"
+      "note": "CodeQL security-extended over python AND actions; first run 2026-09-19, both language lanes analysed and passed"
     },
     "scorecard": {
-      "status": "WRITTEN_NEVER_RUN",
+      "status": "IMPLEMENTED",
       "evidence": ".github/workflows/scorecard.yml",
-      "note": "requires a public repository, has NEVER RUN; no score may be displayed (KGG-011)"
+      "note": "first run 2026-09-19; results are uploaded to code scanning and NOT published to the public Scorecard API, so no score is displayed anywhere"
     }
   },
   "runtime": {
@@ -174,7 +174,6 @@
     "none_certified_because": "reboot stability and version-upgrade stability were not exercised"
   },
   "release_blockers": [
-    "CodeQL, Scorecard and artifact attestations are written but have never run; they activate on the public repository (KGG-011)",
     "no GitHub Release or tag is published; publication is a separate owner decision"
   ]
 }
