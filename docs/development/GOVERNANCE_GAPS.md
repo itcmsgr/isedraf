@@ -335,3 +335,11 @@ the `D` flag. Injections 61 → 62.
 
 **Found by** attempting to verify a locally built artifact against the published attestation and
 noticing the digests could not match — not by review.
+
+**A second thing the runner taught us.** The first version of the injection simply dropped the `D`
+flag, and it **did not fire on CI**. Whether plain `ar rc` is deterministic depends on how the local
+binutils was *compiled*: Ubuntu enables deterministic archives by default, Fedora does not. The
+injection fired on the workstation and passed silently on the runner — which is precisely the reason
+the build writes `D` explicitly rather than trusting a default that varies by distribution. The
+injection now forces `U`, because the property under test is *"does this gate detect a
+non-reproducible build"*, so the experiment must produce one for certain.
