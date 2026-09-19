@@ -110,6 +110,32 @@ ISEDRAF is designed around:
 - declared / resolved / active state where applicable;
 - operator and auditor views derived from the same evidence.
 
+## v0.1.0-alpha1 — what is claimed, and what is not
+
+**ISEDRAF Technical Preview — Linux Host Assurance & Evidence Engine.**
+
+Implemented and observed:
+
+| | |
+|---|---|
+| deterministic host identity | immutable identity evidence |
+| hash-chained ledger | independent verification |
+| host inventory | JSON + Markdown reports |
+| DEB / RPM / source packages | Python 3.6+ production-code compatibility |
+| validated Linux distribution families | CodeQL |
+| Scorecard execution | SPDX SBOM |
+| artifact attestations | tamper-verification |
+| falsifiable internal gates | |
+
+**Not yet claimed** — each of these is absent on purpose, and none is coming in this release:
+
+`GA / production readiness` · `all Linux distributions` · `ARM64 certification` ·
+`organizational compliance` · `CIS mapping` · `ISO 27001 mapping` · `NIS2 / DORA compliance` ·
+`PDF reports` · `privileged production Mode A`
+
+A technical preview is a thing you can install, inspect and verify. It is not a thing to run a
+compliance programme on.
+
 ## Framework mappings
 
 **None exist, none are bundled, and none are licensed.** No third-party control text, identifier set
@@ -160,7 +186,7 @@ What is true today, and verifiable from this repository:
 | OpenSSF Scorecard runs against this repository; results go to code scanning, and **no score is published or displayed** | [`scorecard.yml`](.github/workflows/scorecard.yml) |
 | Release artifacts carry build provenance and an SBOM attestation, and the attestation has been **observed to refuse a forgery** — each artifact verifies, a copy with one flipped byte does not | [`check_attestation_falsifiable.sh`](scripts/ci/check_attestation_falsifiable.sh) |
 | Packaging metadata is checked as text, on any machine, before a commit — a package that builds on the author's distribution is not a package | `make check-packaging` |
-| The source tarball and the `.deb` rebuild **bit-identically on a different distribution**, and the locally rebuilt files verify against the attestation GitHub produced | `make check-reproducible`, `make check-deb-ordering`, [`KGG-016`](docs/development/GOVERNANCE_GAPS.md) |
+| The source tarball and the `.deb` rebuild **bit-for-bit on a different distribution**, and the locally rebuilt files verify against the attestation GitHub produced. The `.rpm` is **not** claimed byte-identical across rpm toolchain versions — rpm 4 and rpm 6 choose different payload compression, which is toolchain variation and not a different ISEDRAF payload | `make check-reproducible`, `make check-deb-ordering`, [`KGG-016`](docs/development/GOVERNANCE_GAPS.md) |
 | A machine-readable SBOM describes each artifact, generated from the **final package** and checked against it — for the RPM, against `rpm`'s own recorded per-file digests | `scripts/ci/generate_sbom.py`, `make check-sbom` |
 | Every tracked file carries a licence statement, and third-party framework content is deny-by-default: unknown licensing state means not distributable | `make check-licensing`, [`FRAMEWORK_SOURCE_REGISTRY`](docs/licensing/FRAMEWORK_SOURCE_REGISTRY.md) |
 | Controls that are intended but **not** in force are written down, not glossed over | [`docs/development/GOVERNANCE_GAPS.md`](docs/development/GOVERNANCE_GAPS.md) |
@@ -198,6 +224,24 @@ The mechanism stays, because it is what made the distinction honest while it las
 jobs is conditional on the repository being public, a skipped job reports **green**, and so every
 one of them is paired with a `guard` job that **fails** if the analysis was due and did not run.
 `docs/CURRENT_STATE.md` still understands `WRITTEN_NEVER_RUN` as a status, and will use it again.
+
+### What may be said about reproducibility
+
+Three artifacts, three different strengths of claim, and they are not interchangeable:
+
+| Artifact | Claim |
+|---|---|
+| source tarball | **bit-for-bit reproducible across tested builders** — observed |
+| `.deb` | **bit-for-bit reproducible across tested builders** — observed |
+| `.rpm` | **package semantics and payload reproducible.** *Not* claimed byte-for-byte reproducible across rpm toolchain versions |
+
+Tested builders: Fedora 44 / btrfs / rpm 6.0.2 and `ubuntu-latest` / ext4 / rpm 4.18.2. `BUILDTIME`
+was identical on both, so `SOURCE_DATE_EPOCH` taken from the commit works across toolchains; the
+`.rpm` bytes differ because rpm 6 writes a **zstd** payload where rpm 4 writes **gzip**.
+
+**No `Reproducible Builds ✓` badge will be shown**, now or later, without a qualifier naming which
+formats actually have byte-identical proof. A green tick beside three artifacts when two of them
+qualify is the kind of claim this project exists not to make.
 
 ### The rule
 

@@ -18,7 +18,7 @@ version drifted until it announced that no product code existed while three comm
 | | |
 |---|---|
 | Project stage | **TECHNICAL_PREVIEW_CANDIDATE** |
-| Public release | **NOT_AUTHORIZED** |
+| Public release | **AWAITING_OWNER_AUTHORIZATION** |
 | Production Python floor | 3.6 |
 | Tooling Python floor | 3.9 |
 | Execution model | unprivileged, ISEDRAF_STATE_ROOT required |
@@ -114,4 +114,5 @@ Not asserted. Each number is counted at generation time.
 
 The public repository is **not** authorized while any of these is open.
 
-- no GitHub Release or tag is published; publication is a separate owner decision
+- GitGuardian has access to the PRIVATE itcmsgr/isedraf-dev - measured with a positive control, not assumed. Repository access must be restricted by the owner in the GitHub UI; the credentials available to CI cannot modify an App installation
+- no GitHub Release or tag is published; publication is a separate owner-authorized act (D-110)

@@ -1,7 +1,7 @@
 {
   "$comment": "THE single authoritative status registry. docs/CURRENT_STATE.md is GENERATED from this file, and check_docs_truth.py validates documentation claims against it. One source, so a generated page and a gate cannot disagree \u2014 which is exactly how CURRENT_STATE.md came to announce that no product code existed while three commands worked.",
   "project_stage": "TECHNICAL_PREVIEW_CANDIDATE",
-  "public_release": "NOT_AUTHORIZED",
+  "public_release": "AWAITING_OWNER_AUTHORIZATION",
   "capabilities": {
     "w1a_evidence_contract": {
       "status": "CERTIFIED",
@@ -206,6 +206,7 @@
     "none_certified_because": "reboot stability and version-upgrade stability were not exercised"
   },
   "release_blockers": [
-    "no GitHub Release or tag is published; publication is a separate owner decision"
+    "GitGuardian has access to the PRIVATE itcmsgr/isedraf-dev - measured with a positive control, not assumed. Repository access must be restricted by the owner in the GitHub UI; the credentials available to CI cannot modify an App installation",
+    "no GitHub Release or tag is published; publication is a separate owner-authorized act (D-110)"
   ]
 }

@@ -29,6 +29,31 @@
 #   MUTATION_EXECUTED_AND_DETECTED   mutation applied, gate failed, gate named the reason  -> PASS
 #   MUTATION_EXECUTED_BUT_NOT_DETECTED  mutation applied, gate passed                      -> FAIL
 #   MUTATION_TOOL_CRASHED            gate failed but produced no rejection evidence        -> FAIL
+#
+# INVARIANT, owner decision 2026-09-19 (from the `ar -D`/`-U` finding):
+#
+#   local mutation works   !=   CI mutation proven
+#
+# For a RELEASE-CRITICAL gate, MUTATION_EXECUTED_AND_DETECTED on a workstation is not
+# sufficient evidence. The injection must also be observed firing in the environment that
+# BUILDS THE RELEASE, because the release environment is part of the proof.
+#
+# This was learned the hard way and twice in one afternoon. A reproducibility injection
+# dropped `ar`'s deterministic flag and fired locally; on ubuntu-latest it passed silently,
+# because whether plain `ar rc` is deterministic depends on how the local binutils was
+# COMPILED. Forcing `U` also fired locally and also passed silently there. A green
+# injection that proves nothing, on the exact machine that produces the artifacts.
+#
+# New release/build injections SHALL declare which of these they have:
+#
+#   MUTATION_EXECUTED_AND_DETECTED   observed firing locally
+#   CI_EXECUTED_AND_DETECTED         observed firing in CI, on the release builder
+#
+# The harness is not redesigned here; `make check-falsifiable` runs in CI on every push and
+# a non-firing injection fails that job, so the second observation exists for every
+# injection that runs there. What this records is that it MUST exist, and that an
+# environment-dependent mutation is not evidence until it has been seen to fire where the
+# release is built.
 #   HARNESS_ERROR                    the mutation never applied, or the copy failed        -> FAIL
 PASS=0
 SKIPPED=0; FAIL=0

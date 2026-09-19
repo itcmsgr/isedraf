@@ -58,7 +58,53 @@ require the four checks, bypass limited to owner emergency use.
 
 ## KGG-002 — GitHub secret scanning and push protection unavailable
 
-**State:** `NOT_AVAILABLE_CURRENT_PLAN`
+**State:** `NOT_AVAILABLE_CURRENT_PLAN` · **an external scanner was found inside the trust surface, see below**
+
+### An unapproved external service was observing both repositories
+
+Found 2026-09-19. A **GitGuardian** GitHub App produced a check on every pull request. Nobody in this
+project installed it for ISEDRAF; it arrived through an account-level installation.
+
+**It was measured, not assumed.** The credentials available here cannot enumerate App installations
+(`user/installations` → 403). The first experiment pushed a branch to the private repository, saw no
+check, and was **discarded as invalid**: the same push to the *public* repository also produced no
+check, so the method could not detect the thing it was looking for. A negative result from a method
+with no positive control is not evidence.
+
+The second experiment opened a pull request in each repository, with the public one as the positive
+control:
+
+| Repository | Visibility | GitGuardian check |
+|---|---|---|
+| `itcmsgr/isedraf` | public | **yes** — control fires |
+| `itcmsgr/isedraf-dev` | **private** | **yes** |
+
+Both probes were closed and their branches deleted immediately.
+
+**Declared permissions** (public App manifest, owner `GitGuardian`, app id `46505`): `contents: read`,
+and **write** on `checks`, `issues` and `pull_requests`. Scanning happens on the provider's
+infrastructure, so repository content leaves GitHub.
+
+**It cannot block a merge today** — the ruleset requires seven checks and GitGuardian is not one of
+them. That is a property of our ruleset, not of the App.
+
+**Verdict: RESTRICT.** Not because the service behaved badly — every check it produced passed — but
+because `isedraf-dev` is the source of truth this project deliberately does not publish, and its
+contents were being sent to a third party nobody chose for that purpose. The rule is that an external
+service does not appear silently inside the trust surface.
+
+**Owner action required, and it is a release blocker until done.** An App installation cannot be
+modified with the credentials available to this project. GitHub → Settings → Applications → Installed
+GitHub Apps → GitGuardian → Configure → *Only select repositories* → remove `itcmsgr/isedraf-dev`.
+The account-level installation may stay if it is used elsewhere; only the repository selection needs
+to change.
+
+Keeping it on the **public** repository afterwards is defensible and would be recorded here as
+`APPROVED_PUBLIC_ONLY`: nothing leaves that was not already published, and a second independent
+scanner beside `check-privacy` — which is our own code checking our own rules — is genuinely useful.
+
+### The local gate, which is not equivalent
+
 
 **Mitigation:** a deterministic local secret-pattern gate is added to `make check` and CI at Prompt 04 W0.
 It is **defense in depth and is not equivalent to GitHub secret scanning** — it matches obvious private-key,
@@ -459,3 +505,28 @@ argument *inside a heredoc*, silently disabling the mutation it was meant to gua
 
 **The pattern worth keeping:** a gate that cannot run must say so. A gate that silently passes on an
 absent subject teaches the reader that the subject was checked.
+
+
+## KGG-018 — `CI_EXECUTED_AND_DETECTED` is required for release-critical gates
+
+**State:** `IMPLEMENTED (as an invariant)` · owner decision 2026-09-19
+
+> `local mutation works` **≠** `CI mutation proven`
+
+For a release-critical gate, `MUTATION_EXECUTED_AND_DETECTED` on a workstation is **not sufficient
+evidence**. The injection must also be observed firing in the environment that **builds the release**,
+because the release environment is part of the proof.
+
+This came out of the `ar -D`/`-U` finding, and the finding matters more than the bug it exposed. A
+reproducibility injection dropped `ar`'s deterministic flag and fired locally; on `ubuntu-latest` it
+passed **silently**, because whether plain `ar rc` is deterministic depends on how the local binutils
+was *compiled*. Forcing `U` also fired locally and also passed silently there. Two green injections
+that proved nothing, on the exact machine that produces the released artifacts.
+
+**What is already true:** `make check-falsifiable` runs in CI on every push and a non-firing injection
+fails that job, so the second observation does exist for every injection that runs there — and it is
+what caught both failures.
+
+**What this records:** that it *must* exist, and that an environment-dependent mutation is not
+evidence until it has been seen to fire where the release is built. New release/build injections
+declare which observations they have. The harness is **not** redesigned for this now.
