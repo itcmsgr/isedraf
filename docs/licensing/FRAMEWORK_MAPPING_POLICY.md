@@ -30,7 +30,12 @@ ISEDRAF EVIDENCE / RESULT     observed, with its limits stated
 OPTIONAL FRAMEWORK MAPPING    a downstream overlay, if one is licensed
 ```
 
-The arrow never runs the other way. A framework requirement does not define how a collector is
+The arrow never runs the other way. This is frozen as an architecture invariant in
+[`NATIVE_CONTROL_CATALOG.md`](../architecture/NATIVE_CONTROL_CATALOG.md) (`D-111`), which fixes the
+`ISE-*` namespace and separates three ownerships: **control ownership** is ISEDRAF's, **evidence
+ownership** is the customer's and the observed host's, and only **framework mapping rights** are
+framework-specific. The practical effect is that the technical engine is completed without waiting
+for any provider — a later agreement adds a mapping pack, and a refusal costs nothing already built. A framework requirement does not define how a collector is
 implemented, and there is no `cis_collector.py`, `iso_collector.py` or `scf_collector.py` — there is
 a users collector, an SSH collector, a logging collector. One host collection can then serve many
 mappings.
