@@ -195,5 +195,43 @@
   "private_only_gates": {
     "$comment": "Gates that read material outside the repository and therefore cannot run in public CI. They are NOT in `make check` and that is deliberate, not a coverage gap. Listed so the omission is visible rather than silent.",
     "check-provider-alignment": "reads the private provider licensing registry, located by the ISEDRAF_PROVIDER_REGISTRY environment variable and absent on a runner; skips with an explicit message and never reports a pass it did not earn"
+  },
+  "gates_outside_make_check": {
+    "$comment": "Every check_* script that `make check` does NOT aggregate, with the reason and the thing that actually runs it. This section exists because the coverage gate used to verify only what was DECLARED: a new gate nobody listed was invisible to it, and passed coverage by not being mentioned. The gate now reconciles this file against scripts/ci/ and fails on any check_* script that appears in neither list, so a gate cannot be added without being accounted for, and one cannot be quietly orphaned.",
+    "check-gate-coverage": {
+      "script": "scripts/ci/check_gate_coverage.py",
+      "invoked_by": "make check-gate-coverage, CI, scripts/ci/falsifiable.sh",
+      "reason": "the meta-gate. It verifies the others, so aggregating it into the target it verifies would make it report on itself."
+    },
+    "check-sbom": {
+      "script": "scripts/ci/check_sbom.py",
+      "invoked_by": "make check-sbom, scripts/ci/falsifiable.sh",
+      "reason": "needs built packages and rpm's own recorded per-file digests; there is nothing to cross-check before a build."
+    },
+    "check-package-payload": {
+      "script": "scripts/ci/check_package_payload.sh",
+      "invoked_by": "make check-package-payload, scripts/ci/release_export.sh, scripts/ci/falsifiable.sh",
+      "reason": "compares the built deb and rpm payloads against each other; requires both artifacts."
+    },
+    "check-reproducible": {
+      "script": "scripts/ci/check_reproducible.sh",
+      "invoked_by": "make check-reproducible, scripts/ci/falsifiable.sh",
+      "reason": "builds twice and compares bytes; too slow for the pre-commit path and meaningless without a build."
+    },
+    "check-deb-ordering": {
+      "script": "scripts/ci/check_deb_ordering.sh",
+      "invoked_by": "make check-deb-ordering, scripts/ci/falsifiable.sh",
+      "reason": "reads the member order inside a built .deb archive."
+    },
+    "check-attestation-falsifiable": {
+      "script": "scripts/ci/check_attestation_falsifiable.sh",
+      "invoked_by": ".github/workflows/release-candidate.yml",
+      "reason": "requires a real attestation from the release workflow; it cannot be produced or verified on a workstation."
+    },
+    "check-provider-alignment": {
+      "script": "scripts/ci/check_provider_alignment.py",
+      "invoked_by": "make check-provider-alignment",
+      "reason": "private: reads the provider licensing registry located by ISEDRAF_PROVIDER_REGISTRY, which is absent on a runner. Also recorded in private_only_gates."
+    }
   }
 }

@@ -123,6 +123,31 @@ for name, g in spec["gates"].items():
             else:
                 fail.append(f"{name}: declared scope {pat!r} matches no files - stale declaration")
 
+# Every check_* script on disk must be accounted for in exactly one place.
+#
+# Until this existed, the gate verified only what gate_coverage.json DECLARED. A gate
+# that nobody declared was not reported as uncovered - it was not reported at all, and
+# the summary line still said every gate was wired, reached and falsifiable. That is the
+# failure mode this whole file exists to prevent, one level up: an absence that reads as
+# a pass. A newly added gate is now either aggregated into `make check` or listed with
+# the reason it is not, and an orphaned script cannot sit in scripts/ci/ unrun.
+declared_scripts = {g["script"] for g in spec["gates"].values()}
+outside = spec.get("gates_outside_make_check", {})
+declared_scripts |= {g["script"] for k, g in outside.items() if not k.startswith("$")}
+
+for script in sorted(ROOT.glob("scripts/ci/check_*")):
+    if script.suffix not in (".py", ".sh"):
+        continue
+    rel = script.relative_to(ROOT).as_posix()
+    if rel not in declared_scripts:
+        fail.append(f"{rel}: a gate script that gate_coverage.json does not account for. "
+                    f"Add it to `gates` if `make check` should run it, or to "
+                    f"`gates_outside_make_check` with the reason it does not [GOV-001]")
+
+for rel in sorted(declared_scripts):
+    if not (ROOT / rel).exists():
+        fail.append(f"{rel}: declared in gate_coverage.json but the script does not exist")
+
 if fail:
     print("=== gate coverage FAILED ===", file=sys.stderr)
     for f in sorted(set(fail)):
