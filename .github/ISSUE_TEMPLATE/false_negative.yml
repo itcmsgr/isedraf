@@ -1,0 +1,61 @@
+name: False negative — a real change was not reported
+description: A security-relevant change occurred on the host and ISEDRAF did not report it, or reported PASS.
+labels: ["false-negative", "security-sensitive", "needs-evidence"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **A false `PASS` is treated as particularly serious.** If a control was never collected but was
+        reported as passing, that is a security-sensitive defect — consider reporting it privately via
+        `SECURITY.md` instead.
+
+        **Redact first.** Use `--redact`.
+  - type: input
+    id: version
+    attributes: {label: ISEDRAF version}
+    validations: {required: true}
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options: ["Debian 12", "Ubuntu 24.04", "Rocky Linux 9", "AlmaLinux 9", "Other (unsupported)"]
+    validations: {required: true}
+  - type: textarea
+    id: change
+    attributes:
+      label: The change you made on the host
+      description: "Exact commands, so it can be reproduced in the corpus."
+    validations: {required: true}
+  - type: textarea
+    id: expected
+    attributes: {label: What you expected ISEDRAF to report}
+    validations: {required: true}
+  - type: textarea
+    id: observed
+    attributes:
+      label: What ISEDRAF reported instead
+      description: "Include the collection status as well as the evaluation result — they are separate."
+    validations: {required: true}
+  - type: dropdown
+    id: false_pass
+    attributes:
+      label: Was a control reported as PASS that was never actually collected?
+      options: ["No", "Yes", "Unsure"]
+    validations: {required: true}
+  - type: dropdown
+    id: privilege
+    attributes:
+      label: Privilege mode of the run
+      options: ["unprivileged", "root / sudo"]
+    validations: {required: true}
+  - type: input
+    id: requirement
+    attributes:
+      label: Affected requirement or control ID (if known)
+      description: "e.g. IDENT-004, D-46. Leave blank if unknown."
+  - type: textarea
+    id: sanitized
+    attributes:
+      label: Sanitized evidence
+      description: "Redacted output (`--redact`). Never paste an unredacted identity or evidence bundle."
+    validations: {required: true}

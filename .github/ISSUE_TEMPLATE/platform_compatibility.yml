@@ -1,0 +1,56 @@
+name: Platform compatibility
+description: Behaviour differs on a specific distribution or version.
+labels: ["platform-compatibility", "needs-evidence"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Supported: Debian 12 · Ubuntu 24.04 · Rocky Linux 9 · AlmaLinux 9.
+        Running elsewhere is not a bug — behaviour is undefined outside the supported tier.
+  - type: input
+    id: distro
+    attributes: {label: Distribution and version, description: "From /etc/os-release"}
+    validations: {required: true}
+  - type: input
+    id: kernel
+    attributes: {label: Kernel version}
+  - type: textarea
+    id: tools
+    attributes:
+      label: Relevant subsystem tools and versions
+      description: "e.g. sshd, cvtsudoers, findmnt, auditctl, timedatectl, aa-status"
+  - type: textarea
+    id: difference
+    attributes: {label: What differs from a supported platform}
+    validations: {required: true}
+  - type: input
+    id: version
+    attributes: {label: ISEDRAF version}
+    validations: {required: true}
+  - type: dropdown
+    id: privilege
+    attributes:
+      label: Privilege mode of the run
+      options: ["unprivileged", "root / sudo"]
+    validations: {required: true}
+  - type: input
+    id: requirement
+    attributes:
+      label: Affected requirement or control ID (if known)
+      description: "e.g. IDENT-004, D-46. Leave blank if unknown."
+  - type: textarea
+    id: expected
+    attributes: {label: Expected behaviour}
+    validations: {required: true}
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: "Exact commands, so the case can be added to the corpus."
+    validations: {required: true}
+  - type: textarea
+    id: sanitized
+    attributes:
+      label: Sanitized evidence
+      description: "Redacted output (`--redact`). Never paste an unredacted identity or evidence bundle."
+    validations: {required: true}

@@ -1,0 +1,85 @@
+# ISEDRAF — OpenSSF Scorecard
+# SPDX-License-Identifier: MPL-2.0
+#
+# Scorecard reads a repository the way an outsider does: branch protection, pinned
+# dependencies, token permissions, dangerous workflow patterns. It is useful here
+# precisely because it does NOT trust this project's own gates.
+#
+# Conditional on public visibility for the same reason as CodeQL: Scorecard's data
+# sources require a public repository, so in the private engineering repository the
+# job would fail permanently. Until the public repository exists this has NEVER RUN,
+# and no score may be displayed. A score is a measurement, not a decoration.
+#
+# `results.sarif` is uploaded to code scanning so findings are reviewable in place;
+# it is NOT published to the public Scorecard API (`publish_results: false`), because
+# publishing is an outward-facing act that is the owner's to authorise.
+name: Scorecard
+
+on:
+  branch_protection_rule:
+  schedule:
+    - cron: '41 5 * * 1'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    if: github.event.repository.visibility == 'public'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: false
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scorecard-results
+          path: results.sarif
+          retention-days: 5
+      - uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+        with:
+          sarif_file: results.sarif
+
+  # A skipped job reports green. That is the exact failure mode this project keeps
+  # finding: a control that never fires looks identical to a control that passed.
+  # This job ALWAYS runs. If the repository is public - so the analysis was due -
+  # and the analysis did not actually run, it fails loudly instead of skipping quietly.
+  guard:
+    name: analysis was due and ran
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    needs: [analysis]
+    if: always()
+    permissions: {}
+    steps:
+      - name: Attribute the outcome
+        run: |
+          visibility='${{ github.event.repository.visibility }}'
+          result='${{ needs.analysis.result }}'
+          echo "repository visibility : ${visibility:-<unset>}"
+          echo "analysis job result      : $result"
+          if [ "$visibility" = public ] && [ "$result" = skipped ]; then
+            echo "FAIL  the repository is public, so this analysis was due, and it did not run." >&2
+            exit 1
+          fi
+          if [ "$result" = failure ] || [ "$result" = cancelled ]; then
+            echo "FAIL  the analysis ran and did not pass." >&2
+            exit 1
+          fi
+          if [ "$result" = skipped ]; then
+            echo "SKIPPED  not a pass: this analysis requires a public repository and has"
+            echo "         NEVER RUN. Nothing may be displayed for it. See KGG-011."
+          fi

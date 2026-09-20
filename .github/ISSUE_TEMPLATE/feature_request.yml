@@ -1,0 +1,33 @@
+name: Feature proposal
+description: Propose new functionality.
+labels: ["feature-proposal", "future"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Check the boundary first.** Permanently out of scope: firewalls, AV, EDR/XDR, IDS/IPS, WAF,
+        SIEM, cloud and network controls, CVE matching, remote patch availability, whole-filesystem FIM,
+        remote attestation, network egress, API, database connectors, automatic remediation.
+
+        See `docs/roadmap/ROADMAP.md` — it may already be planned.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: "What can you not answer about a host today?"
+    validations: {required: true}
+  - type: textarea
+    id: proposal
+    attributes: {label: Proposed behaviour}
+    validations: {required: true}
+  - type: dropdown
+    id: boundary
+    attributes:
+      label: Is this observable on the local host without network access, a database or a daemon?
+      options: ["Yes", "No", "Unsure"]
+    validations: {required: true}
+  - type: textarea
+    id: evidence
+    attributes:
+      label: What evidence would support it
+      description: "Which local commands or files, and what NOT_TESTED would mean here."

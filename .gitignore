@@ -1,0 +1,22 @@
+# ISEDRAF — SPDX-License-Identifier: MPL-2.0
+
+# Internal planning material. Local-only, never published.
+/planning/
+/INIT/
+
+# Never commit bytecode (D-17, D-86). Syntax validation must not produce these.
+__pycache__/
+*.pyc
+*.pyo
+
+# Runtime state never belongs in the repository (D-49).
+/var/
+.isedraf-dev-state/
+
+# Local editor/OS noise
+*.swp
+*~
+.DS_Store
+
+# Build output. Never committed; the release export builds it fresh.
+/dist/

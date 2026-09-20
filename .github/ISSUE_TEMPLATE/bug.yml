@@ -1,0 +1,46 @@
+name: Bug report
+description: Something behaves incorrectly and does not fit the evidence-correctness forms.
+labels: ["bug", "needs-evidence"]
+body:
+  - type: markdown
+    attributes:
+      value: "**Redact first** (`--redact`). Vulnerabilities go to `SECURITY.md`, never here."
+  - type: input
+    id: version
+    attributes: {label: ISEDRAF version}
+    validations: {required: true}
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options: ["Debian 12", "Ubuntu 24.04", "Rocky Linux 9", "AlmaLinux 9", "Other (unsupported)"]
+    validations: {required: true}
+  - type: textarea
+    id: repro
+    attributes: {label: Reproduction, description: "Minimal steps."}
+    validations: {required: true}
+  - type: textarea
+    id: expected
+    attributes: {label: Expected behaviour}
+    validations: {required: true}
+  - type: textarea
+    id: actual
+    attributes: {label: Actual behaviour, description: "Include the exit code."}
+    validations: {required: true}
+  - type: dropdown
+    id: privilege
+    attributes:
+      label: Privilege mode of the run
+      options: ["unprivileged", "root / sudo"]
+    validations: {required: true}
+  - type: input
+    id: requirement
+    attributes:
+      label: Affected requirement or control ID (if known)
+      description: "e.g. IDENT-004, D-46. Leave blank if unknown."
+  - type: textarea
+    id: sanitized
+    attributes:
+      label: Sanitized evidence
+      description: "Redacted output (`--redact`). Never paste an unredacted identity or evidence bundle."
+    validations: {required: true}

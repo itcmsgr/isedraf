@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+#
+# Copyright © 2026 Antonios Voulvoulis / ITCMS
+# SPDX-License-Identifier: MPL-2.0
+#
+# This file is part of ISEDRAF.
+# D-93: `Assisted-by:` is disclosure and is REQUIRED. `Co-Authored-By:` naming an AI tool
+# or provider is an AUTHORSHIP CLAIM and is REJECTED — AI tools hold no rights (D-92).
+# Human Co-Authored-By trailers are unaffected. Both halves are enforced.
+msg="$1"
+rc=0
+
+if ! grep -qE '^Assisted-by: .+' "$msg"; then
+    echo "commit-msg: add 'Assisted-by: <tool> (<role>)' or 'Assisted-by: none' (D-93)" >&2
+    rc=1
+fi
+
+# Reject an AI co-author trailer in any case variant.
+if grep -iqE '^Co-Authored-By:.*(claude|anthropic|chatgpt|openai|gemini|google|copilot|gpt-|llm)' "$msg"; then
+    echo "commit-msg: remove the AI 'Co-Authored-By:' trailer (D-93)." >&2
+    echo "  'Co-Authored-By' claims authorship; AI tools hold no rights in ISEDRAF (D-92)." >&2
+    echo "  Disclose the assistance with 'Assisted-by: <tool> (<role>)' instead." >&2
+    rc=1
+fi
+
+exit "$rc"

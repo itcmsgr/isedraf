@@ -1,0 +1,29 @@
+name: Documentation
+description: Documentation is wrong, unclear, stale or contradicts the implementation.
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If documentation and implementation disagree, say so — **the documentation is not automatically
+        the thing that is wrong.** Frozen requirements govern, and docs are never edited to match a bug.
+  - type: input
+    id: path
+    attributes: {label: Document path, description: "e.g. docs/operator/EXPLAIN.md"}
+    validations: {required: true}
+  - type: textarea
+    id: problem
+    attributes: {label: What is wrong}
+    validations: {required: true}
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - "Inaccurate — contradicts observed behaviour"
+        - "Stale — describes an older version"
+        - "Unclear"
+        - "Missing"
+        - "Broken link or reference"
+        - "Overclaims — language stronger than the evidence supports"
+    validations: {required: true}

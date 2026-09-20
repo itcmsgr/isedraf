@@ -1,0 +1,23 @@
+# ISEDRAF — dependency updates
+# SPDX-License-Identifier: MPL-2.0
+#
+# ISEDRAF has NO third-party runtime dependencies (D-12): the runtime is Bash plus
+# the Python standard library. Dependabot therefore covers only GitHub Actions and
+# development/CI tooling. It must never introduce a runtime dependency.
+version: 2
+updates:
+  # Third-party actions are SHA-pinned; this keeps the pins current.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "ci"
+
+  # NOTE: no pip ecosystem. ISEDRAF intentionally has NO third-party Python runtime
+  # dependencies (D-12), so there is nothing for Dependabot to track. Python dependency
+  # automation is deliberately omitted rather than configured against an empty surface.

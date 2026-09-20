@@ -1,0 +1,76 @@
+{
+  "$comment": "THE public licensing boundary. One machine-readable authority, consumed by scripts/ci/check_licensing.py. Sanitized by construction: it contains no provider research, no correspondence, and no private filesystem paths. The private provider registry is a separate artifact outside this repository, located by the ISEDRAF_PROVIDER_REGISTRY environment variable, and is NEVER required by public CI because it is not available there.",
+  "policy_version": 1,
+  "effective": "2026-09-19",
+  "project_license": "MPL-2.0",
+  "native_control_model": "ISEDRAF_NATIVE_FIRST",
+  "unknown_provider_content_policy": "DENY",
+  "public_framework_mappings": [],
+  "licensed_framework_packs": [],
+  "provider_partnerships": [],
+  "bundled_third_party_framework_content": [],
+  "$boundary_comment": "The v0.1.0-alpha1 boundary, stated as the target state rather than as an aspiration: ISEDRAF-owned native content ALLOWED, MPL-2.0 project code ALLOWED, verified first-party test vectors ALLOWED; external framework mappings ZERO, licensed provider content ZERO, provider partnership claims ZERO, provider-specific collectors ZERO, unknown third-party content ZERO.",
+  "restricted_providers": {
+    "$comment": "Token patterns with explicit word boundaries. A bare 'ISO' or 'CIS' is NOT matched: 'iso' appears inside ordinary words and 'CIS' inside identifiers, and a gate that cries wolf teaches maintainers to skip it.",
+    "CIS": "\\bCIS\\s+(?:Controls?|Benchmarks?|Safeguards?)\\b",
+    "ISO/IEC 27000 series": "\\bISO(?:/IEC)?[\\s-]?2700\\d\\b",
+    "Secure Controls Framework": "\\bSecure Controls Framework\\b|\\bSCF\\b",
+    "HITRUST": "\\bHITRUST\\b",
+    "COBIT": "\\bCOBIT\\b",
+    "PCI DSS": "\\bPCI[\\s-]?DSS\\b",
+    "AICPA Trust Services Criteria": "\\bTrust Services Criteria\\b|\\bSOC\\s?2\\b",
+    "IEC 62443": "\\bIEC\\s?62443\\b",
+    "CSA Cloud Controls Matrix": "\\bCloud Controls Matrix\\b|\\bCCM\\b",
+    "NIS2": "\\bNIS2\\b",
+    "DORA": "\\bDORA\\b"
+  },
+  "claim_context": {
+    "$comment": "A provider token is only a finding when it appears WITH a claim word. 'do not copy from CIS' and 'no CIS mapping' are not claims of support.",
+    "positive": "\\b(support(?:s|ed|ing)?|compliant|compatible|certified|validated against|mapped to|mapping to|aligned (?:to|with)|conforms? to|implements?|covers?|meets|ready|integration|partner(?:ship)?|approved|endorsed|official)\\b",
+    "negation": "\\b(no|not|never|without|zero|none|neither|nor|forbid(?:den|s)?|prohibit(?:ed|s)?|must not|shall not|do not|cannot|excluded?|absent|unsupported)\\b"
+  },
+  "allowed_context_paths": {
+    "$comment": "Paths that legitimately name providers: the gates' own denylists, the licensing policy that states the boundary, and the clean-room prohibition in contributor docs. Naming a framework in order to FORBID it is the opposite of claiming it.",
+    "paths": [
+      "scripts/ci/public_licensing_policy.json",
+      "scripts/ci/check_licensing.py",
+      "scripts/ci/check_native_catalog.py",
+      "scripts/ci/native_controls.json",
+      "scripts/ci/falsifiable.sh",
+      "docs/licensing/FRAMEWORK_MAPPING_POLICY.md",
+      "docs/licensing/FRAMEWORK_SOURCE_REGISTRY.md",
+      "docs/licensing/FRAMEWORK_PACK_ARCHITECTURE.md",
+      "docs/development/DOCUMENTATION_POLICY.md",
+      "docs/development/LLM_PROTOCOL.md",
+      "CONTRIBUTING.md",
+      "CLAUDE.md"
+    ]
+  },
+  "restricted_document_formats": [
+    ".pdf",
+    ".xlsx",
+    ".xls",
+    ".docx",
+    ".doc",
+    ".pptx",
+    ".ppt",
+    ".csv",
+    ".ods",
+    ".odt",
+    ".zip",
+    ".7z",
+    ".rar"
+  ],
+  "allowed_binary_artifacts": {
+    "$comment": "Explicit allowlist by path. Unknown binary or office documents fail closed. Empty today: the repository contains no such artifact."
+  },
+  "package_license_expectations": {
+    "rpm_license_field": "MPL-2.0",
+    "deb_copyright_file": "packaging/deb/copyright",
+    "deb_copyright_license": "MPL-2.0",
+    "sbom_declared_license": "MPL-2.0",
+    "license_file": "LICENSE",
+    "license_first_line": "Mozilla Public License Version 2.0"
+  },
+  "$private_registry_comment": "The private provider registry is located through the ISEDRAF_PROVIDER_REGISTRY environment variable, NOT through a path recorded here. The privacy gate caught the first version of this file naming an absolute path under the owner's home directory - a public file does not get to describe a private filesystem. Its CONTENTS are never quoted in any failure message; only provider name, public file and line."
+}

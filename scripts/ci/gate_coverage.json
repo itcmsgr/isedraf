@@ -1,0 +1,189 @@
+{
+  "$comment": "Consumed by scripts/ci/check_gate_coverage.py. A gate listed here must exist, be invoked by `make check`, be reachable from CI, carry a falsifiability injection, and declare its complete eligible file class. U-30: this file was previously read by nothing.",
+  "ci_entrypoints": [
+    "make check",
+    "make check-falsifiable",
+    "make check-gate-coverage"
+  ],
+  "python_matrix": {
+    "$comment": "Z-12. NORM-039 requires the golden vectors to be exercised on Python 3.9 AND the current CI Python. D-12 sets the >=3.9 floor; docs/development/CI_INVENTORY.md P-03/P-07 name 3.12 as the current supported version. check_gate_coverage.py asserts the workflow really declares this matrix and really runs the certification command in every lane - a lane that boots an interpreter and never executes the vectors closes nothing. W1-B: the production tests join the matrix, because a production implementation proven on one interpreter is not proven.",
+    "versions": [
+      "3.9",
+      "3.12"
+    ],
+    "certification_command": "make check-vectors check-vectors-negative check-tests"
+  },
+  "gates": {
+    "check-scope": {
+      "script": "scripts/ci/check_bootstrap_scope.sh",
+      "implements": "D-96",
+      "falsification": "D-96 product code with no verified freeze set",
+      "eligible": []
+    },
+    "check-headers": {
+      "script": "scripts/ci/check_headers.sh",
+      "implements": "D-62, D-90, HDR-001",
+      "falsification": "L-03 junk meta:owner",
+      "eligible": [
+        "scripts/**/*.sh",
+        "scripts/**/*.py"
+      ]
+    },
+    "check-shell": {
+      "script": "Makefile",
+      "implements": "D-12",
+      "falsification": "D-12 shell syntax error",
+      "eligible": [
+        "scripts/**/*.sh",
+        "git-hooks/*"
+      ]
+    },
+    "check-refs": {
+      "script": "scripts/ci/check_requirement_refs.py",
+      "implements": "D-105, D-106",
+      "falsification": "D-105 undefined DECISION cited",
+      "eligible": [
+        "docs/**/*.md",
+        "CLAUDE.md",
+        "scripts/**/*.py",
+        "scripts/**/*.sh",
+        "Makefile",
+        ".github/workflows/*.yml"
+      ]
+    },
+    "check-paths": {
+      "script": "scripts/ci/check_paths.sh",
+      "implements": "D-99",
+      "falsification": "D-99 singular ledger.jsonl path reintroduced",
+      "eligible": [
+        "docs/**/*.md",
+        "CLAUDE.md"
+      ]
+    },
+    "check-index": {
+      "script": "scripts/docs/master_index.py",
+      "implements": "D-89",
+      "falsification": "D-89 stale MASTER_INDEX",
+      "eligible": [
+        "docs/architecture/*.md",
+        "docs/development/HEADER_POLICY.md"
+      ]
+    },
+    "check-docs": {
+      "script": "scripts/docs/doclint.py",
+      "implements": "D-87, D-88, D-89",
+      "falsification": "C-05 forbidden claim in a non-exempt document",
+      "eligible": [
+        "docs/**/*.md"
+      ]
+    },
+    "check-freeze": {
+      "script": "scripts/ci/check_freeze.sh",
+      "implements": "D-68, GOV-004",
+      "falsification": "D-68 frozen artifact modified after manifest",
+      "eligible": [
+        "docs/architecture/freeze/*.sha256"
+      ],
+      "eligible_may_be_empty_reason": "No freeze set is declared during the candidate phase. The gate passes explicitly on an empty freeze/ directory and becomes load-bearing the moment W1_CORE.sha256 is written. Stated rather than excused (GOV-001)."
+    },
+    "check-vectors": {
+      "script": "scripts/vectors/check.sh",
+      "implements": "NORM-039",
+      "falsification": "NORM-039 golden vector mutated by one byte",
+      "eligible": [
+        "test-vectors/w1a/v1/**/*"
+      ]
+    },
+    "check-vectors-negative": {
+      "script": "scripts/vectors/negative_test.sh",
+      "implements": "NORM-039, GOV-002",
+      "falsification": "Z-14 verifier accepts a corrupted artifact",
+      "eligible": [
+        "scripts/vectors/verify.py"
+      ]
+    },
+    "check-python-floor": {
+      "script": "scripts/ci/check_python_floor.py",
+      "implements": "D-12",
+      "falsification": "D-12 production code uses an API newer than the runtime floor",
+      "eligible": [
+        "lib/isedraf/*.py",
+        "scripts/compat/*.py"
+      ]
+    },
+    "check-privacy": {
+      "script": "scripts/ci/check_privacy.py",
+      "implements": "D-90, GOV-001",
+      "falsification": "D-90 an operator identifier reaches the publication surface",
+      "eligible": [
+        "docs/**/*.md",
+        "README.md",
+        "lib/isedraf/*.py"
+      ]
+    },
+    "check-docs-truth": {
+      "script": "scripts/ci/check_docs_truth.py",
+      "implements": "C-01, C-06, D-88",
+      "falsification": "C-06 competitive framing naming an external project",
+      "eligible": [
+        "docs/**/*.md",
+        "README.md",
+        ".github/workflows/*.yml"
+      ]
+    },
+    "check-current-state": {
+      "script": "scripts/docs/current_state.py",
+      "implements": "D-88, D-89, GOV-007",
+      "falsification": "D-89 the status registry claims a capability whose evidence is absent",
+      "eligible": [
+        "scripts/ci/project_status.json",
+        "docs/CURRENT_STATE.md"
+      ]
+    },
+    "check-packaging": {
+      "script": "scripts/ci/check_packaging.py",
+      "implements": "D-86, EXEC-016",
+      "falsification": "D-86 the rpm spec declares a build dependency the release builder cannot resolve",
+      "eligible": [
+        "packaging/rpm/*.spec.in",
+        "packaging/deb/control.in"
+      ]
+    },
+    "check-public-claims": {
+      "script": "scripts/ci/check_public_claims.py",
+      "implements": "C-01, D-88, D-89, D-90",
+      "falsification": "D-88 the README version badge disagrees with VERSION",
+      "eligible": [
+        "README.md"
+      ]
+    },
+    "check-licensing": {
+      "script": "scripts/ci/check_licensing.py",
+      "implements": "D-84, D-90, GOV-001",
+      "falsification": "D-90 an unregistered framework pack enters the tree",
+      "eligible": [
+        "REUSE.toml",
+        "scripts/ci/framework_sources.json"
+      ]
+    },
+    "check-native-catalog": {
+      "script": "scripts/ci/check_native_catalog.py",
+      "implements": "D-78, D-79, D-84, D-111",
+      "falsification": "D-111 a production module is named after a framework provider",
+      "eligible": [
+        "scripts/ci/native_controls.json",
+        "docs/architecture/NATIVE_CONTROL_CATALOG.md"
+      ]
+    }
+  },
+  "unpublished_paths": {
+    "$comment": "Declared gate scopes that are absent by design in a public checkout. check_gate_coverage.py must not call these a stale declaration: the path is real and in scope where the gate can act on it. Anything NOT listed here that matches no file is still a stale declaration.",
+    "paths": [
+      "CLAUDE.md"
+    ]
+  },
+  "private_only_gates": {
+    "$comment": "Gates that read material outside the repository and therefore cannot run in public CI. They are NOT in `make check` and that is deliberate, not a coverage gap. Listed so the omission is visible rather than silent.",
+    "check-provider-alignment": "reads the private provider licensing registry, located by the ISEDRAF_PROVIDER_REGISTRY environment variable and absent on a runner; skips with an explicit message and never reports a pass it did not earn"
+  }
+}

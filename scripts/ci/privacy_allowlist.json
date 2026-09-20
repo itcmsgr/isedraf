@@ -1,0 +1,48 @@
+{
+  "$comment": "Consumed by scripts/ci/check_privacy.py. Every entry needs a justification: an allowlist without reasons becomes a place to hide findings. Nothing is excluded silently \u2014 an allowed value is still classified and counted.",
+  "approved_public_identifiers": {
+    "itcms.gr": "the owner's published business contact, intentionally public in every SPDX header",
+    "contact@itcms.gr": "same",
+    "github.com": "the forge this project is published on",
+    "img.shields.io": "badge rendering in README",
+    "mozilla.org": "the MPL-2.0 licence text URL",
+    "nftban.com": "an ITCMS project with a public-facing domain; naming it is intentional",
+    "python.org": "upstream Python",
+    "itcmsgr": "the owner's public GitHub organization handle",
+    "anthropic.com": "same fixture as above",
+    "debian.org": "the DEP-5 machine-readable copyright format specification URL, required verbatim in packaging/deb/copyright"
+  },
+  "synthetic_ranges": {
+    "192.0.2.0/24": "RFC 5737 TEST-NET-1",
+    "198.51.100.0/24": "RFC 5737 TEST-NET-2",
+    "203.0.113.0/24": "RFC 5737 TEST-NET-3",
+    "2001:db8::/32": "RFC 3849 documentation prefix",
+    "10.0.0.0/24": "unit-test fixtures only; asserted to appear solely under tests/"
+  },
+  "lab_disposable_ranges": {
+    "192.168.122.0/24": "libvirt's default NAT network. Not routable, not the owner's estate, and the VMs it describes are destroyed after each campaign"
+  },
+  "approved_public_hosts": {
+    "9.9.9.9": "Quad9, used as an example resolver in a unit test",
+    "162.159.200.1": "Cloudflare public NTP, observed by a lab VM",
+    "185.125.190.122": "Canonical public NTP, observed by a lab VM"
+  },
+  "synthetic_literals": {
+    "7f8e9a0b1c2d3e4f5061728394a5b6c7": "the fabricated machine-id used by every golden vector",
+    "fixture-host": "unit-test hostname",
+    "example.com": "RFC 2606",
+    "example.test": "RFC 6761",
+    "example.invalid": "RFC 2606",
+    "Example Company S.A.": "sample report customer",
+    "A. Reviewer": "sample report assessor",
+    "x@anthropic.com": "a deliberately REJECTED Co-Authored-By trailer in the falsifiability harness; the injection exists to prove the commit-msg hook refuses it (D-93)"
+  },
+  "forbidden_operational_identifiers": {
+    "$comment": "EXACT identifiers that must never appear on the publication surface, in ANY file type. Scanned literally, not as prose patterns, so the structured scan has zero false positives by construction and can therefore run against .yml/.yaml where the prose classifier would produce noise on every legitimate `permissions: contents: read`. A denylist in a file called allowlist is slightly odd; it lives here because this is the privacy policy data, and splitting it across two files is how the release surface drifted before.",
+    "itcmsgr/isedraf-dev": "the private engineering repository, by name",
+    "46505": "an external App identifier recorded in the private governance record",
+    "PROVIDERS_LICENSE": "the private provider licensing registry",
+    "licensed-framework-research": "private licensing research",
+    "EXTERNAL_SERVICE_REVIEW": "the private external-service review"
+  }
+}

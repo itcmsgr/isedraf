@@ -1,0 +1,92 @@
+# ISEDRAF — CodeQL static analysis
+# SPDX-License-Identifier: MPL-2.0
+#
+# Two languages, not one. `actions` is analysed alongside `python` because the
+# workflows are as much a part of the attack surface as the collector: a poisoned
+# action or an injectable `run:` line reaches the same artifacts the Python does.
+#
+# The job is CONDITIONAL on the repository being public. CodeQL on a private
+# repository requires GitHub Advanced Security, which this plan does not have -
+# verified, not assumed. An unconditional job would fail on every push in the
+# private engineering repository, and a job that is always red teaches people to
+# ignore red. The condition makes the skip explicit instead of silent.
+#
+# Consequence, recorded rather than glossed over: until the public repository
+# exists, this workflow has NEVER RUN. Nothing may be displayed for it until a
+# real successful run exists. See docs/development/GOVERNANCE_GAPS.md.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly: the code can stop changing, the queries do not.
+    - cron: '27 4 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: analyze (${{ matrix.language }})
+    if: github.event.repository.visibility == 'public'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, actions]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+        with:
+          languages: ${{ matrix.language }}
+          # security-extended, not the default suite. The default trades recall for
+          # precision; this project would rather triage a false positive than ship
+          # an unexamined one.
+          queries: security-extended
+      - uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+        with:
+          category: /language:${{ matrix.language }}
+
+  # A skipped job reports green. That is the exact failure mode this project keeps
+  # finding: a control that never fires looks identical to a control that passed.
+  # This job ALWAYS runs. If the repository is public - so the analysis was due -
+  # and the analysis did not actually run, it fails loudly instead of skipping quietly.
+  guard:
+    name: analysis was due and ran
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    needs: [analyze]
+    if: always()
+    permissions: {}
+    steps:
+      - name: Attribute the outcome
+        run: |
+          visibility='${{ github.event.repository.visibility }}'
+          result='${{ needs.analyze.result }}'
+          echo "repository visibility : ${visibility:-<unset>}"
+          echo "analyze job result      : $result"
+          if [ "$visibility" = public ] && [ "$result" = skipped ]; then
+            echo "FAIL  the repository is public, so this analysis was due, and it did not run." >&2
+            exit 1
+          fi
+          if [ "$result" = failure ] || [ "$result" = cancelled ]; then
+            echo "FAIL  the analysis ran and did not pass." >&2
+            exit 1
+          fi
+          if [ "$result" = skipped ]; then
+            echo "SKIPPED  not a pass: this analysis requires a public repository and has"
+            echo "         NEVER RUN. Nothing may be displayed for it. See KGG-011."
+          fi

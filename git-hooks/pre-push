@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+#
+# Copyright © 2026 Antonios Voulvoulis / ITCMS
+# SPDX-License-Identifier: MPL-2.0
+#
+# This file is part of ISEDRAF.
+# Prototype phase: publication is owner-only. Remove this hook deliberately when publishing.
+echo "pre-push: pushing is disabled during the ISEDRAF prototype phase" >&2
+exit 1

@@ -1,0 +1,274 @@
+{
+  "$comment": "THE single authoritative status registry. docs/CURRENT_STATE.md is GENERATED from this file, and check_docs_truth.py validates documentation claims against it. One source, so a generated page and a gate cannot disagree \u2014 which is exactly how CURRENT_STATE.md came to announce that no product code existed while three commands worked.",
+  "project_stage": "TECHNICAL_PREVIEW_CANDIDATE",
+  "public_release": "AWAITING_OWNER_AUTHORIZATION",
+  "identity": {
+    "$comment": "THE canonical identity strings. Five surfaces described the same product five different ways - file headers, README, package metadata, CLI help and the GitHub About field - and nothing compared them. They legitimately differ in LENGTH and CASE, because a banner, a subtitle, a one-line package Summary and a 131-character About field are different formats. They must not differ in SUBSTANCE. Each form is declared here and check-public-claims holds its surface to it.",
+    "name": "ISEDRAF",
+    "noun": "Evidence Engine",
+    "$noun_comment": "D-113: canonical. 'Evidence Bridge' is RETIRED as a product descriptor and may not appear on any public claim surface (PRODUCT-DESCRIPTOR-001). Historical decision and amendment records may retain it where the usage is clearly historical - falsifying the record of what a thing was once called is worse than an inconsistent string.",
+    "header": "ISEDRAF \u2014 Linux Host Assurance, State Delta & Evidence Engine (codename)",
+    "tagline": "Linux Host Assurance with Approved Baselines, State Delta & Verifiable Evidence",
+    "short": "Linux host assurance, approved baseline, state delta and evidence engine",
+    "about": "Framework-neutral Linux host assurance: canonical state, immutable snapshots, approved baselines and explainable delta. Independent native controls.",
+    "$about_comment": "The GitHub repository description, and a PUBLIC CLAIM SURFACE no offline gate can read because it is forge metadata rather than a file - the same blind spot that let all four README badges go stale. Checked at release time. It states what the product IS: 'Python standard library only' is an implementation constraint and belongs in the README, not in the one sentence a reader uses to decide what this is (D-113).",
+    "retired_descriptors": [
+      "Evidence Bridge"
+    ],
+    "$retired_comment": "PRODUCT-DESCRIPTOR-001. Forbidden on public claim surfaces. The historical-record exemption covers AMENDMENTS.md and DECISIONS_REGISTER.md only.",
+    "topics": [
+      "linux",
+      "security",
+      "host-security",
+      "security-audit",
+      "compliance-evidence",
+      "configuration-audit",
+      "system-hardening",
+      "open-source"
+    ],
+    "$topics_comment": "Repository topics, declared here and applied by the owner - they are a repository setting. Deliberately NOT included: 'configuration-management', which implies tools that APPLY desired state (Ansible, Puppet, Salt) where ISEDRAF observes and explains; and cis/iso27001/nist/compliance/grc/edr/siem, which would either overstate current support or place the product in the wrong category."
+  },
+  "capabilities": {
+    "w1a_evidence_contract": {
+      "status": "CERTIFIED",
+      "evidence": "docs/architecture/freeze/W1A_CORE_PUBLIC.sha256",
+      "note": "The published freeze manifest is the public subset; its digests are copied from the full set in the engineering repository, never recomputed, so both verify the same bytes"
+    },
+    "identity": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/identity.py",
+      "command": "isedraf identity"
+    },
+    "inventory": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/inventory/",
+      "command": "isedraf inventory"
+    },
+    "report_json": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/report/render.py",
+      "command": "isedraf report --json"
+    },
+    "report_markdown": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/report/render.py",
+      "command": "isedraf report"
+    },
+    "snapshot": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/snapshot.py"
+    },
+    "ledger": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/ledger.py"
+    },
+    "independent_verifier": {
+      "status": "IMPLEMENTED",
+      "evidence": "scripts/vectors/verify.py"
+    },
+    "package_deb": {
+      "status": "IMPLEMENTED",
+      "evidence": "packaging/deb/control.in"
+    },
+    "package_rpm": {
+      "status": "IMPLEMENTED",
+      "evidence": "packaging/rpm/isedraf.spec.in"
+    },
+    "report_pdf": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "users_groups": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "sudo_privilege": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "ssh_state": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "pam": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "mounts": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "audit_subsystem": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "journald_recording": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "services": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "software_inventory": {
+      "status": "FUTURE",
+      "evidence": null
+    },
+    "baseline_approval": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "delta_comparison": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "export": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "signing": {
+      "status": "PLANNED",
+      "evidence": null
+    },
+    "production_mode_a": {
+      "status": "DEFERRED",
+      "evidence": "SCOPE-072",
+      "note": "the privileged topology that owns /var/lib/isedraf is Freeze Set 2"
+    },
+    "arm64": {
+      "status": "NOT_TESTED",
+      "evidence": null,
+      "note": "zero campaigns have run; planned second architecture"
+    },
+    "package_lifecycle_verified": {
+      "status": "IMPLEMENTED",
+      "evidence": "scripts/compat/package_lifecycle.sh",
+      "note": "install/run/remove/reinstall proven on Debian 12, AlmaLinux 8.10 (vendor Python 3.6.8) and AlmaLinux 9.7"
+    },
+    "clean_public_export": {
+      "status": "IMPLEMENTED",
+      "evidence": "scripts/ci/release_export.sh",
+      "note": "packages are rebuilt from the exported tree, not the engineering tree"
+    },
+    "sbom": {
+      "status": "IMPLEMENTED",
+      "evidence": "scripts/ci/generate_sbom.py",
+      "note": "SPDX 2.3 JSON per artifact, generated from the FINAL package by the standard library alone; scripts/ci/check_sbom.py cross-checks the rpm SBOM against rpm's own recorded per-file digests"
+    },
+    "artifact_attestation": {
+      "status": "IMPLEMENTED",
+      "evidence": ".github/workflows/release-candidate.yml",
+      "note": "build provenance over 6 subjects plus an SBOM attestation per versioned artifact; proven BINDING on 2026-09-19 - each artifact verified, then a copy with one flipped byte was refused (ATTESTATION_REJECTED_TAMPERED)"
+    },
+    "code_scanning": {
+      "status": "IMPLEMENTED",
+      "evidence": ".github/workflows/codeql.yml",
+      "note": "CodeQL security-extended over python AND actions; first run 2026-09-19, both language lanes analysed and passed"
+    },
+    "scorecard": {
+      "status": "IMPLEMENTED",
+      "evidence": ".github/workflows/scorecard.yml",
+      "note": "first run 2026-09-19; results are uploaded to code scanning and NOT published to the public Scorecard API, so no score is displayed anywhere"
+    },
+    "reproducible_build": {
+      "status": "IMPLEMENTED",
+      "evidence": "scripts/ci/check_reproducible.sh",
+      "command": "make check-reproducible",
+      "note": "the source tarball and the .deb rebuild BIT-IDENTICALLY on a different distribution (Fedora 44/btrfs/rpm 6.0.2 vs ubuntu-latest/ext4/rpm 4.18.2) and the locally rebuilt files verify against the published attestation; the .rpm differs because rpm 6 writes a zstd payload and rpm 4 writes gzip - a property of rpm, recorded in KGG-016 rather than papered over"
+    },
+    "framework_neutral_core": {
+      "status": "IMPLEMENTED",
+      "evidence": "docs/licensing/FRAMEWORK_MAPPING_POLICY.md",
+      "note": "collectors and criteria are authored by ISEDRAF and do not derive from any framework; there is no cis_collector, iso_collector or scf_collector, and removing every framework would leave the collectors unchanged"
+    },
+    "framework_source_registry": {
+      "status": "IMPLEMENTED",
+      "evidence": "scripts/ci/framework_sources.json",
+      "command": "make check-licensing",
+      "note": "deny by default: 0 sources registered, and the gate separately proves no framework content exists anywhere in the tree, so 'nothing registered' and 'nothing present' must agree"
+    },
+    "framework_mapping_packs": {
+      "status": "PLANNED",
+      "design": "docs/licensing/FRAMEWORK_PACK_ARCHITECTURE.md",
+      "note": "design only - no pack loader, no manifest reader, no entitlement mechanism and no signing exists; no third-party mapping is licensed, reviewed or bundled"
+    },
+    "framework_entitlement": {
+      "status": "PLANNED",
+      "design": "docs/licensing/FRAMEWORK_PACK_ARCHITECTURE.md",
+      "note": "intended boundary recorded (signed pack plus signed local entitlement file, verified offline); no cryptography and no licensing server is implemented or designed, because a protocol written before its legal constraints are known is one that will be rewritten"
+    },
+    "framework_specific_reports": {
+      "status": "NOT_TESTED",
+      "note": "not available: framework-specific output does not exist, and core reports are complete without it"
+    },
+    "native_control_catalog": {
+      "status": "PLANNED",
+      "design": "docs/architecture/NATIVE_CONTROL_CATALOG.md",
+      "note": "D-111 freezes the invariant and the ISE-* namespace: 14 families, ISE-IDENT reserved and not in use. NO native criterion is authored yet - they arrive in W1-D. make check-native-catalog enforces that the registry and the catalog document agree, that criteria hold to the namespace, that no criterion is derived from a framework, and that no production module is named after a provider"
+    },
+    "public_licensing_boundary": {
+      "status": "IMPLEMENTED",
+      "evidence": "scripts/ci/public_licensing_policy.json",
+      "command": "make check-licensing",
+      "note": "one machine-readable authority for the public licensing boundary. The gate reads every text surface for provider claims in context, the built DEB/RPM/TGZ and the SBOMs - not only the templates that produced them - plus restricted document formats, symlinks leaving the repository, and MPL-2.0 application in LICENSE, rpm metadata and the DEP-5 deb copyright. Zero false positives on 16 legitimate uses of control/framework/support/ISO-substring text"
+    },
+    "provider_alignment_check": {
+      "status": "IMPLEMENTED",
+      "evidence": "scripts/ci/check_provider_alignment.py",
+      "command": "make check-provider-alignment",
+      "note": "PRIVATE-only: compares public claims against the provider licensing registry, located by ISEDRAF_PROVIDER_REGISTRY. Never required by public CI, skips with an explicit message when the registry is absent, and never quotes its contents - a failure reports provider, public file, line and authorization state only"
+    },
+    "consolidated_product_model": {
+      "status": "IMPLEMENTED",
+      "evidence": "docs/architecture/ISEDRAF_PRODUCT_HLD.md",
+      "command": "make check-public-claims",
+      "note": "D-112: 64-bit Linux across x86_64 and ARM64 as a validated matrix rather than a blanket claim, and three interpretation modes - A native, B open mapping, C licensed BYOL - with the invariant that neither B nor C may alter A. The gate refuses a platform claim the measured record does not support and refuses removal of the mode invariant from the HLD"
+    },
+    "mode_b_open_mapping": {
+      "status": "PLANNED",
+      "design": "docs/architecture/ISEDRAF_PRODUCT_HLD.md",
+      "note": "optional mapping to an external authority whose exact reuse rights were validated first. NIST is the candidate and its rights are NOT yet verified - 'government' and 'open source' are where everyone assumes and nobody checks"
+    },
+    "mode_c_licensed_byol": {
+      "status": "PLANNED",
+      "design": "docs/architecture/ISEDRAF_PRODUCT_HLD.md",
+      "note": "provider-authorized pack plus the customer's own provider entitlement, only after a written agreement. Zero providers approached, zero agreements, and the architecture being ready is not a provider having agreed"
+    }
+  },
+  "runtime": {
+    "production_python_floor": "3.6",
+    "tooling_python_floor": "3.9",
+    "execution_model": "unprivileged, ISEDRAF_STATE_ROOT required",
+    "dependencies": "Python standard library only"
+  },
+  "platforms": {
+    "architectures_measured": [
+      "x86_64"
+    ],
+    "architectures_not_tested": [
+      "aarch64",
+      "armhf"
+    ],
+    "distributions_measured": [
+      "Debian 11",
+      "Debian 12",
+      "Debian 13",
+      "Ubuntu 22.04",
+      "Ubuntu 24.04",
+      "Ubuntu 26.04",
+      "AlmaLinux 8.10",
+      "AlmaLinux 9.7",
+      "Rocky 9.7",
+      "CentOS Stream 9",
+      "openSUSE Leap 15.6"
+    ],
+    "none_certified_because": "reboot stability and version-upgrade stability were not exercised"
+  },
+  "release_blockers": [
+    "an external integration boundary is under review; the Technical Preview is not released until the required repository-isolation condition is verified",
+    "no GitHub Release or tag is published; publication is a separate owner-authorized act (D-110)"
+  ],
+  "$release_blockers_comment": "PUBLIC-SAFE ONLY. This file is published and docs/CURRENT_STATE.md is generated from it, so anything written here reaches the public surface automatically. Earlier text here described an unresolved internal finding in operational detail. The detail belongs in the private governance record; a public project does not need to publish every internal reason a release has not happened. Use public_reason_class for the category and say no more. See PUBLIC-OPS-001.",
+  "public_reason_class": "EXTERNAL_TRUST_BOUNDARY_REVIEW",
+  "$public_reason_class_comment": "A closed vocabulary the public generator may emit in place of a described blocker. The generator reads THIS, never a free-text private reason, so the leak is structural rather than a wording that has to be policed on every regeneration."
+}

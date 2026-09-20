@@ -1,0 +1,32 @@
+{
+  "$comment": "The ISEDRAF NATIVE CONTROL CATALOG registry. Authority for the ISE-* namespace. Consumed by scripts/ci/check_native_catalog.py, which requires this file and docs/architecture/NATIVE_CONTROL_CATALOG.md to agree - two authorities that can disagree are how a namespace drifts. Criteria are authored in W1-D and later; `criteria` is empty today and that is the accurate state.",
+  "catalog_version": 1,
+  "namespace_pattern": "^ISE-[A-Z]+-[0-9]{3}$",
+  "families": {
+    "ISE-ASSET":   "asset and host inventory",
+    "ISE-SW":      "software and package state",
+    "ISE-ACCOUNT": "user, service and administrative accounts",
+    "ISE-AUTH":    "authentication",
+    "ISE-PRIV":    "sudo and privilege",
+    "ISE-SSH":     "SSH posture",
+    "ISE-SVC":     "service exposure and state",
+    "ISE-KERNEL":  "sysctl and kernel security",
+    "ISE-LOG":     "audit and logging",
+    "ISE-TIME":    "clock and time synchronization",
+    "ISE-CRYPTO":  "cryptographic posture",
+    "ISE-STORAGE": "filesystem, storage and mount security",
+    "ISE-NET":     "network configuration",
+    "ISE-UPDATE":  "update and support posture"
+  },
+  "reserved_families": {
+    "ISE-IDENT": "RESERVED, NOT IN USE. An earlier draft of the namespace used ISE-IDENT-* for accounts. Host IDENTITY (machine-id, host_id) and user ACCOUNTS are different domains, and one prefix meaning both would have been a permanent source of confusion. Accounts are ISE-ACCOUNT-*. ISE-IDENT stays reserved so it cannot be reused for something else and so the earlier draft resolves to an explanation rather than to silence."
+  },
+  "required_criterion_fields": [
+    "criterion_id", "purpose", "facts_required", "dimensions", "evaluation_semantics",
+    "applicability", "limitations", "evidence_pointers", "version"
+  ],
+  "optional_criterion_fields": ["remediation_guidance"],
+  "result_states": ["PASS", "FAIL", "PARTIAL", "NOT_EVALUATED"],
+  "criteria": [],
+  "$criteria_comment": "Empty. No native criterion is authored yet; they arrive in W1-D. The gate proves the namespace is consistent and that nothing framework-derived has entered it - it does not treat an empty catalog as a pass by omission."
+}

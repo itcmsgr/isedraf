@@ -1,0 +1,51 @@
+name: Security control interpretation
+description: You disagree with how ISEDRAF classified or explained an observed state.
+labels: ["architecture", "needs-evidence"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ISEDRAF separates **facts** from **criteria**: one observed state may legitimately evaluate
+        differently under different criteria. Use this form when the classification itself looks wrong.
+  - type: input
+    id: control
+    attributes: {label: Control, finding or change ID}
+    validations: {required: true}
+  - type: textarea
+    id: explain
+    attributes: {label: "Output of `isedraf explain <id>`", description: "Redacted."}
+    validations: {required: true}
+  - type: textarea
+    id: disagreement
+    attributes:
+      label: Why the classification is wrong
+      description: "Cite the observed state, not a framework requirement."
+    validations: {required: true}
+  - type: textarea
+    id: proposed
+    attributes: {label: Proposed classification and reasoning}
+  - type: input
+    id: version
+    attributes: {label: ISEDRAF version}
+    validations: {required: true}
+  - type: dropdown
+    id: privilege
+    attributes:
+      label: Privilege mode of the run
+      options: ["unprivileged", "root / sudo"]
+    validations: {required: true}
+  - type: input
+    id: requirement
+    attributes:
+      label: Affected requirement or control ID (if known)
+      description: "e.g. IDENT-004, D-46. Leave blank if unknown."
+  - type: textarea
+    id: observed
+    attributes: {label: Observed behaviour}
+    validations: {required: true}
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: "Exact commands, so the case can be added to the corpus."
+    validations: {required: true}
