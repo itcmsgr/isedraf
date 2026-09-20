@@ -507,6 +507,19 @@ inject "D-86 the rpm changelog states a weekday the date never fell on" \
   'sed -i "s|^\* Fri Sep 18 2026|* Thu Sep 18 2026|" packaging/rpm/isedraf.spec.in' \
   'which was a|packaging metadata gate FAILED'
 
+# GOV-001. The coverage gate used to verify only what was DECLARED, so an undeclared
+# gate passed by not being mentioned. These two prove it now reconciles the declaration
+# against the directory in both directions.
+inject "GOV-001 a gate script is added that nothing declares or runs" \
+  'python3 scripts/ci/check_gate_coverage.py' \
+  'printf "import sys\nsys.exit(0)\n" > scripts/ci/check_orphan_example.py && git add -A' \
+  'does not account for|gate coverage FAILED'
+
+inject "GOV-001 a declared gate script is deleted from the tree" \
+  'python3 scripts/ci/check_gate_coverage.py' \
+  'git rm -q --cached scripts/ci/check_sbom.py && rm -f scripts/ci/check_sbom.py' \
+  'does not exist|gate coverage FAILED'
+
 # D-114 / STORAGE-SEMANTICS-001. The retired storage vocabulary survived in a published
 # sample report for three schema versions, because every gate read the source and none
 # read the documentation. These three prove the gate now reads the whole surface: a
