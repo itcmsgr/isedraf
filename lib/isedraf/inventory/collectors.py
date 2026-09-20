@@ -152,16 +152,37 @@ def collect_machine(root="/"):
         if cpuinfo.ok:
             virtualized = bool(re.search(r"^flags\s*:.*\bhypervisor\b", cpuinfo.value,
                                          re.M))
+    vendor, product = dmi("sys_vendor"), dmi("product_name")
     data = {"virtualized": virtualized, "hypervisor": hypervisor,
-            "vendor": dmi("sys_vendor"), "product": dmi("product_name")}
-    known = [v for v in data.values() if v is not None]
-    status = model.COLLECTED if len(known) >= 2 else model.PARTIAL
+            "vendor": vendor, "product": product}
+
+    # Status is decided PER SOURCE, not by counting non-null values across the whole
+    # subdomain. The previous rule was `len(known) >= 2` over all four fields, and
+    # `virtualized` and `hypervisor` counted toward it - so on any virtualized host
+    # without SMBIOS (a cloud image, a container, a minimal VM) DMI could be entirely
+    # absent and the subdomain still reported COLLECTED, with vendor and product null
+    # and no reason, because a reason is only attached to PARTIAL.
+    #
+    # That is an incomplete collection reported as complete, which is the one thing an
+    # evidence engine cannot be wrong about. The Raspberry Pi case was handled correctly
+    # by accident: no DMI AND no hypervisor happened to fall below the threshold.
+    # BOTH identity fields, not either. One present and one absent is still an
+    # incomplete collection, and reporting COLLECTED with a null field is the same
+    # defect one size smaller.
+    missing = [n for n, v in (("vendor", vendor), ("product", product)) if v is None]
+    if not missing:
+        status, reason = model.COLLECTED, None
+    else:
+        status = model.PARTIAL
+        reason = ("SOURCE_ABSENT: /sys/class/dmi/id exposes no %s on this platform, so "
+                  "machine identity is incomplete. Common on ARM single-board computers "
+                  "and on virtualized or containerized hosts without SMBIOS. "
+                  "Virtualization detection is reported separately and does not "
+                  "establish machine identity." % " or ".join(missing))
     return model.subdomain(
         status, data,
         method="systemd-detect-virt | /sys/hypervisor + /sys/class/dmi/id",
-        reason=None if status == model.COLLECTED
-        else "SOURCE_ABSENT: DMI is not exposed on this platform (common on ARM "
-             "single-board computers) and no hypervisor could be identified")
+        reason=reason)
 
 
 # --- compute and memory --------------------------------------------------------------------
@@ -229,30 +250,59 @@ def collect_storage(root="/"):
             devmodel = read_file(os.path.join(block, name, "device/model"))
             removable = read_file(os.path.join(block, name, "removable"))
             scsi_type = read_file(os.path.join(block, name, "device/type"))
-            is_removable = removable.ok and removable.value.strip() == "1"
+            devvendor = read_file(os.path.join(block, name, "device/vendor"))
 
-            # Order matters. `rotational == 0` is true of an optical drive as well as an
-            # SSD, so the optical checks come FIRST - otherwise a DVD-ROM is reported as
-            # solid-state storage, which is what the first published sample did.
-            kind = model.DEVICE_UNKNOWN
-            if name.startswith("nvme"):
-                kind = model.DEVICE_NVME
-            elif name.startswith(("sr", "scd")) or (
-                    scsi_type.ok and scsi_type.value.strip() == "5"):   # SCSI TYPE_ROM
-                kind = model.DEVICE_OPTICAL
-            elif name.startswith("vd"):
-                # virtio-blk. What backs it is not observable from the guest, so naming
-                # the transport is the honest answer rather than guessing the medium.
-                kind = model.DEVICE_VIRTUAL
-            elif rotational.ok:
-                kind = (model.DEVICE_ROTATIONAL if rotational.value.strip() == "1"
-                        else model.DEVICE_SOLID_STATE)
+            # D-114. Each dimension is recorded as itself. Nothing here infers a
+            # physical medium, a transport, or that this block device corresponds to
+            # one physical disk - an HP RAID logical volume presents as a single
+            # device over four of them.
+            #
+            # kernel_subsystem comes from the kernel's own device/subsystem link, not
+            # from a name prefix. FIXTURE-CONFINEMENT-001: the link is read LEXICALLY.
+            # os.path.realpath() would resolve it against the REAL filesystem and read
+            # the host's /sys/bus while believing it was reading a fixture root - the
+            # same escape that once let timedatectl run against the live host.
+            subsystem = None
+            link = os.path.join(block, name, "device", "subsystem")
+            try:
+                if os.path.islink(link):
+                    subsystem = os.path.basename(os.readlink(link).rstrip("/")) or None
+            except OSError:
+                subsystem = None
+
+            rot = None
+            if rotational.ok:
+                v = rotational.value.strip()
+                rot = True if v == "1" else (False if v == "0" else None)
+
+            removable_flag = None
+            if removable.ok:
+                v = removable.value.strip()
+                removable_flag = True if v == "1" else (False if v == "0" else None)
+
+            # Meaningful only within the SCSI family. A global `device/type == 5` test
+            # would be an assumption buried in a branch; scoping it is part of the
+            # field's definition.
+            peripheral = None
+            if subsystem == "scsi" and scsi_type.ok:
+                try:
+                    peripheral = int(scsi_type.value.strip())
+                except ValueError:
+                    peripheral = None
+
+            # Stable keys with null, never a shape that varies by subsystem: the same
+            # idiom SNAP-023 already fixes for manifest_core.host_id. A missing key is
+            # ambiguous - old schema, conditional serialization, or a defect - where
+            # null says the field belongs here and no value was established.
             devices.append({
                 "name": name,
                 # /sys/block/*/size is in 512-byte sectors regardless of logical size.
                 "size_bytes": int(size.value.strip()) * 512 if size.ok else None,
-                "type": kind,
-                "removable": is_removable,
+                "kernel_subsystem": subsystem,
+                "queue_rotational": rot,
+                "kernel_removable": removable_flag,
+                "scsi_peripheral_type": peripheral,
+                "vendor": devvendor.value.strip() if devvendor.ok else None,
                 "model": devmodel.value.strip() if devmodel.ok else None,
             })
 

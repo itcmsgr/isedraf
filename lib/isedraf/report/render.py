@@ -172,14 +172,30 @@ def to_markdown(report):
     out.append("")
     devices = storage.get("devices") or []
     if devices:
-        out.append("| Device | Size | Class | Removable | Model |")
-        out.append("|---|---|---|---|---|")
+        # D-114. Column headers name the SOURCE, so a reader cannot mistake a kernel
+        # flag for a physical fact: "Kernel removable flag", not "Removable".
+        out.append("| Device | Size | Kernel subsystem | Queue rotational | "
+                   "Kernel removable flag | Vendor | Model |")
+        out.append("|---|---|---|---|---|---|---|")
         for dev in devices:
             size = "%.1f GB" % (dev["size_bytes"] / 1e9) if dev.get("size_bytes") else "—"
-            out.append("| `%s` | %s | %s | %s | %s |"
-                       % (dev["name"], size, dev.get("type") or "—",
-                          "yes" if dev.get("removable") else "no",
+
+            def tri(v):
+                return "—" if v is None else ("true" if v else "false")
+
+            out.append("| `%s` | %s | %s | %s | %s | %s | %s |"
+                       % (dev["name"], size,
+                          dev.get("kernel_subsystem") or "—",
+                          tri(dev.get("queue_rotational")),
+                          tri(dev.get("kernel_removable")),
+                          dev.get("vendor") or "—",
                           dev.get("model") or "—"))
+        out.append("")
+        out.append("*Kernel-reported block-device attributes. `Queue rotational` and "
+                   "`Kernel removable flag` describe how Linux presents the block "
+                   "queue; neither establishes the physical storage medium, and a "
+                   "block device does not necessarily correspond to one physical "
+                   "disk (D-114).*")
         out.append("")
     filesystems = storage.get("filesystems") or []
     if filesystems:

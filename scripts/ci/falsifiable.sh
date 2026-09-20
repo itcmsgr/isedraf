@@ -339,6 +339,76 @@ inject "D-90 a public artifact is assembled through a symlink leaving the reposi
   'ln -s /etc/hostname docs/reference/external-input.txt && git add -f -A' \
   'symlink pointing OUTSIDE|licensing gate FAILED'
 
+# STORAGE-SEMANTICS-001 (D-114). The retired inference must be provably dead, not
+# merely absent. Each of these reintroduces it in a different disguise.
+inject "STORAGE-SEMANTICS-001 non-rotational is inferred to be solid state" \
+  'python3 tests/test_inventory.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/inventory/collectors.py"); s = p.read_text()
+old = "                \"queue_rotational\": rot,"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, old + "\n                \"type\": \"SOLID_STATE\" if rot is False else None,", 1))
+PYX' \
+  'reappeared|SOLID_STATE|FAILED'
+
+inject "STORAGE-SEMANTICS-001 a physical medium field is reintroduced" \
+  'python3 tests/test_inventory.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/inventory/collectors.py"); s = p.read_text()
+old = "                \"kernel_removable\": removable_flag,"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, old + "\n                \"physical_medium\": \"SOLID_STATE\",", 1))
+PYX' \
+  'reappeared|physical_medium|FAILED'
+
+inject "STORAGE-SEMANTICS-001 the queue observation is deleted instead of the inference" \
+  'python3 tests/test_inventory.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/inventory/collectors.py"); s = p.read_text()
+old = "                \"queue_rotational\": rot,"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "", 1))
+PYX' \
+  'queue_rotational|FAILED'
+
+# FIXTURE-CONFINEMENT-001.
+#
+# The first version of this injection mutated readlink() to realpath() and DID NOT FIRE.
+# Measured, not assumed: with a RELATIVE link inside a fixture root, realpath resolves
+# within that root, and basename() of either is the same string. The two implementations
+# are indistinguishable at this call site, so that mutation had nothing to detect and
+# reporting it as a control would have been a green check proving nothing.
+#
+# The real failure mode is an implementation that VALIDATES the target - exists(), stat(),
+# listdir() - because a fixture link legitimately points at something that is not there.
+# That is what this mutates, and the test's deliberately non-existent target answers it.
+inject "FIXTURE-CONFINEMENT-001 the subsystem link target is validated before use" \
+  'python3 tests/test_inventory.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/inventory/collectors.py"); s = p.read_text()
+old = "                if os.path.islink(link):"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "                if os.path.islink(link) and os.path.exists(link):", 1))
+PYX' \
+  'example_fake_subsystem|FAILED'
+
+# D-114 Defect A. An incomplete collection reported as complete is the one thing an
+# evidence engine cannot be wrong about.
+inject "SCOPE-022 DMI absent with virtualization present is reported COLLECTED" \
+  'python3 tests/test_inventory.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/inventory/collectors.py"); s = p.read_text()
+old = "    missing = [n for n, v in ((\"vendor\", vendor), (\"product\", product)) if v is None]"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    missing = [] if hypervisor else [n for n, v in ((\"vendor\", vendor), (\"product\", product)) if v is None]", 1))
+PYX' \
+  'PARTIAL|reason|FAILED'
+
 # D-111. The native control catalog is authored first and is ISEDRAF's own. The invariant
 # is frozen; these prove the gate enforcing it can refuse.
 inject "D-111 a production module is named after a framework provider" \
@@ -436,6 +506,26 @@ inject "D-86 the rpm changelog states a weekday the date never fell on" \
   'python3 scripts/ci/check_packaging.py' \
   'sed -i "s|^\* Fri Sep 18 2026|* Thu Sep 18 2026|" packaging/rpm/isedraf.spec.in' \
   'which was a|packaging metadata gate FAILED'
+
+# D-114 / STORAGE-SEMANTICS-001. The retired storage vocabulary survived in a published
+# sample report for three schema versions, because every gate read the source and none
+# read the documentation. These three prove the gate now reads the whole surface: a
+# device record carrying the retired value, a device table whose column hides the source,
+# and the retired enum constant returning to the engine.
+inject "D-114 a published document reports a storage device type of ROTATIONAL" \
+  'python3 scripts/ci/check_storage_vocabulary.py' \
+  'printf "%s\n" "{\"name\": \"sda\", \"type\": \"ROTATIONAL\"}" > docs/reference/PLATFORM_COMPATIBILITY.md' \
+  'retired value|storage vocabulary gate FAILED'
+
+inject "D-114 a storage table column says Class instead of naming its kernel source" \
+  'python3 scripts/ci/check_storage_vocabulary.py' \
+  'printf "%s\n%s\n" "| Device | Size | Class | Model |" "|---|---|---|---|" > docs/reference/PLATFORM_COMPATIBILITY.md' \
+  'Class/Type column|storage vocabulary gate FAILED'
+
+inject "D-114 the retired DEVICE_SOLID_STATE constant returns to the engine" \
+  'python3 scripts/ci/check_storage_vocabulary.py' \
+  'printf "%s\n" "DEVICE_SOLID_STATE = \"SOLID_STATE\"" >> lib/isedraf/inventory/collectors.py' \
+  'retired storage vocabulary|storage vocabulary gate FAILED'
 
 # D-86. The deb and the rpm are built by two different implementations. Dropping a
 # document from one of them must be caught by comparing them, not by anyone remembering.
@@ -602,18 +692,33 @@ inject "D-90 a private key path is committed into docs" \
   'printf "\nKey at ~/.ssh/id_ed25519_release for deploys.\n" >> docs/reference/GLOSSARY.md  # privacy:planted-fixture' \
   'SSH_PRIVATE_KEY_PATH'
 
-# W1-C1: an optical drive reports rotational=0 exactly like an SSD. Classifying on that
-# alone put a QEMU DVD-ROM in the first published sample as SOLID_STATE.
-inject "optical device classified by the rotational flag alone" \
+# W1-C1 -> D-114. An optical drive reports rotational=0 exactly like an SSD, and
+# classifying on that alone put a QEMU DVD-ROM in the first published sample as
+# SOLID_STATE. The branch this used to mutate no longer exists: D-114 retired the whole
+# classification chain. STORAGE-SEMANTICS-002 says such an injection is REPLACED by one
+# protecting the corrected model, not deleted - the concern survives, the mechanism
+# changed. The peripheral type is now the evidence, and it must be recorded and scoped.
+inject "D-114 the SCSI peripheral type is dropped from the observation" \
   'python3 tests/test_inventory.py' \
   'python3 - <<'"'"'PYX'"'"'
 import pathlib
 p = pathlib.Path("lib/isedraf/inventory/collectors.py"); s = p.read_text()
-old = "            elif name.startswith((\"sr\", \"scd\")) or ("
+old = "                \"scsi_peripheral_type\": peripheral,"
 assert old in s, "mutation anchor miss"
-p.write_text(s.replace(old, "            elif False and ("))
+p.write_text(s.replace(old, "                \"scsi_peripheral_type\": None,", 1))
 PYX' \
-  'OPTICAL|DEVICE_OPTICAL'
+  'scsi_peripheral_type|FAILED'
+
+inject "D-114 the peripheral type leaks outside the SCSI family" \
+  'python3 tests/test_inventory.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/inventory/collectors.py"); s = p.read_text()
+old = "            if subsystem == \"scsi\" and scsi_type.ok:"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "            if scsi_type.ok:", 1))
+PYX' \
+  'leaked into|FAILED'
 
 # W1-C1: the report tells its reader that incomplete observations explain themselves.
 inject "SCOPE-022 an incomplete collection carries no reason" \

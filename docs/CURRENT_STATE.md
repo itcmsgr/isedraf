@@ -32,6 +32,7 @@ What exists and runs today. Nothing else on this page does.
 |---|---|---|
 | `w1a_evidence_contract` | `docs/architecture/freeze/W1A_CORE_PUBLIC.sha256` | — |
 | `artifact_attestation` | `.github/workflows/release-candidate.yml` | — |
+| `block_storage_observation_model` | `lib/isedraf/inventory/collectors.py` | — |
 | `clean_public_export` | `scripts/ci/release_export.sh` | — |
 | `code_scanning` | `.github/workflows/codeql.yml` | — |
 | `consolidated_product_model` | `docs/architecture/ISEDRAF_PRODUCT_HLD.md` | `make check-public-claims` |
@@ -110,8 +111,8 @@ Not asserted. Each number is counted at generation time.
 
 | | |
 |---|---|
-| Gates | 18 |
-| Falsification injections | 100 |
+| Gates | 19 |
+| Falsification injections | 109 |
 | Golden vector cases | 15 |
 | Frozen artifacts | 7 |
 | Test files | 3 |

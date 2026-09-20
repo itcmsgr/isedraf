@@ -51,12 +51,21 @@ ERROR = "ERROR"
 # --- block device classes ---------------------------------------------------------------
 # `rotational == 0` does not mean "SSD". An optical drive reports 0 too, which is how a
 # QEMU DVD-ROM was classified as SOLID_STATE in the first sample report anyone read.
-DEVICE_NVME = "NVME"
-DEVICE_SOLID_STATE = "SOLID_STATE"
-DEVICE_ROTATIONAL = "ROTATIONAL"
-DEVICE_OPTICAL = "OPTICAL"
-DEVICE_VIRTUAL = "VIRTUAL"
-DEVICE_UNKNOWN = "UNKNOWN"
+# D-114: the overloaded `type` enum is RETIRED, not deprecated. It conflated kernel
+# subsystem (NVME, VIRTUAL), block-queue behaviour (ROTATIONAL, SOLID_STATE) and
+# peripheral class (OPTICAL) into one apparently authoritative answer, and the
+# `rotational == 0 -> SOLID_STATE` branch made an SD card a solid-state drive and,
+# before that, a DVD-ROM one.
+#
+# A convenient but semantically broken field that remains readable continues to be read,
+# so there is no compatibility alias. Replaced by the dimensions Linux actually exposes:
+# kernel_subsystem, queue_rotational, kernel_removable, scsi_peripheral_type.
+#
+# STORAGE-SEMANTICS-001:
+#   queue_rotational = false   MUST NOT imply SOLID_STATE
+#   kernel_subsystem = scsi    MUST NOT imply SATA / SAS / USB / iSCSI / FC
+#   kernel_subsystem = nvme    MUST NOT imply a solid-state physical medium
+#   a block-layer object       MUST NOT be assumed to represent one physical device
 
 # --- IPv6 address classes ---------------------------------------------------------------
 # Flattening these is how privacy addresses become permanent false churn: RFC 4941

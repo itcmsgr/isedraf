@@ -202,8 +202,13 @@ Report
 | Collection completeness | both | per-subdomain status |
 | Limitations | both | what the evidence does not support |
 
-A sample of the real output is in [`samples/SAMPLE_REPORT.md`](samples/SAMPLE_REPORT.md), generated on a
-lab VM and not edited.
+A rendered sample of the real output is **not published with this preview**. The previous sample was
+generated on a disposable lab VM that no longer exists, and it describes the retired storage schema:
+it reports a device `type` of `ROTATIONAL` or `OPTICAL`, which is exactly the inference the storage
+observation model now refuses to make. It could not be migrated, because the fields that replaced
+that one - `kernel_subsystem`, `queue_rotational`, `kernel_removable`, `scsi_peripheral_type` - were
+never collected from that host, and writing plausible values for them would be inventing evidence.
+A sample returns when it can be produced by running the tool, not by editing a document.
 
 ## Domains not yet mapped
 

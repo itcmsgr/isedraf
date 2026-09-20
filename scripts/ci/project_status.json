@@ -42,7 +42,8 @@
     "inventory": {
       "status": "IMPLEMENTED",
       "evidence": "lib/isedraf/inventory/",
-      "command": "isedraf inventory"
+      "command": "isedraf inventory",
+      "note": ". Machine identity reports PARTIAL with an explicit reason whenever DMI is absent or incomplete; virtualization detection is separate and does not establish it"
     },
     "report_json": {
       "status": "IMPLEMENTED",
@@ -233,6 +234,11 @@
       "status": "PLANNED",
       "design": "docs/architecture/ISEDRAF_PRODUCT_HLD.md",
       "note": "provider-authorized pack plus the customer's own provider entitlement, only after a written agreement. Zero providers approached, zero agreements, and the architecture being ready is not a provider having agreed"
+    },
+    "block_storage_observation_model": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/inventory/collectors.py",
+      "note": "D-114: the overloaded storage `type` is retired, not deprecated. Replaced by kernel_subsystem (from device/subsystem, read lexically), queue_rotational, kernel_removable and scsi_peripheral_type (scoped to the SCSI family), with stable keys and null. No physical_medium, transport or is_aggregate: a block-layer object is not necessarily one physical device"
     }
   },
   "runtime": {
