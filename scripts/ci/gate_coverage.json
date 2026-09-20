@@ -159,6 +159,15 @@
         "docs/reference/*.md"
       ]
     },
+    "check-sample-report": {
+      "script": "scripts/docs/sample_report.py",
+      "implements": "IQ-011, D-88, D-89",
+      "falsification": "IQ-011 the published sample drifts from the evidence it is generated from",
+      "eligible": [
+        "docs/reference/samples/evidence/*.json",
+        "docs/reference/samples/SAMPLE_REPORT.*"
+      ]
+    },
     "check-public-claims": {
       "script": "scripts/ci/check_public_claims.py",
       "implements": "C-01, D-88, D-89, D-90",

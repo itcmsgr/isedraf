@@ -1,0 +1,7 @@
+isedraf_version: isedraf 0.1.0-alpha1
+deb_version: 0.1.0~alpha1
+python: Python 3.11.2 (main, May 12 2026, 05:17:27) [GCC 12.2.0]
+kernel: 6.1.0-53-cloud-amd64 x86_64
+PRETTY_NAME="Debian GNU/Linux 12 (bookworm)"
+VERSION_ID="12"
+ID=debian

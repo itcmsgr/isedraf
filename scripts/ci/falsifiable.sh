@@ -507,6 +507,26 @@ inject "D-86 the rpm changelog states a weekday the date never fell on" \
   'sed -i "s|^\* Fri Sep 18 2026|* Thu Sep 18 2026|" packaging/rpm/isedraf.spec.in' \
   'which was a|packaging metadata gate FAILED'
 
+# IQ-011. The previous sample described a retired storage schema for three versions and
+# nothing noticed, because no gate compared a published document against the evidence it
+# came from. These two prove the sample cannot drift from its evidence in either
+# direction: the document edited by hand, and the evidence changed underneath it.
+inject "IQ-011 the published sample drifts from the evidence it is generated from" \
+  'python3 scripts/docs/sample_report.py check' \
+  'sed -i "s/| Kernel subsystem |/| Class |/" docs/reference/samples/SAMPLE_REPORT.md' \
+  'SAMPLE_REPORT.md|does not match the committed evidence'
+
+inject "IQ-011 the committed evidence changes without the sample being regenerated" \
+  'python3 scripts/docs/sample_report.py check' \
+  'python3 - <<PYX
+import json
+p = "docs/reference/samples/evidence/collected_inventory.json"
+d = json.load(open(p))
+d["subdomains"]["storage"]["data"]["devices"][0]["queue_rotational"] = False
+json.dump(d, open(p, "w"))
+PYX' \
+  'SAMPLE_REPORT|does not match the committed evidence'
+
 # GOV-001. The coverage gate used to verify only what was DECLARED, so an undeclared
 # gate passed by not being mentioned. These two prove it now reconciles the declaration
 # against the directory in both directions.

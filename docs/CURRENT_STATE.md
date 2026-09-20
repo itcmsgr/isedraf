@@ -111,8 +111,8 @@ Not asserted. Each number is counted at generation time.
 
 | | |
 |---|---|
-| Gates | 19 |
-| Falsification injections | 111 |
+| Gates | 20 |
+| Falsification injections | 113 |
 | Golden vector cases | 15 |
 | Frozen artifacts | 7 |
 | Test files | 3 |
