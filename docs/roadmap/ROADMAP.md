@@ -10,6 +10,83 @@ Implements: D-65, D-66, D-82, D-88
 Everything on this page is `PLANNED`, `FUTURE` or `OUT_OF_SCOPE`. Nothing here is released.
 For what exists, see [`../CURRENT_STATE.md`](../CURRENT_STATE.md).
 
+## Canonical phase model — the single roadmap interpretation
+
+Owner decision, 2026-09-20. This section is the authoritative reading of the roadmap. It exists
+because the work kept drifting between "release work", "report work", "controls", "ARM" and
+"frameworks" as though they competed for the same slot. They do not. No new architecture decision
+is taken from this page: an amendment follows implementation evidence, never the reverse.
+
+Everything from Phase 1 onward is `PLANNED` or `FUTURE`. Nothing below Phase 0 is built.
+
+| Phase | Name | State | What closes it |
+|---|---|---|---|
+| 0 | Technical preview foundation | **IMPLEMENTED** | the evidence engine, packaging, deterministic semantics and release process are trustworthy enough to build an assurance layer on |
+| 1 | Reproducible example report | `PLANNED` | a fresh, schema-current public example rendered from committed input bytes (closes `IQ-011`) |
+| 2 | W1-D host assurance collection | `PLANNED` | the ten control domains below, each with its full fixture set |
+| 3 | Native `ISE-*` control catalog | `PLANNED` | criteria authored against frozen collector schemas, in our numbering and our technical reasoning |
+| 4 | Findings report | `PLANNED` | the first customer-useful output: native findings with result classes and evidence references |
+| 5 | Approved baseline and classified delta | `PLANNED` | "what changed since the state I approved?", plus the unchanged-runs and engine-upgrade acceptance tests |
+| 6 | Platform expansion | `PLANNED` | ARM64, Raspberry Pi, Alpine, then further distributions; support grows from evidence |
+| 7 | Generic mapping engine | `FUTURE` | an overlay that never modifies facts, criteria, results, snapshots, ledger, baseline or delta |
+| 8 | Mode B — validated open mappings | `FUTURE` | an external authority whose exact reuse rights were verified first |
+| 9 | Mode C — provider-authorized BYOL | `FUTURE` | a written provider agreement; the core stays MPL-2.0 |
+
+### The alpha goal, stated plainly
+
+`v0.1.0-alpha1` is a **technical preview**, and its goal is *not* to complete assurance content. Its
+goal is to prove the engine, the packaging, the deterministic semantics and the release process are
+sound enough to build on. Measuring that against assurance breadth would fail it for the wrong reason.
+
+### Four report milestones
+
+The reporting engine is not what is missing. What is `PLANNED` is the assurance intelligence that
+makes a report worth giving to a customer.
+
+| Level | Meaning | State |
+|---|---|---|
+| **R0** Evidence report | identity + inventory + completeness + evidence references | **IMPLEMENTED** — `isedraf report` |
+| **R1** Public sample | a reproducible, current-schema published example | `PLANNED` — Phase 1 |
+| **R2** Assurance report | users, privilege, SSH, authentication and the rest, plus native findings | `PLANNED` — Phases 2-4 |
+| **R3** Continuous assurance | approved baseline plus classified delta | `PLANNED` — Phase 5 |
+
+### W1-D control domains, in order
+
+The order is by control domain, not by release. Each domain is complete only when it carries the
+fixture set this repository already requires of every parser: normal, missing, malformed, permission
+denied, partial, unsupported, and fixture isolation.
+
+```text
+ 1  users and groups            6  services
+ 2  privilege and sudo          7  logging and audit
+ 3  account ageing              8  mounts and filesystem security
+ 4  SSH                         9  kernel and security posture
+ 5  PAM and authentication     10  update and support posture
+```
+
+### Three tracks, run in parallel, never conflated
+
+```text
+PRODUCT DEPTH        inventory -> controls -> findings -> baseline/delta
+PLATFORM BREADTH     x86_64 -> ARM64 -> Raspberry Pi -> further distributions
+FRAMEWORK ECOSYSTEM  native only -> verified open maps -> provider-authorized BYOL
+```
+
+Platform validation has no dependency on the control or framework tracks and does not queue behind
+them. Framework negotiation blocks nothing, because Mode A is the product.
+
+### How the remaining effort is estimated
+
+No duration is frozen here. A number produced before any domain has been built is a guess wearing a
+schedule's clothing, and this repository does not publish confidence the evidence has not earned.
+The method instead:
+
+```text
+implement the first two full domains
+        -> measure the real cost of collector + fixtures + criterion + renderer + falsification
+        -> re-estimate the remaining domains from observed velocity
+```
+
 ## Prototype — PLANNED
 
 Host identity · identity views (`users`, `user <name>`, `groups`, `group <name>`, `privileged`) from one
