@@ -202,13 +202,22 @@ Report
 | Collection completeness | both | per-subdomain status |
 | Limitations | both | what the evidence does not support |
 
-A rendered sample of the real output is **not published with this preview**. The previous sample was
-generated on a disposable lab VM that no longer exists, and it describes the retired storage schema:
-it reports a device `type` of `ROTATIONAL` or `OPTICAL`, which is exactly the inference the storage
-observation model now refuses to make. It could not be migrated, because the fields that replaced
-that one - `kernel_subsystem`, `queue_rotational`, `kernel_removable`, `scsi_peripheral_type` - were
-never collected from that host, and writing plausible values for them would be inventing evidence.
-A sample returns when it can be produced by running the tool, not by editing a document.
+A rendered sample of the real output is in [`samples/SAMPLE_REPORT.md`](samples/SAMPLE_REPORT.md),
+with the same report as JSON beside it. It is real `isedraf report` output, collected by an
+unprivileged user on a disposable Debian 12 VM using the released `0.1.0-alpha1` package.
+
+It is **generated from committed evidence**, not pasted in. The collection it came from is in
+[`samples/evidence/`](samples/evidence/) — the inventory as collected, and the snapshot, manifest
+and ledger as written — and `python3 scripts/docs/sample_report.py generate` rebuilds both
+documents from those bytes. Regenerating re-verifies the ledger chain as it goes, so the sample
+demonstrates the verification rather than asserting it. `make check` fails if the published
+sample and its evidence disagree.
+
+The previous sample was withdrawn because it described a retired storage schema and its source
+machine no longer existed, so it could not be regenerated. That cannot happen again: the sample
+no longer depends on anyone still having the host. What committed bytes cannot reproduce is the
+collection itself — reading `/sys` and `/proc` needs the machine — so the evidence is captured
+once and the report is reproducible from it.
 
 ## Domains not yet mapped
 
