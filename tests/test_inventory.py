@@ -23,6 +23,7 @@
 import io
 import os
 import pathlib
+import os
 import shutil
 import subprocess
 import sys
@@ -309,7 +310,7 @@ class TestDeviceClassification(unittest.TestCase):
     """`rotational == 0` is true of an optical drive as well as an SSD."""
 
     def device(self, name, rotational=None, removable=None, scsi_type=None,
-               devmodel=None):
+               devmodel=None, devvendor=None, subsystem=None):
         files = {"proc/self/mounts": ""}
         base = "sys/block/%s" % name
         files[base + "/size"] = "2097152\n"
@@ -321,39 +322,172 @@ class TestDeviceClassification(unittest.TestCase):
             files[base + "/device/type"] = "%s\n" % scsi_type
         if devmodel is not None:
             files[base + "/device/model"] = "%s\n" % devmodel
+        if devvendor is not None:
+            files[base + "/device/vendor"] = "%s\n" % devvendor
         root = build_root(files)
         self.addCleanup(shutil.rmtree, root, True)
+        # D-114: kernel_subsystem comes from the kernel's own link, so a fixture that
+        # claims to test a subsystem must PROVIDE one. A RELATIVE link, and the
+        # collector reads it lexically - FIXTURE-CONFINEMENT-001. A target that does
+        # not exist is deliberate in one test: resolving it is not required.
+        if subsystem is not None:
+            devdir = os.path.join(root, "sys/block", name, "device")
+            if not os.path.isdir(devdir):
+                os.makedirs(devdir)
+            os.symlink("../../../bus/%s" % subsystem,
+                       os.path.join(devdir, "subsystem"))
         return collectors.collect_storage(root)["data"]["devices"][0]
 
-    def test_optical_is_not_solid_state(self):
-        """The exact defect found in the first published sample: a QEMU DVD-ROM."""
+    # ---- INV-MACHINE-NODMI-001 ---------------------------------------------------
+
+    def _machine(self, files):
+        root = build_root(files)
+        self.addCleanup(shutil.rmtree, root, True)
+        return collectors.collect_machine(root)
+
+    def test_absent_dmi_is_never_reported_as_collected(self):
+        """Defect A. Virtualization detection is not machine identity.
+
+        The previous rule counted non-null values across the whole subdomain, and
+        `virtualized` and `hypervisor` counted toward the threshold - so on any
+        virtualized host without SMBIOS, DMI could be entirely absent and the
+        subdomain still reported COLLECTED with vendor and product null and no
+        reason. An incomplete collection reported as complete.
+        """
+        for name, files in (
+                ("no DMI, no hypervisor",
+                 {"proc/cpuinfo": "Hardware\t: BCM2835\n"}),
+                ("no DMI, hypervisor present",
+                 {"proc/cpuinfo": "flags\t: hypervisor\n",
+                  "sys/hypervisor/type": "kvm\n"})):
+            sd = self._machine(files)
+            self.assertEqual(sd["collection_status"], model.PARTIAL, name)
+            self.assertIsNone(sd["data"]["vendor"], name)
+            self.assertIsNone(sd["data"]["product"], name)
+            self.assertTrue(sd.get("reason"), "%s: PARTIAL with no reason" % name)
+            self.assertIn("SOURCE_ABSENT", sd["reason"], name)
+
+    def test_partial_dmi_is_still_incomplete(self):
+        """One identity field present and one absent is not a complete collection."""
+        sd = self._machine({"proc/cpuinfo": "x\n",
+                            "sys/class/dmi/id/sys_vendor": "QEMU\n"})
+        self.assertEqual(sd["collection_status"], model.PARTIAL)
+        self.assertIn("product", sd["reason"])
+
+    def test_complete_dmi_collects_without_a_reason(self):
+        sd = self._machine({"proc/cpuinfo": "x\n",
+                            "sys/class/dmi/id/sys_vendor": "Dell Inc.\n",
+                            "sys/class/dmi/id/product_name": "PowerEdge R640\n"})
+        self.assertEqual(sd["collection_status"], model.COLLECTED)
+        self.assertIsNone(sd.get("reason"))
+
+    # ---- D-114 / STORAGE-SEMANTICS-001 -------------------------------------------
+    #
+    # The tests these replace asserted the DEFECT as expected behaviour. The worst was
+    # `test_real_ssd_is_solid_state`: its fixture proved only that a SCSI device
+    # reported non-rotational, and it asserted SOLID_STATE - exactly the inference
+    # D-114 prohibits. STORAGE-SEMANTICS-002 says such a test is replaced by a test of
+    # the corrected model, and that deleting it is not sufficient: the inverse must be
+    # asserted.
+
+    def test_no_device_reports_a_physical_medium(self):
+        """STORAGE-SEMANTICS-001. The retired field must not come back under any name."""
+        for kwargs in ({"rotational": 0, "scsi_type": 0, "subsystem": "scsi"},
+                       {"rotational": 1, "subsystem": "scsi"},
+                       {"rotational": 0, "subsystem": "nvme"},
+                       {"rotational": 0, "subsystem": "mmc"},
+                       {"rotational": 0, "scsi_type": 5, "subsystem": "scsi"}):
+            dev = self.device("dev0", **kwargs)
+            for retired in ("type", "physical_medium", "transport", "is_aggregate"):
+                self.assertNotIn(retired, dev,
+                                 "%s reappeared for %r" % (retired, kwargs))
+            self.assertNotIn("SOLID_STATE", repr(dev))
+
+    def test_non_rotational_scsi_is_not_called_solid_state(self):
+        """Replaces test_real_ssd_is_solid_state, whose premise was false.
+
+        The fixture proves a SCSI device reports non-rotational. It proves nothing
+        about the medium, and the record must say exactly that much.
+        """
+        dev = self.device("sda", rotational=0, removable=0, scsi_type=0,
+                          subsystem="scsi")
+        self.assertEqual(dev["kernel_subsystem"], "scsi")
+        self.assertIs(dev["queue_rotational"], False)
+        self.assertEqual(dev["scsi_peripheral_type"], 0)
+
+    def test_queue_rotational_false_is_retained_as_evidence(self):
+        """Positive control. Without it, a future 'fix' could delete the observation
+        instead of the inference, and every negative test would still pass."""
+        dev = self.device("sdc", rotational=0, subsystem="scsi")
+        self.assertIn("queue_rotational", dev)
+        self.assertIs(dev["queue_rotational"], False)
+
+    def test_optical_is_recorded_as_a_scsi_peripheral_type(self):
+        """The sr0 regression, carried across the schema change.
+
+        Its meaning survives: a DVD-ROM is never reported as solid-state. Its old
+        assertion could not, because it interrogated the retired field.
+        """
         dev = self.device("sr0", rotational=0, removable=1, scsi_type=5,
-                          devmodel="QEMU DVD-ROM")
-        self.assertEqual(dev["type"], model.DEVICE_OPTICAL)
-        self.assertTrue(dev["removable"])
+                          devmodel="QEMU DVD-ROM", subsystem="scsi")
+        self.assertEqual(dev["scsi_peripheral_type"], 5)
+        self.assertIs(dev["kernel_removable"], True)
+        self.assertNotIn("SOLID_STATE", repr(dev))
 
-    def test_optical_detected_by_scsi_type_even_with_an_odd_name(self):
-        dev = self.device("sdz", rotational=0, scsi_type=5)
-        self.assertEqual(dev["type"], model.DEVICE_OPTICAL)
+    def test_scsi_peripheral_type_is_null_outside_the_scsi_family(self):
+        """Family scoping belongs to the field definition, not to a branch."""
+        for sub in ("nvme", "mmc", "virtio"):
+            dev = self.device("dev0", rotational=0, scsi_type=5, subsystem=sub)
+            self.assertIsNone(dev["scsi_peripheral_type"],
+                              "scsi_peripheral_type leaked into %s" % sub)
 
-    def test_real_ssd_is_solid_state(self):
-        dev = self.device("sda", rotational=0, removable=0, scsi_type=0)
-        self.assertEqual(dev["type"], model.DEVICE_SOLID_STATE)
+    def test_subsystem_comes_from_the_kernel_not_the_name(self):
+        """D-114: device/subsystem is authoritative; a name prefix is not."""
+        self.assertIsNone(self.device("nvme0n1", rotational=0)["kernel_subsystem"])
+        self.assertEqual(
+            self.device("sdz", rotational=0, subsystem="nvme")["kernel_subsystem"],
+            "nvme")
 
-    def test_spinning_disk(self):
-        self.assertEqual(self.device("sdb", rotational=1)["type"],
-                         model.DEVICE_ROTATIONAL)
+    def test_subsystem_link_is_read_lexically_and_never_resolved(self):
+        """FIXTURE-CONFINEMENT-001. The target deliberately does not exist.
 
-    def test_nvme(self):
-        self.assertEqual(self.device("nvme0n1", rotational=0)["type"],
-                         model.DEVICE_NVME)
+        A lexical read returns the name. Any implementation calling realpath, stat or
+        exists fails here - and would, in a real fixture, read the HOST's /sys/bus
+        while believing it was reading the fixture root.
+        """
+        dev = self.device("sdq", rotational=0, subsystem="example_fake_subsystem")
+        self.assertEqual(dev["kernel_subsystem"], "example_fake_subsystem")
 
-    def test_virtio_names_the_transport_rather_than_guessing_the_medium(self):
-        self.assertEqual(self.device("vda", rotational=1)["type"],
-                         model.DEVICE_VIRTUAL)
+    def test_missing_rotational_attribute_is_unknown_not_assumed(self):
+        dev = self.device("sdd", subsystem="scsi")
+        self.assertIsNone(dev["queue_rotational"])
+
+    def test_every_device_carries_stable_keys(self):
+        """Object shape does not vary by subsystem (SNAP-023 idiom)."""
+        keys = {"name", "size_bytes", "kernel_subsystem", "queue_rotational",
+                "kernel_removable", "scsi_peripheral_type", "vendor", "model"}
+        for sub in ("scsi", "nvme", "mmc", "virtio", None):
+            dev = self.device("dev0", rotational=0, subsystem=sub)
+            self.assertEqual(set(dev), keys, "shape varies for subsystem=%r" % sub)
+
+    def test_raid_logical_volume_claims_no_physical_disk(self):
+        """Measured on a real Smart Array: four disks behind one block device."""
+        dev = self.device("sda", rotational=1, removable=0, scsi_type=0,
+                          devvendor="HP", devmodel="LOGICAL VOLUME",
+                          subsystem="scsi")
+        self.assertEqual(dev["vendor"], "HP")
+        self.assertEqual(dev["model"], "LOGICAL VOLUME")
+        self.assertIs(dev["queue_rotational"], True)
+        self.assertNotIn("is_aggregate", dev)
+
 
     def test_unknown_when_nothing_says(self):
-        self.assertEqual(self.device("xyz0")["type"], model.DEVICE_UNKNOWN)
+        # D-114: unknown is expressed by null in each dimension, not by one
+        # UNKNOWN token standing in for four different unanswered questions.
+        dev = self.device("xyz0")
+        self.assertIsNone(dev["kernel_subsystem"])
+        self.assertIsNone(dev["queue_rotational"])
+        self.assertIsNone(dev["scsi_peripheral_type"])
 
 
 class TestIncompleteAlwaysExplains(unittest.TestCase):

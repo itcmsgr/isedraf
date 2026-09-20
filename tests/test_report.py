@@ -73,11 +73,15 @@ def synthetic_inventory(**overrides):
                             {"total_bytes": 34359738368, "swap_total_bytes": 0}),
             "storage": block(inventory_model.COLLECTED, {
                 "devices": [{"name": "vda", "size_bytes": 250000000000,
-                             "type": inventory_model.DEVICE_VIRTUAL,
-                             "removable": False, "model": "QEMU"},
+                             "kernel_subsystem": "virtio",
+                             "queue_rotational": False, "kernel_removable": False,
+                             "scsi_peripheral_type": None, "vendor": None,
+                             "model": "QEMU"},
                             {"name": "sr0", "size_bytes": 1073741824,
-                             "type": inventory_model.DEVICE_OPTICAL,
-                             "removable": True, "model": "QEMU DVD-ROM"}],
+                             "kernel_subsystem": "scsi",
+                             "queue_rotational": False, "kernel_removable": True,
+                             "scsi_peripheral_type": 5, "vendor": None,
+                             "model": "QEMU DVD-ROM"}],
                 "filesystems": [{"source": "/dev/vda1", "mount_point": "/",
                                  "fstype": "xfs", "options": ["rw", "relatime"],
                                  "read_only": False},
@@ -287,7 +291,14 @@ class TestContent(ReportCase):
 
     def test_optical_device_is_not_reported_as_solid_state(self):
         text = render.to_markdown(self.build())
-        self.assertIn("OPTICAL", text)
+        # D-114 / STORAGE-SEMANTICS-002: the OPTICAL vocabulary is retired. The
+        # report now carries the kernel subsystem and the queue attribute, with column
+        # headers naming their SOURCE so a kernel flag cannot read as a physical fact.
+        self.assertIn("Kernel subsystem", text)
+        self.assertIn("Queue rotational", text)
+        self.assertNotIn("OPTICAL", text)
+        self.assertNotIn("SOLID_STATE", text)
+        self.assertIn("neither establishes the physical storage medium", text)
         self.assertNotIn("SOLID_STATE", text)
 
     def test_unsynchronized_clock_raises_rec005(self):

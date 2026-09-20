@@ -6,9 +6,9 @@
 # CI invokes these same targets rather than re-implementing them in YAML, which is
 # what prevents a gate silently degrading into a warning. There is no warning tier.
 
-.PHONY: check check-provider-alignment check-native-catalog check-licensing check-public-claims check-deb-ordering check-reproducible check-sbom check-tests check-python-floor check-packaging check-native-catalog check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-headers check-docs check-scope check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-gate-coverage check-falsifiable help
+.PHONY: check check-provider-alignment check-native-catalog check-licensing check-public-claims check-deb-ordering check-reproducible check-sbom check-tests check-python-floor check-packaging check-storage-vocabulary check-native-catalog check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-headers check-docs check-scope check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-gate-coverage check-falsifiable help
 
-check: check-scope check-headers check-python-floor check-packaging check-native-catalog check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-tests check-docs
+check: check-scope check-headers check-python-floor check-packaging check-storage-vocabulary check-native-catalog check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-shell check-refs check-paths check-index check-freeze check-vectors check-vectors-negative check-vectors-crossversion check-tests check-docs
 	@echo "make check: all gates passed"
 
 ## check-scope   D-96: no product implementation before architecture freeze
@@ -84,6 +84,11 @@ check-python-floor:
 ## check-packaging  D-86/EXEC-016: packaging metadata, without needing every builder
 check-packaging:
 	@python3 scripts/ci/check_packaging.py
+
+## check-storage-vocabulary  D-114: a retired inference does not return as vocabulary
+check-storage-vocabulary:
+	@python3 scripts/ci/check_storage_vocabulary.py --self-test
+	@python3 scripts/ci/check_storage_vocabulary.py
 
 ## check-native-catalog  D-111: the control catalog is ISEDRAF's own, and stays that way
 check-native-catalog:

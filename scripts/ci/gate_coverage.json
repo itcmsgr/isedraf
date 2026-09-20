@@ -149,6 +149,16 @@
         "packaging/deb/control.in"
       ]
     },
+    "check-storage-vocabulary": {
+      "script": "scripts/ci/check_storage_vocabulary.py",
+      "implements": "D-114, STORAGE-SEMANTICS-001, GOV-002",
+      "falsification": "D-114 a published document reports a storage device type of ROTATIONAL",
+      "eligible": [
+        "lib/isedraf/inventory/*.py",
+        "lib/isedraf/report/*.py",
+        "docs/reference/*.md"
+      ]
+    },
     "check-public-claims": {
       "script": "scripts/ci/check_public_claims.py",
       "implements": "C-01, D-88, D-89, D-90",

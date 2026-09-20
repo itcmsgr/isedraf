@@ -161,9 +161,14 @@ def _render_inventory(inv, out):
 
     out.write("\nSTORAGE\n")
     for dev in field("storage", "devices") or []:
-        out.write("  %-17s : %s, %s\n" % (
+        # D-114: the observations, not an invented class. `queue_rotational` is
+        # printed as a queue property because that is what it is.
+        rot = dev.get("queue_rotational")
+        rot_text = "rotational" if rot is True else (
+            "non-rotational" if rot is False else "rotational unknown")
+        out.write("  %-17s : %s, %s, %s\n" % (
             dev["name"], "%.1f GB" % (dev["size_bytes"] / 1e9) if dev["size_bytes"] else "?",
-            dev["type"]))
+            dev.get("kernel_subsystem") or "subsystem unknown", rot_text))
     for fs in (field("storage", "filesystems") or [])[:8]:
         out.write("  %-17s : %s%s\n" % (fs["mount_point"], fs["fstype"],
                                          " (read-only)" if fs["read_only"] else ""))
