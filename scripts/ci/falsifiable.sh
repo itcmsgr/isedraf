@@ -138,6 +138,7 @@ inject "D-89 stale MASTER_INDEX" \
 
 # D-107: the index status column is read from the freeze manifests. It was once a constant,
 # and taking a document out of every freeze set left the index reporting itself fresh.
+next_requires "docs/architecture/MASTER_INDEX.md"
 inject "D-107 MASTER_INDEX status survives a document leaving its freeze sets" \
   'python3 scripts/docs/master_index.py check' \
   'sed -i "\|docs/architecture/ISEDRAF_HLD.md|d" docs/architecture/freeze/W1A_CORE.sha256 docs/architecture/freeze/W1A_CORE_PUBLIC.sha256' \
@@ -563,7 +564,7 @@ inject "L2-SEC-8 technical-preview wording returns at general availability" \
 # documents began citing files the export removes; `make check` now runs it on every commit.
 # The export reads committed bytes, so the mutation is committed inside the sandbox first.
 inject "EXP-1 an exported document cites a file the export removes" \
-  'git add -A && git commit -qm mutation && d=$(mktemp -d) && bash scripts/ci/release_export.sh --no-build "$d/x"' \
+  'git add -A && git -c user.name=falsifiable -c user.email=falsifiable@invalid commit -qm mutation && d=$(mktemp -d) && bash scripts/ci/release_export.sh --no-build "$d/x"' \
   'printf "\nSee \`docs/architecture/AMENDMENTS.md\` for the history.\n" >> docs/GETTING_STARTED.md' \
   'DANGLING_REFERENCE|release export FAILED'
 
