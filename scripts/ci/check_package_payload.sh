@@ -56,11 +56,15 @@ if [ -n "$DEB" ] && [ -n "$RPM" ] && command -v rpm >/dev/null 2>&1; then
     # .rpm states the same thing in its `License:` metadata field instead. Requiring both
     # formats to carry both mechanisms would be parity for its own sake. Everything else
     # must still match exactly.
+    # Paths relative to the doc directory, regular files only. Basenames were compared
+    # until 0.1.0 shipped its guides in docs/: tar lists that directory as "docs/" and
+    # rpm as "docs", so identical payloads compared unequal - and a basename comparison
+    # could never see a guide installed in the wrong directory.
     ar p "$DEB" data.tar.gz 2>/dev/null | tar tz 2>/dev/null \
-        | grep 'usr/share/doc/isedraf/.' | sed 's|.*/||' | grep -v '^copyright$' \
-        | sort -u > "$D/deb"
-    rpm -qlp "$RPM" 2>/dev/null \
-        | grep 'usr/share/doc/isedraf/.' | sed 's|.*/||' | sort -u > "$D/rpm"
+        | sed -n 's|^\./||; s|^usr/share/doc/isedraf/||p' | grep -v '/$' \
+        | grep -v '^copyright$' | grep -v '^$' | sort -u > "$D/deb"
+    rpm -qp --qf '[%{FILEMODES:perms} %{FILENAMES}\n]' "$RPM" 2>/dev/null \
+        | sed -n 's|^-[^ ]* /usr/share/doc/isedraf/||p' | sort -u > "$D/rpm"
     if cmp -s "$D/deb" "$D/rpm"; then
         ok "deb and rpm ship the same $(wc -l < "$D/deb" | tr -d ' ') documentation files"
     else
