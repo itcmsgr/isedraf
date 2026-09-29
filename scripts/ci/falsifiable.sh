@@ -2317,7 +2317,7 @@ inject "D-114 the retired DEVICE_SOLID_STATE constant returns to the engine" \
 # D-86. The deb and the rpm are built by two different implementations. Dropping a
 # document from one of them must be caught by comparing them, not by anyone remembering.
 inject "D-86 the rpm and the deb ship different documentation" \
-  'bash packaging/build.sh 2>&1; bash scripts/ci/check_package_payload.sh' \
+  'git add -A >/dev/null 2>&1; git -c user.name=falsifiable -c user.email=falsifiable@invalid commit -qm mutation >/dev/null 2>&1; bash packaging/build.sh 2>&1; bash scripts/ci/check_package_payload.sh' \
   'python3 - <<'"'"'PYX'"'"'
 import pathlib
 p = pathlib.Path("packaging/rpm/isedraf.spec.in"); s = p.read_text()
@@ -2326,7 +2326,15 @@ assert old in s, "mutation anchor miss"
 head, sep, tail = s.partition(old)
 p.write_text(head + tail.split("\n", 1)[1].split("\n", 1)[1])
 PYX' \
-  'ship DIFFERENT documentation|package payload gate FAILED'
+  'ship DIFFERENT documentation'
+
+# The comparison was by basename until the guides moved into docs/ (0.1.0, 2026-09-29): it
+# failed identical payloads, and it could never see a guide installed in the wrong
+# directory. It now compares paths relative to the doc directory.
+inject "D-86 the rpm installs a guide outside docs/" \
+  'git add -A >/dev/null 2>&1; git -c user.name=falsifiable -c user.email=falsifiable@invalid commit -qm mutation >/dev/null 2>&1; bash packaging/build.sh 2>&1; bash scripts/ci/check_package_payload.sh' \
+  'sed -i "s|%{_docdir}/isedraf/docs/\$guide.md|%{_docdir}/isedraf/\$guide.md|" packaging/rpm/isedraf.spec.in' \
+  'ship DIFFERENT documentation'
 
 # PUBLIC-OPS-001 structured. YAML sat outside the prose scan because prose patterns fire
 # on every legitimate `permissions: contents: read`. But YAML carries exactly what the
