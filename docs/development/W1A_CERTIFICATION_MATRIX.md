@@ -34,7 +34,7 @@ Status vocabulary, used exactly:
 Runtime coverage column: `3.9/3.12/3.14` means the evidence was produced under CPython 3.9.25 and 3.12.14
 in CI and 3.12.3 + 3.14.7 locally, producing **one** corpus digest.
 
-**The authoritative corpus digest is `5f2ac4d7a9ddeec172e6f22dac1d604565fd6ff750d31f4da6fd44fad4d3fc31`** — the SHA-256 of
+**The authoritative corpus digest is `f55c297aa7868e34491b20ea16251306437da363a5d7b93762a4568f23442e11`** — the SHA-256 of
 `test-vectors/w1a/v1/EXPECTED.sha256`, which is the artifact pinned by
 `freeze/W1A_CORE.sha256`. `make check-docs-truth` compares every digest quoted here against
 that file, so this line cannot go stale again without a gate failing.
@@ -151,7 +151,7 @@ unrelated owner decision invalidate the W1-A freeze — the opposite of what `D-
 is a judgement call and is recorded as one rather than left implicit.
 
 Verification after creation: `check-freeze` → *8 artifacts verified*; corpus digest unchanged at
-`5f2ac4d7a9ddeec1…`, the same value both CI Python lanes reproduced before the freeze existed. **The
+`5f2ac4d7a9ddeec1…` — Historical, superseded by `D-115` — the same value both CI Python lanes reproduced before the freeze existed. **The
 freeze altered no evidence digest and no canonical artifact.**
 
 ### What the freeze switched on, and what it exposed

@@ -1,6 +1,9 @@
 Name:           isedraf
 Version:        @VERSION@
-Release:        @RELEASE@%{?dist}
+# No %{?dist}: this is one noarch package for every supported release. The dist tag was
+# inherited from the build host, so an RPM built on Fedora 44 installed on EL9 as ".fc44"
+# (GA lifecycle proof, 2026-09-28).
+Release:        @RELEASE@
 Summary:        @DESCRIPTION@
 License:        MPL-2.0
 URL:            https://github.com/itcmsgr/isedraf
@@ -31,12 +34,17 @@ Requires:       (python3 or platform-python)
 # workflow runs on ubuntu-latest, so this would have broken the RPM for every release.
 
 %description
-ISEDRAF collects Linux host state, normalizes it into canonical bytes, commits immutable
-snapshots with a hash-chained ledger, and produces evidence that can be verified
-independently of the tool that produced it.
+ISEDRAF collects evidence about a local Linux host on demand: host and platform
+inventory, local accounts and groups, NSS configuration, hostname, sudo, SSH server
+configuration, PAM, login policy, mounts and SSH authorized keys. `isedraf audit`
+normalizes what it collects and commits it as one evidence run in the invoking user's
+own store, with the provenance of every fact and a hash-chained ledger record.
+`isedraf report` renders a committed run - as a readable report, JSON or static HTML -
+and never collects again.
 
-This is an early technical preview. It collects host identity and a host inventory and
-renders a report; account, SSH, audit and comparison domains are not implemented.
+This release runs unprivileged. Facts that need root are reported NOT_TESTED - not
+observed, never passed. It makes no pass/fail judgement and does not compare runs.
+Uninstalling the package does not remove collected evidence.
 
 Python standard library only: no compiled component, no third-party runtime module, and
 no interpreter is installed, bundled or downgraded by this package.
@@ -65,6 +73,10 @@ install -m 0644 docs/reference/PLATFORM_COMPATIBILITY.md \
     %{buildroot}%{_docdir}/isedraf/PLATFORM_COMPATIBILITY.md
 install -m 0644 docs/operator/STORAGE_AND_OUTPUTS.md \
     %{buildroot}%{_docdir}/isedraf/STORAGE_AND_OUTPUTS.md
+install -d -m 0755 %{buildroot}%{_docdir}/isedraf/docs
+for guide in GETTING_STARTED EVIDENCE_MODEL AUDITOR_GUIDE REPORT_GUIDE SECURITY_AND_LIMITATIONS; do
+    install -m 0644 docs/$guide.md %{buildroot}%{_docdir}/isedraf/docs/$guide.md
+done
 
 %files
 %{_bindir}/isedraf
@@ -72,5 +84,16 @@ install -m 0644 docs/operator/STORAGE_AND_OUTPUTS.md \
 %doc %{_docdir}/isedraf
 
 %changelog
-* Fri Sep 18 2026 Antonios Voulvoulis <contact@itcms.gr> - @VERSION@-@RELEASE@
+* Mon Sep 28 2026 Antonios Voulvoulis <contact@itcms.gr> - @VERSION@-@RELEASE@
+- 0.1.0, the first release: unprivileged evidence collection with isedraf audit, a
+  user-mode evidence store, and Markdown, JSON and static HTML reports of a committed run.
+
+* Mon Sep 28 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.1.0-0.rc2
+- A refused sudo run no longer leaves bytecode in the installed package directory.
+
+* Mon Sep 28 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.1.0-0.rc1
+- 0.1 release candidate: unprivileged evidence collection with isedraf audit, a user-mode
+  evidence store, and Markdown, JSON and static HTML reports of a committed run.
+
+* Fri Sep 18 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.1.0-0.alpha1
 - Early technical preview: host identity, host inventory, report engine.

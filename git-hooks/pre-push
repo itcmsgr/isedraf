@@ -5,6 +5,25 @@
 # SPDX-License-Identifier: MPL-2.0
 #
 # This file is part of ISEDRAF.
-# Prototype phase: publication is owner-only. Remove this hook deliberately when publishing.
-echo "pre-push: pushing is disabled during the ISEDRAF prototype phase" >&2
-exit 1
+# GA push policy (D-119, replacing the prototype's unconditional refusal, A-005/D-73).
+#
+#   engineering tree   never pushed anywhere. It holds the private history and internal change
+#                      control; the public repository receives the sanitized release export.
+#   public tree        never pushed straight to main. Push a branch and open a pull request;
+#                      the required checks and the DCO check run there.
+#
+# Possessing a key is still not authorization: tags and releases remain owner acts.
+top="$(git rev-parse --show-toplevel)" || exit 1
+if [ -e "$top/CLAUDE.md" ] || [ -e "$top/docs/architecture/DECISIONS_REGISTER.md" ]; then
+    echo "pre-push: this is the engineering repository; it is never pushed (D-119)." >&2
+    echo "  Publish through the sanitized release export: scripts/ci/release_export.sh" >&2
+    exit 1
+fi
+while read -r local_ref local_sha remote_ref remote_sha; do
+    case "$remote_ref" in
+        refs/heads/main)
+            echo "pre-push: push a branch and open a pull request; main is never pushed directly (D-119)." >&2
+            exit 1 ;;
+    esac
+done
+exit 0

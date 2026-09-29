@@ -71,6 +71,7 @@ else:
 
 # --- 2. the status badge does not contradict the status registry -------------------
 STAGE_WORDS = {
+    "GENERAL_AVAILABILITY": ("general availability",),
     "TECHNICAL_PREVIEW_CANDIDATE": ("technical", "preview"),
     "TECHNICAL_PREVIEW": ("technical", "preview"),
     "PROTOTYPE": ("prototype",),
@@ -240,6 +241,11 @@ else:
     # the file is owner-only, so the inconsistency needs to stay visible to a human.
     NOT_PUBLISHED = {"CLAUDE.md"}
     for retired in IDENT.get("retired_descriptors", []):
+        # Case-insensitive, and any run of whitespace or hyphens between the words: prose
+        # writes the descriptor in lower case and Markdown wraps it across a line, and an
+        # exact-substring test let the canonical product description itself carry it.
+        pattern = re.compile(r"[\s\-]+".join(re.escape(w) for w in retired.split()),
+                             re.IGNORECASE)
         for rel in subprocess.check_output(
                 ["git", "ls-files"], cwd=str(ROOT), text=True).split():
             if rel in HISTORICAL or rel in GATE_SELF:
@@ -251,8 +257,9 @@ else:
                 body = f.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError):
                 continue
-            if retired in body:
-                n = body[:body.index(retired)].count("\n") + 1
+            hit = pattern.search(body)
+            if hit:
+                n = body[:hit.start()].count("\n") + 1
                 if rel in NOT_PUBLISHED:
                     print("  NOTE  %s:%d still uses %r. Not a public claim surface — it "
                           "is excluded from the export — but owner-only, so it cannot be "

@@ -21,10 +21,12 @@
 """`isedraf identity` and `isedraf inventory`."""
 import argparse
 import json
+import os
 import sys
 
 from . import (ENGINE_VERSION, identity, inventory, ledger, report, snapshot,
                stateroot, verify)
+from . import audit as audit_mod
 from .exitcodes import INCOMPLETE, OK, PRIVILEGE_REFUSED, USAGE_OR_ENGINE
 
 # SNAP-022's vocabulary, rendered for an operator. The token is the evidence; this text
@@ -57,22 +59,64 @@ def _render(ident, snapshot_id, state_root_class, root, out):
     if state_root_class == stateroot.DEV:
         out.write("  note              : development state root; these artifacts are\n")
         out.write("                      marked DEV and are not production evidence\n")
+    if state_root_class in (stateroot.DEV, stateroot.USER_PRODUCTION):
+        # GA v0.1 (D-117): stated on every run, never implied.
+        out.write("  privilege level   : UNPRIVILEGED - evidence that needs root is\n")
+        out.write("                      NOT_TESTED, never assumed\n")
     if not ident.collected:
         out.write("\nThe snapshot was still committed. A record of what could not be\n")
         out.write("collected is evidence; it is not a failure to report it.\n")
 
 
+def _refused(exc, err):
+    """SCOPE-071's message verbatim (frozen); it already says what to do."""
+    err.write("isedraf: %s\n" % exc)
+
+
 def cmd_identity(args, out=None, err=None):
     out = sys.stdout if out is None else out
     err = sys.stderr if err is None else err
+    done = _commit_run(args.source, None, err)
+    if isinstance(done, int):
+        return done
+    ident, snapshot_id, state_root_class, root = done
+    _render(ident, snapshot_id, state_root_class, root, out)
+    return OK if ident.collected else INCOMPLETE
+
+
+def _commit_run(identity_source, audit_root, err):
+    """Collect, build, commit and ledger one run; verify the store afterwards.
+
+    Returns (ident, snapshot_id, state_root_class, root, sections, run_status) or an exit
+    code. `audit_root` None is an identity-only run; otherwise every audit section is
+    collected there once and travels in the same bundle (D-115), committed by the same
+    atomic rename and ledger append (D-50) - there is no second commit mechanism.
+    """
     try:
         root, state_root_class = stateroot.resolve()
     except stateroot.PrivilegeRefused as exc:
-        err.write("isedraf: %s (SCOPE-071)\n" % exc)
+        _refused(exc, err)
         return PRIVILEGE_REFUSED
     except stateroot.StateRootError as exc:
         err.write("isedraf: %s\n" % exc)
         return USAGE_OR_ENGINE
+
+    if state_root_class == stateroot.USER_PRODUCTION:
+        # STORE-026/027, before anything is created or collected: the root must be the
+        # invoking user's own 0700 directory, on storage whose commit semantics hold.
+        # A refusal never falls back to another class or root.
+        try:
+            stateroot.check_user_root(root, os.geteuid())
+        except stateroot.StateRootError as exc:
+            err.write("isedraf: %s\n" % exc)
+            return USAGE_OR_ENGINE
+        existing = root
+        while not os.path.exists(existing) and os.path.dirname(existing) != existing:
+            existing = os.path.dirname(existing)
+        suitable, reason = stateroot.storage_suitability(existing)
+        if not suitable:
+            err.write("isedraf: %s\n" % reason)
+            return USAGE_OR_ENGINE
 
     try:
         stateroot.prepare(root)
@@ -90,10 +134,12 @@ def cmd_identity(args, out=None, err=None):
                           "ledger (SNAP-018)\n" % len(orphans))
                 return INCOMPLETE
 
-            ident = identity.collect(args.source)
+            ident = identity.collect(identity_source)
+            sections, run_status = (audit_mod.collect(audit_root) if audit_root is not None
+                                    else (None, None))
             created_at, snapshot_id, run_id, event_id = snapshot.new_ids()
             built = snapshot.build(ident, snapshot_id, run_id, created_at,
-                                   state_root_class, ENGINE_VERSION)
+                                   state_root_class, ENGINE_VERSION, sections=sections)
             snapshot.commit(root, built, snapshot_id)
             core, _core_canonical, record_hash = ledger.build_record(
                 root, snapshot_id, built["manifest_hash"], event_id, created_at,
@@ -116,8 +162,30 @@ def cmd_identity(args, out=None, err=None):
             err.write("  %s\n" % p)
         return USAGE_OR_ENGINE
 
-    _render(ident, snapshot_id, state_root_class, root, out)
-    return OK if ident.collected else INCOMPLETE
+    if audit_root is None:
+        return ident, snapshot_id, state_root_class, root
+    return ident, snapshot_id, state_root_class, root, sections, run_status
+
+
+def cmd_audit(args, out=None, err=None):
+    """Every built collector once, one committed run, then the report of that run."""
+    out = sys.stdout if out is None else out
+    err = sys.stderr if err is None else err
+    root = getattr(args, "root", "/")
+    source = (identity.SOURCE_PATH if root in ("", "/")
+              else os.path.join(root, identity.SOURCE_PATH.lstrip("/")))
+    done = _commit_run(source, root, err)
+    if isinstance(done, int):
+        return done
+    ident, snapshot_id, state_root_class, evidence_root, sections, run_status = done
+    _render(ident, snapshot_id, state_root_class, evidence_root, out)
+    out.write("  audit             : %s\n" % run_status)
+    for name in audit_mod.SECTIONS:
+        s = sections[name]
+        out.write("    %-15s %s\n" % (name, s["collection_status"]))
+    out.write("\nRender it with: isedraf report\n")
+    complete = ident.collected and run_status == "COLLECTED"
+    return OK if complete else INCOMPLETE
 
 
 _STATUS_NOTE = {
@@ -250,7 +318,7 @@ def cmd_report(args, out=None, err=None):
     try:
         root, _class = stateroot.resolve()
     except stateroot.PrivilegeRefused as exc:
-        err.write("isedraf: %s (SCOPE-071)\n" % exc)
+        _refused(exc, err)
         return PRIVILEGE_REFUSED
     except stateroot.StateRootError as exc:
         err.write("isedraf: %s\n" % exc)
@@ -260,28 +328,51 @@ def cmd_report(args, out=None, err=None):
     except report.ProfileError as exc:
         err.write("isedraf: %s\n" % exc)
         return USAGE_OR_ENGINE
+    committed = report.committed_run(root)
+    if committed is None:
+        err.write("isedraf: no committed audit run in %s; run `isedraf audit` first. "
+                  "A report renders committed evidence and never collects.\n" % root)
+        return USAGE_OR_ENGINE
     try:
-        inv = inventory.collect()
-        model_obj = report.build(root, inv, assessment=assessment)
-        rendered = (report.render.to_json(model_obj) if getattr(args, "json", False)
-                    else report.render.to_markdown(model_obj))
+        model_obj = report.build(root, committed["sections"]["inventory"]["evidence"],
+                                 assessment=assessment,
+                                 audit_sections=committed["sections"],
+                                 audit_digests=committed["digests"])
+        if getattr(args, "json", False):
+            rendered, extension = report.render.to_json(model_obj), "json"
+        elif getattr(args, "html", False):
+            rendered, extension = report.render.to_html(model_obj), "html"
+        else:
+            rendered, extension = report.render.to_markdown(model_obj), "md"
     except Exception as exc:                          # pragma: no cover - engine failure
         err.write("isedraf: engine error: %s\n" % exc)
         return USAGE_OR_ENGINE
 
     if getattr(args, "save", False):
-        path = report.write(root, model_obj, rendered,
-                            "json" if getattr(args, "json", False) else "md")
+        path = report.write(root, model_obj, rendered, extension)
         out.write("%s\n" % path)
     else:
         out.write(rendered)
     return OK if model_obj["report"]["status"] == "COMPLETE" else INCOMPLETE
 
 
+class _Parser(argparse.ArgumentParser):
+    """argparse, but a usage error exits 64 (SCOPE-077).
+
+    argparse exits 2 on its own, and 2 is the frozen code for committed-but-incomplete
+    evidence: a mistyped command read as "the run happened and the evidence is partial".
+    Subparsers inherit this class.
+    """
+
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        self.exit(USAGE_OR_ENGINE, "%s: error: %s\n" % (self.prog, message))
+
+
 def main(argv=None):
-    parser = argparse.ArgumentParser(
+    parser = _Parser(
         prog="isedraf",
-        description="Linux host assurance, approved baseline, state delta and evidence engine")
+        description="Linux host evidence and assurance tool")
     parser.add_argument("--version", action="version",
                         version="isedraf %s" % ENGINE_VERSION)
     sub = parser.add_subparsers(dest="command")
@@ -296,9 +387,17 @@ def main(argv=None):
     p_inventory.add_argument("--root", default="/",
                              help="filesystem root (testing; default %(default)s)")
     p_inventory.set_defaults(func=cmd_inventory)
-    p_report = sub.add_parser("report", help="render a system assurance report")
+    p_audit = sub.add_parser("audit", help="run every built collector once and commit "
+                                           "the evidence as one run")
+    p_audit.add_argument("--root", default="/",
+                         help="filesystem root (testing; default %(default)s)")
+    p_audit.set_defaults(func=cmd_audit)
+    p_report = sub.add_parser("report", help="render the report of the latest committed "
+                                             "audit run (never collects)")
     p_report.add_argument("--json", action="store_true",
                           help="emit the machine-readable report model")
+    p_report.add_argument("--html", action="store_true",
+                          help="emit the static HTML report (Report 0.1)")
     p_report.add_argument("--profile", default=None,
                           help="optional assessment profile file (JSON). Personal\n"
                                "details belong in a file, not in argv, which lands\n"

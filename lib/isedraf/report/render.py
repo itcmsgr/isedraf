@@ -195,7 +195,7 @@ def to_markdown(report):
                    "`Kernel removable flag` describe how Linux presents the block "
                    "queue; neither establishes the physical storage medium, and a "
                    "block device does not necessarily correspond to one physical "
-                   "disk (D-114).*")
+                   "disk.*")
         out.append("")
     filesystems = storage.get("filesystems") or []
     if filesystems:
@@ -323,9 +323,140 @@ def to_markdown(report):
                "rendered as an empty success.")
     out.append("")
 
+    sections = report.get("audit_sections") or {}
+    if sections:
+        from .sections import ORDER
+        out.append("## Audit sections")
+        out.append("")
+        out.append("| Area | Status | Reason |")
+        out.append("|---|---|---|")
+        rank = {n: i for i, n in enumerate(ORDER)}
+        for name, s in sorted(sections.items(), key=lambda kv: rank.get(kv[0], 99)):
+            out.append("| %s | %s | %s |" % (
+                s.get("title") or name, s.get("collection_status"),
+                (s.get("reason") or "").replace("|", "\\|") or "—"))
+        out.append("")
+        out.append("*NOT_TESTED means not observed - never passed. The HTML report "
+                   "(`isedraf report --html`) shows each area's facts and evidence "
+                   "reference.*")
+        out.append("")
     out.append("## Limitations")
     out.append("")
     for limitation in report["limitations"]:
         out.append("- %s" % limitation)
     out.append("")
     return "\n".join(out) + "\n"
+
+
+# --- Report 0.1: static HTML (GA v0.1) ------------------------------------------------------
+# One page, no script, no external resource, every value escaped. It renders the model and
+# nothing else, exactly like to_markdown: host-derived text is data, never markup (OUT-013).
+
+def _esc(value):
+    """HTML-escape any value. `html` is not on the runtime import allowlist, so it is done here."""
+    text = "" if value is None else "%s" % (value,)
+    return (text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            .replace('"', "&quot;").replace("'", "&#39;"))
+
+
+_STYLE = """
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;color:#1d2330;
+background:#f6f7f9;line-height:1.45}
+main{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:.2rem 0}h2{font-size:1.1rem;margin:0 0 .4rem}
+.banner{background:#1d2330;color:#fff;padding:16px}
+.banner .facts{font-weight:700;letter-spacing:.02em}
+.banner p{margin:.3rem 0 0;max-width:780px}
+section,.panel{background:#fff;border:1px solid #d9dde3;border-radius:6px;padding:12px 14px;
+margin:12px 0}
+table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:4px 6px;
+border-bottom:1px solid #eceef2;vertical-align:top;overflow-wrap:anywhere}
+th{font-weight:600;color:#4a5264;width:34%}
+.status{display:inline-block;padding:1px 8px;border-radius:10px;font-size:.85rem;font-weight:600}
+.COLLECTED{background:#e3f4e8;color:#17602f}.PARTIAL{background:#fff3d6;color:#7a5200}
+.NOT_TESTED{background:#e9ecf2;color:#39414f}.ERROR{background:#fde2e2;color:#8a1c1c}
+.reason{color:#4a5264;font-size:.92rem}.ref{font-family:ui-monospace,monospace;
+font-size:.8rem;color:#4a5264;overflow-wrap:anywhere}
+"""
+
+
+def _ordered(sections):
+    from .sections import ORDER
+    rank = {name: i for i, name in enumerate(ORDER)}
+    return sorted(sections.items(), key=lambda kv: (rank.get(kv[0], len(rank)), kv[0]))
+
+
+def _status(value):
+    return '<span class="status %s">%s</span>' % (_esc(value), _esc(value))
+
+
+def to_html(report):
+    """Report 0.1: a factual rendering of one committed audit run."""
+    ident = report.get("identity_evidence") or {}
+    sections = report.get("audit_sections") or {}
+    overall = report["report"]["status"]
+    unprivileged = ident.get("state_root_class") in ("DEV", "USER_PRODUCTION")
+    out = []
+    w = out.append
+    w('<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
+      '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+      '<title>ISEDRAF Host Evidence Report</title>\n<style>%s</style>\n</head>\n<body>\n'
+      % _STYLE)
+    w('<header class="banner"><main>\n<h1>ISEDRAF Host Evidence Report</h1>\n')
+    w('<div class="facts">PRIVILEGE LEVEL: %s &middot; OVERALL EVIDENCE: %s</div>\n'
+      % ("UNPRIVILEGED" if unprivileged else _esc(ident.get("state_root_class")),
+         _esc(overall)))
+    if unprivileged:
+        w("<p>This run had no elevated privilege. Facts that need it were NOT_TESTED. "
+          "NOT_TESTED does not mean those controls passed; it means they were not "
+          "observed.</p>\n")
+    if ident.get("state_root_class") == "DEV":
+        w("<p>Development evidence (DEV): not production evidence.</p>\n")
+    w("</main></header>\n<main>\n")
+
+    w('<div class="panel"><h2>Run</h2><table>\n')
+    for label, value in (("Host", (report.get("target") or {}).get("hostname")),
+                         ("Host id (pseudonymous)", ident.get("host_id")),
+                         ("Snapshot", ident.get("snapshot_id")),
+                         ("Run", ident.get("run_id")),
+                         ("Collected at", ident.get("created_at")),
+                         ("Report generated", report["report"].get("generated_at")),
+                         ("Engine version", report["report"].get("engine_version")),
+                         ("Evidence class", ident.get("state_root_class"))):
+        w("<tr><th>%s</th><td>%s</td></tr>\n" % (_esc(label), _esc(value)))
+    verification = ident.get("verification") or {}
+    verified = verification.get("verified")
+    w("<tr><th>Evidence verification</th><td>%s</td></tr>\n"
+      % ("verified: hashes, bindings and ledger chain hold" if verified
+         else "NOT VERIFIED" if verified is False else "not performed"))
+    w("</table>\n")
+    for problem in verification.get("problems") or []:
+        w('<p class="reason">%s</p>\n' % _esc(problem))
+    w("</div>\n")
+
+    w('<div class="panel"><h2>Sections</h2><table>\n')
+    for name, s in _ordered(sections):
+        w('<tr><th><a href="#section-%s">%s</a></th><td>%s</td></tr>\n'
+          % (_esc(name), _esc(s.get("title") or name), _status(s.get("collection_status"))))
+    w("</table></div>\n")
+
+    for name, s in _ordered(sections):
+        w('<section id="section-%s">\n<h2>%s %s</h2>\n'
+          % (_esc(name), _esc(s.get("title") or name), _status(s.get("collection_status"))))
+        if s.get("reason"):
+            w('<p class="reason">%s</p>\n' % _esc(s["reason"]))
+        rows = s.get("summary") or []
+        if rows:
+            w("<table>\n")
+            for label, value in rows:
+                w("<tr><th>%s</th><td>%s</td></tr>\n" % (_esc(label), _esc(value)))
+            w("</table>\n")
+        ref = s.get("evidence_ref") or {}
+        w('<p class="ref">evidence: %s &middot; %s</p>\n</section>\n'
+          % (_esc(ref.get("path")), _esc(ref.get("digest") or "unbound")))
+
+    w('<div class="panel"><h2>Limitations</h2><ul>\n')
+    for item in report.get("limitations") or []:
+        w("<li>%s</li>\n" % _esc(item))
+    w("</ul></div>\n</main>\n</body>\n</html>\n")
+    return "".join(out)

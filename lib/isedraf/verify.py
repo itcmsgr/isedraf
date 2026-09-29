@@ -23,7 +23,7 @@
 import json
 import os
 
-from . import canonical, ledger
+from . import canonical, ledger, snapshot as snapshot_mod, stateroot
 
 
 def _reserialize(obj):
@@ -49,6 +49,10 @@ def verify_snapshot(snapshot_dir):
         canonical.hash_frame(canonical.DOMAIN_SNAPSHOT_MANIFEST, core_canonical))
     if envelope.get("manifest_hash") != expected:
         problems.append("%s: manifest_hash does not match its preimage" % snapshot_dir)
+    if core.get("state_root") not in stateroot.STATE_ROOT_CLASSES:
+        # STORE-026: one literal of a closed vocabulary; anything else names no class.
+        problems.append("%s: state_root %r is not an artifact class (STORE-026)"
+                        % (snapshot_dir, core.get("state_root")))
 
     section = core["sections"]["host_identity"]
     state_path = os.path.join(snapshot_dir, "state", "host_identity.json")
@@ -78,7 +82,57 @@ def verify_snapshot(snapshot_dir):
                             % (snapshot_dir, section["collection_status"]))
     if "host_id" not in core:
         problems.append("%s: SNAP-023 manifest_core has no host_id key" % snapshot_dir)
+    problems.extend(_auxiliary(snapshot_dir, core))
     return problems
+
+
+def _auxiliary(snapshot_dir, core):
+    """D-115. Every declared auxiliary artifact is OPENED and checked.
+
+    Before this, `method/host_identity.json` sat in every bundle and nothing read it back:
+    manifest_core carried the collector and parser versions but no digest of the file, so
+    the bytes could be replaced and the snapshot would still verify. R1.5-P added a second
+    artifact of the same class - the Evidence Limits Manifest, which decides
+    absence_claim_allowed - and made the gap worth closing rather than recording.
+
+    Both directions are checked. A declared artifact that is missing, modified or
+    substituted fails; and an artifact the schema REQUIRES which is present in the bundle
+    but absent from the declaration also fails, so binding cannot be evaded by removing
+    the entry as well as changing the file.
+    """
+    out = []
+    declared = core.get("auxiliary_artifacts")
+    if declared is None:
+        return ["%s: D-115 manifest_core has no auxiliary_artifacts key" % snapshot_dir]
+    seen = set()
+    for path, digest in sorted(declared.items()):
+        if path not in snapshot_mod.AUXILIARY_ARTIFACTS:
+            out.append("%s: D-115 auxiliary path %r is not in the authoritative set"
+                       % (snapshot_dir, path))
+            continue
+        seen.add(path)
+        full = os.path.join(snapshot_dir, path)
+        try:
+            with open(full, "rb") as handle:
+                data = handle.read()
+        except OSError:
+            out.append("%s: D-115 bound auxiliary artifact %s is missing or unreadable"
+                       % (snapshot_dir, path))
+            continue
+        if digest != snapshot_mod.auxiliary_digest(data):
+            out.append("%s: D-115 auxiliary artifact %s does not match its binding"
+                       % (snapshot_dir, path))
+    for path in snapshot_mod.AUXILIARY_ARTIFACTS:
+        if path in seen:
+            continue
+        present = os.path.exists(os.path.join(snapshot_dir, path))
+        if present:
+            out.append("%s: D-115 auxiliary artifact %s is in the bundle and is not "
+                       "bound by manifest_core" % (snapshot_dir, path))
+        elif path in snapshot_mod.REQUIRED_AUXILIARY:
+            out.append("%s: D-115 required auxiliary artifact %s is absent"
+                       % (snapshot_dir, path))
+    return out
 
 
 def verify_ledger(root):
@@ -99,6 +153,9 @@ def verify_ledger(root):
         if core.get("previous_record_hash") != previous:
             problems.append("ledger record %d: previous_record_hash breaks the chain"
                             % index)
+        if core.get("state_root") not in stateroot.STATE_ROOT_CLASSES:
+            problems.append("ledger record %d: state_root %r is not an artifact class "
+                            "(STORE-026)" % (index, core.get("state_root")))
         previous = row.get("record_hash")
     return problems
 

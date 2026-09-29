@@ -36,25 +36,25 @@ record rather than published (`PUBLIC-OPS-001`).
 
 ## KGG-002 — GitHub secret scanning and push protection unavailable
 
-**State:** `NOT_AVAILABLE_CURRENT_PLAN` · **an external scanner was found inside the trust surface, see below**
+**State:** `CLOSED (public repository)` · secret scanning and push protection are enabled on the public
+repository (API read-back 2026-09-29). Non-provider patterns and validity checks are `NOT_AVAILABLE` on the
+current plan.
 
-### An external integration boundary is under review
+### The external integration boundary — CLOSED 2026-09-29
 
 An external service integration was found whose repository authorization did not match this
-project's intended private-repository trust policy. **No service behaved improperly** — the issue is
-scope, not conduct.
+project's intended private-repository trust policy. **No service behaved improperly** — the issue was
+scope, not conduct. It held back the release until the required repository isolation was verified.
 
-The finding, the evidence, the affected scope and the remediation are recorded in the **private
-governance record**. They are not published here, for three reasons: an unresolved exposure of our
-own is not something to describe publicly while it is still open; naming a third party in a
-security-finding context is a characterisation they cannot answer; and a public project does not need
-to publish every internal reason a release has not happened.
+**Closed on 2026-09-29 by evidence, not by assertion:**
 
-**Release consequence.** The Technical Preview is not released until the required repository
-isolation is verified. `docs/CURRENT_STATE.md` reports this as
-`EXTERNAL_TRUST_BOUNDARY_REVIEW` and nothing further — the public status generator reads a closed
-vocabulary rather than a free-text private reason, so the detail cannot reach the public surface by
-regeneration. See `PUBLIC-OPS-001` in `make check-privacy`.
+- the owner restricted the integration's repository access to this repository only and confirmed
+  the configuration on 2026-09-29;
+- the former private engineering repository is archived and read-only (API read-back
+  `archived=true`, 2026-09-29), so it produces no new events for any integration to observe;
+- this repository is now the only active repository of the project.
+
+The detailed finding stays in the private governance record, for the reasons it was kept there.
 
 ### The local gate, which is not equivalent
 
@@ -64,12 +64,12 @@ It is **defense in depth and is not equivalent to GitHub secret scanning** — i
 token and credential patterns only, has no partner-token feed, no historical scan of existing history, and
 no push-time enforcement on the server.
 
-## KGG-003 — Private vulnerability reporting unavailable
+## KGG-003 — Private vulnerability reporting
 
-**State:** `NOT_AVAILABLE` — the feature applies to public repositories.
+**State:** `CLOSED` — enabled on the public repository (API read-back `enabled: true`, 2026-09-29).
 
-**Mitigation:** `SECURITY.md` directs reports privately to `contact@itcms.gr` and away from public issues.
-The issue-template `config.yml` surfaces the same route before an issue can be opened.
+`SECURITY.md` names it as the primary reporting route, with `contact@itcms.gr` as the alternative.
+The issue-template `config.yml` points to the same routes before an issue can be opened.
 
 ## KGG-004 — Private forking cannot be disabled
 

@@ -112,6 +112,55 @@ _record() {   # _record OUTCOME name detail
 # This reads the same way and cannot land inside a heredoc.
 next_requires() { NEXT_REQUIRES="$1"; }
 
+# IQ-018 instrumentation. Written INSIDE the disposable tree after the gate ran, so it sees
+# exactly the state the gate saw. Diagnostic only: it never changes an outcome.
+_evidence_meta() {   # _evidence_meta FILE name mutate gate before after gate_rc
+    {
+        echo "injection: $2"
+        echo "mutation command: $3"
+        echo "gate command: $4"
+        echo "gate return code: $7"
+        echo "tree digest before mutation: $5"
+        echo "tree digest after mutation:  $6"
+        echo "working directory: $PWD"
+        echo "timestamp (UTC): $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        echo "bash: ${BASH_VERSION:-?}"
+        echo "--- environment (selected) ---"
+        env | grep -E '^(PATH|LANG|LC_[A-Z]+|TMPDIR|PYTHON[A-Z]*|GIT_[A-Z_]+|SHELL|HOME|MAKEFLAGS|MAKELEVEL)=' | sort
+        echo "--- changed paths (git status --porcelain, vs the sandbox commit) ---"
+        git status --porcelain --untracked-files=all 2>&1
+        echo "--- git ls-files (what the index holds) ---"
+        git ls-files 2>&1 | grep -nE '\.pyc$|__pycache__/' || echo "(no bytecode path in the index)"
+        echo "--- git diff HEAD --stat ---"
+        git diff HEAD --stat 2>&1
+        echo "--- git diff HEAD ---"
+        git diff HEAD 2>&1 | head -400
+    } >"$1" 2>&1
+}
+
+_preserve_evidence() {   # _preserve_evidence name tree log meta
+    local base="${FALSIFY_EVIDENCE_DIR:-${TMPDIR:-/tmp}}" slug dir
+    slug="$(printf '%s' "$1" | tr -c 'A-Za-z0-9._-' '_' | cut -c1-60)"
+    dir="$(mktemp -d "$base/isedraf-falsify-evidence.$slug.XXXXXX")" || {
+        echo "         | could not create an evidence directory under $base" >&2
+        return
+    }
+    mv "$3" "$dir/gate-output.txt"
+    mv "$4" "$dir/evidence.txt"
+    # The first FALSIFY_EVIDENCE_TREES misses (default 3) keep their whole mutated tree;
+    # later ones keep all the text evidence and drop the ~15 MB tree, so a run in which
+    # many gates break at once cannot exhaust /tmp and bury the first miss in errors.
+    PRESERVED_TREES=$(( ${PRESERVED_TREES:-0} + 1 ))
+    if [ "$PRESERVED_TREES" -le "${FALSIFY_EVIDENCE_TREES:-3}" ]; then
+        mv "$2" "$dir/mutated-tree"
+        echo "mutated tree (kept): $dir/mutated-tree" >>"$dir/evidence.txt"
+    else
+        rm -rf "$2"
+        echo "mutated tree: not kept (tree cap ${FALSIFY_EVIDENCE_TREES:-3} reached)" >>"$dir/evidence.txt"
+    fi
+    echo "         | evidence preserved: $dir" >&2
+}
+
 inject() {
     # A malformed call used to die with "$3: unbound variable" and abort the whole run,
     # which is the worst possible failure for a harness: it stops reporting on everything
@@ -135,7 +184,7 @@ inject() {
         echo "  SKIP subject not present in this checkout: $requires — $name"
         return
     fi
-    local t log; t="$(mktemp -d)"; log="$(mktemp)"
+    local t log meta; t="$(mktemp -d)"; log="$(mktemp)"; meta="$(mktemp)"
 
     git ls-files -z | tar --null -T - -cf - 2>/dev/null | tar -xf - -C "$t" 2>/dev/null
     (
@@ -151,26 +200,38 @@ inject() {
         # A fresh `git init` inherits no hooks, so nothing is bypassed here.
         git -c user.name=falsifiable -c user.email=falsifiable@invalid \
             commit -q -m "sandbox" >/dev/null 2>&1 || exit 70
-        local before after
+        local before after gate_rc
         before="$(_tree_digest)"
         eval "$mutate" >/dev/null 2>&1 || exit 71
         after="$(_tree_digest)"
         if [ "$scope" = "tree" ] && [ "$before" = "$after" ]; then
             exit 72
         fi
-        eval "$gate" >"$log" 2>&1 || exit 1
-        exit 0
+        eval "$gate" >"$log" 2>&1; gate_rc=$?
+        _evidence_meta "$meta" "$name" "$mutate" "$gate" "$before" "$after" "$gate_rc"
+        [ "$gate_rc" -eq 0 ] && exit 0
+        exit 1
     )
     local rc=$?
     local out; out="$(cat "$log" 2>/dev/null)"
-    rm -rf "$t" "$log"
+    # IQ-018 (owner, 2026-09-26): "miss once -> preserve evidence -> fail run". An
+    # undetected or crashed mutation keeps its mutated tree and everything needed to
+    # reproduce it; it is never retried. Every other outcome is cleaned up as before.
+    # The evidence match reads a here-string, never `printf | grep -q`: this file is sourced
+    # under pipefail, where grep -q's early exit can kill printf with SIGPIPE and turn a
+    # detected mutation into MUTATION_TOOL_CRASHED (IQ-018, the D-115 transient's shape).
+    if [ "$rc" -eq 0 ] || { [ "$rc" -eq 1 ] && ! grep -qE "$evidence" <<<"$out"; }; then
+        _preserve_evidence "$name" "$t" "$log" "$meta"
+    else
+        rm -rf "$t" "$log" "$meta"
+    fi
 
     case "$rc" in
         70) _record HARNESS_ERROR "$name" "could not build the disposable tree";;
         71) _record HARNESS_ERROR "$name" "the mutation command failed; the tree was never mutated";;
         72) _record HARNESS_ERROR "$name" "the mutation changed nothing in the tree";;
         0)  _record MUTATION_EXECUTED_BUT_NOT_DETECTED "$name" "the gate accepted the mutated tree";;
-        *)  if printf '%s' "$out" | grep -qE "$evidence"; then
+        *)  if grep -qE "$evidence" <<<"$out"; then
                 _record MUTATION_EXECUTED_AND_DETECTED "$name"
             else
                 _record MUTATION_TOOL_CRASHED "$name" \

@@ -1,0 +1,32 @@
+{
+  "$comment": "Consumed by scripts/docs/public_ux.py (DOC-PUBLIC-UX-001, docs/development/PUBLIC_DOCS_UX.md). The human/public documentation layer. Everything not listed here is internal and is not checked by this gate. Owner direction 2026-09-26: the public surface carries no architect/developer documents, so Architecture and Development Guide are deliberately absent until the owner confirms them.",
+  "enforce": true,
+  "$enforce": "false = REPORT-ONLY: findings are printed as NOTE lines and the gate exits 0. Flipping this to true at milestone DOC-PUBLIC-01 is the single reviewed change that turns every finding into a failure.",
+  "milestone": "DOC-PUBLIC-01",
+  "documents": [
+    "README.md",
+    "docs/GETTING_STARTED.md",
+    "docs/EVIDENCE_MODEL.md",
+    "docs/AUDITOR_GUIDE.md",
+    "docs/REPORT_GUIDE.md",
+    "docs/SECURITY_AND_LIMITATIONS.md"
+  ],
+  "limits": {
+    "paragraph_words": 120,
+    "section_words": 400,
+    "readme_lines": 150,
+    "duplicate_paragraph_words": 40
+  },
+  "readme_sections": {
+    "$why": "The README reader test: each question must have a heading that answers it. A heading matches when it contains any of the keywords (case-insensitive).",
+    "what it is": ["what is", "what it is", "overview", "about"],
+    "what it does not do": ["does not", "doesn't", "not do", "outside", "out of scope", "limitations", "not prove"],
+    "install": ["install", "build from source"],
+    "first run": ["first run", "quick start", "quickstart", "getting started", "try it"],
+    "where next": ["next", "read more", "further reading", "documentation", "where to go"]
+  },
+  "product_id_prefixes": {
+    "$why": "Artifact names an operator meets in the product itself (snapshot, evaluation and acceptance files). They are product vocabulary, not internal process identifiers.",
+    "prefixes": ["SDS-", "EVL-", "ACC-"]
+  }
+}

@@ -86,6 +86,23 @@
       ],
       "eligible_may_be_empty_reason": "No freeze set is declared during the candidate phase. The gate passes explicitly on an empty freeze/ directory and becomes load-bearing the moment W1_CORE.sha256 is written. Stated rather than excused (GOV-001)."
     },
+    "check-precommit": {
+      "script": "scripts/ci/check_precommit_index.sh",
+      "implements": "GOV-002, D-68, D-83",
+      "falsification": "IQ-029 pre-commit validates the working tree instead of the committed content",
+      "eligible": [
+        "git-hooks/pre-commit"
+      ]
+    },
+    "check-imports": {
+      "script": "scripts/ci/check_runtime_imports.py",
+      "implements": "D-84, GOV-002",
+      "falsification": "D-84 runtime imports a module that is not on the allowlist",
+      "eligible": [
+        "lib/isedraf/**/*.py",
+        "lib/isedraf/runtime-imports.allow"
+      ]
+    },
     "check-vectors": {
       "script": "scripts/vectors/check.sh",
       "implements": "NORM-039",
@@ -149,6 +166,25 @@
         "packaging/deb/control.in"
       ]
     },
+    "check-architecture": {
+      "script": "scripts/ci/check_architecture.py",
+      "implements": "GOV-001, GOV-002, SCOPE-022, SCOPE-045",
+      "falsification": "ARCH-01 a shared primitive imports a domain module",
+      "eligible": [
+        "lib/isedraf/shared/*.py",
+        "lib/isedraf/report/*.py",
+        "lib/isedraf/*.py"
+      ]
+    },
+    "check-architecture-artifacts": {
+      "script": "scripts/ci/check_architecture_artifacts.py",
+      "implements": "GOV-001, GOV-002",
+      "falsification": "ARCH-01 a committed architecture artifact drifts from the code",
+      "eligible": [
+        "docs/development/architecture/generated/*",
+        "scripts/analysis/*.py"
+      ]
+    },
     "check-storage-vocabulary": {
       "script": "scripts/ci/check_storage_vocabulary.py",
       "implements": "D-114, STORAGE-SEMANTICS-001, GOV-002",
@@ -192,6 +228,44 @@
       "eligible": [
         "scripts/ci/native_controls.json",
         "docs/architecture/NATIVE_CONTROL_CATALOG.md"
+      ]
+    },
+    "check-public-ux": {
+      "script": "scripts/docs/public_ux.py",
+      "implements": "D-87, D-88, DOC-PUBLIC-UX-001",
+      "falsification": "DOC-PUBLIC-UX-001 paragraph-length rule disabled",
+      "eligible": [
+        "README.md",
+        "scripts/ci/public_layer.json"
+      ]
+    },
+    "check-repo-security": {
+      "script": "scripts/ci/check_repo_security.py",
+      "implements": "D-88, D-90, D-91, D-93",
+      "falsification": "L2-SEC-1 a workflow regains a write-all token",
+      "eligible": [
+        ".github/workflows/*.yml",
+        "SECURITY.md",
+        "MAINTAINERS.md",
+        "CONTRIBUTING.md",
+        "docs/DEPENDENCIES.md"
+      ]
+    },
+    "check-dco": {
+      "script": "scripts/ci/check_dco.py",
+      "implements": "D-91, D-92, D-93",
+      "falsification": "L2-DCO-1 the DCO check accepts a sign-off by someone other than the author",
+      "eligible": [
+        "scripts/ci/check_dco.py"
+      ]
+    },
+    "check-export": {
+      "script": "scripts/ci/release_export.sh",
+      "implements": "D-90, D-110",
+      "falsification": "EXP-1 an exported document cites a file the export removes",
+      "eligible": [
+        "docs/**/*.md",
+        "*.md"
       ]
     }
   },
@@ -241,6 +315,11 @@
       "script": "scripts/ci/check_provider_alignment.py",
       "invoked_by": "make check-provider-alignment",
       "reason": "private: reads the provider licensing registry located by ISEDRAF_PROVIDER_REGISTRY, which is absent on a runner. Also recorded in private_only_gates."
+    },
+    "check-lane-scope": {
+      "script": "scripts/ci/check_lane_scope.sh",
+      "invoked_by": "the coordinator, at every lane handoff before integration",
+      "reason": "takes a lane, a base SHA and a head SHA, so it has nothing to check outside an integration handoff. Caught by this gate's own reconciliation when it was added undeclared, which is what that reconciliation is for."
     }
   }
 }

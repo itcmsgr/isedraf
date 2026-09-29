@@ -27,6 +27,11 @@
 # =============================================================================
 set -uo pipefail
 ROOT="$(git rev-parse --show-toplevel)"; cd "$ROOT" || exit 2
+# --no-build: the same export and the same gates, without building packages. `make check`
+# runs it on every commit, because the export is the only route to a public release and it
+# broke for a week unnoticed when exported documents began citing removed files (2026-09-29).
+BUILD=1
+if [ "${1:-}" = "--no-build" ]; then BUILD=0; shift; fi
 OUT="${1:-$ROOT/dist/export}"
 FAIL=0
 bad() { echo "  FAIL  $*" >&2; FAIL=1; }
@@ -107,7 +112,7 @@ if [ "$FAIL" -eq 0 ]; then
         || bad "the export failed freeze verification"
 fi
 
-if [ "$FAIL" -eq 0 ]; then
+if [ "$FAIL" -eq 0 ] && [ "$BUILD" -eq 1 ]; then
     ( cd "$OUT" && bash packaging/build.sh ) > "$OUT/../export-build.log" 2>&1 \
         || { bad "the release build FAILED from the exported tree"; tail -5 "$OUT/../export-build.log" >&2; }
     if [ -d "$OUT/dist/packages" ]; then
@@ -119,4 +124,8 @@ fi
 rm -rf "${OUT:?}/.git"
 
 [ "$FAIL" -eq 0 ] || { echo "  release export FAILED" >&2; exit 1; }
-echo "  OK    export clean, packages built from it, payloads verified"
+if [ "$BUILD" -eq 1 ]; then
+    echo "  OK    export clean, packages built from it, payloads verified"
+else
+    echo "  OK    export clean and its gates pass (packages not built: --no-build)"
+fi

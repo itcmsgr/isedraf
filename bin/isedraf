@@ -80,4 +80,7 @@ for lib in "$PREFIX/lib" "$PREFIX/lib/isedraf/.."; do
     fi
 done
 
-exec "$PY" -c 'import sys; from isedraf.cli import main; sys.exit(main())' "$@"
+# -B: never write bytecode (D-86). Under root the interpreter could write into the
+# installed package, and a refused `sudo isedraf` left root-owned __pycache__ files in
+# /usr/lib/isedraf that no package owns, so uninstall left the directory behind.
+exec "$PY" -B -c 'import sys; from isedraf.cli import main; sys.exit(main())' "$@"

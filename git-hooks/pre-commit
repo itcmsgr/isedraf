@@ -5,10 +5,36 @@
 # SPDX-License-Identifier: MPL-2.0
 #
 # This file is part of ISEDRAF.
-# Install: cp git-hooks/* .git/hooks/ && chmod 0755 .git/hooks/*
+# Install: h="$(git rev-parse --git-path hooks)"; cp git-hooks/* "$h"/ && chmod 0755 "$h"/*
 set -u
 root="$(git rev-parse --show-toplevel)" || exit 1
 cd "$root" || exit 1
+# IQ-029: validate the content being COMMITTED, not the working tree. Every check below
+# once ran against the working tree, so staging an invalid file and repairing only the
+# tree copy passed the hook while git recorded the invalid staged bytes - a passing hook
+# behind content that never passed. And unrelated uncommitted work failed valid commits.
+#
+# git hands the hook the index it is about to commit in GIT_INDEX_FILE - the real index
+# for a plain commit, a temporary one for `commit -a` and `commit <path>`. That index is
+# written as a tree, wrapped in a throwaway commit object, and checked out as a detached
+# linked worktree. The checks run there, on exactly those bytes. Nothing in the developer's
+# working tree or index is read, changed, stashed or restored.
+tree="$(git write-tree)" \
+  || { echo "pre-commit: cannot write the index being committed as a tree (IQ-029)" >&2; exit 1; }
+snap="$(git commit-tree "$tree" -m "pre-commit snapshot (IQ-029)")" \
+  || { echo "pre-commit: cannot build the snapshot of the index (IQ-029)" >&2; exit 1; }
+# From here on nothing may act on the index being committed.
+unset GIT_INDEX_FILE GIT_DIR GIT_WORK_TREE GIT_PREFIX
+snapdir="$(mktemp -d "${TMPDIR:-/tmp}/isedraf-precommit.XXXXXX")" || exit 1
+cleanup() {
+  git -C "$root" worktree remove --force "$snapdir" >/dev/null 2>&1
+  rm -rf "$snapdir"
+  git -C "$root" worktree prune >/dev/null 2>&1
+}
+trap cleanup EXIT
+git worktree add --quiet --detach "$snapdir" "$snap" >/dev/null 2>&1 \
+  || { echo "pre-commit: cannot materialize the index snapshot (IQ-029)" >&2; exit 1; }
+cd "$snapdir" || exit 1
 # D-107 replaced the single global FROZEN_MANIFEST.sha256 with per-set freeze manifests,
 # and this hook was not updated with it: it referenced two files that no longer exist, so
 # it could not succeed if it were installed. Found while committing the Z-10/Z-12 lane and
@@ -16,8 +42,23 @@ cd "$root" || exit 1
 # check now goes through the one mechanism that implements D-68 today.
 bash scripts/ci/check_freeze.sh \
   || { echo "pre-commit: a frozen set changed without an explicit re-freeze (D-68, D-107)" >&2; exit 1; }
+# D-83 compares the INSTALLED hooks against the repository copies. The location was
+# spelled ".git/hooks" literally, which is only true in a plain clone: in a linked
+# worktree .git is a FILE and ".git/hooks" is "Not a directory", so every compliant
+# commit in a worktree was rejected for the wrong reason - and this project uses linked
+# worktrees for lanes. Measured, not reasoned: a green tree with a compliant trailer was
+# refused with this hook's own D-83 message.
+#
+# git knows where the hooks really are; ask it instead of the filesystem. This is the
+# same correction check_docs_truth.py already made for the same reason. It does not
+# weaken the check: --git-path also follows core.hooksPath, so it names the directory
+# git will ACTUALLY run hooks from, which the literal path did not. The snapshot is itself
+# a linked worktree, so this is also the case that correction exists for; the repository
+# copies compared are the ones being committed.
+hooks_dir="$(git rev-parse --git-path hooks)" || exit 1
+case "$hooks_dir" in /*) ;; *) hooks_dir="$PWD/$hooks_dir" ;; esac
 for h in pre-commit pre-push commit-msg; do
-  cmp -s "git-hooks/$h" ".git/hooks/$h" \
+  cmp -s "git-hooks/$h" "$hooks_dir/$h" \
     || { echo "pre-commit: installed hook $h differs from git-hooks/$h (D-83)" >&2; exit 1; }
 done
-make check || { echo "pre-commit: make check failed" >&2; exit 1; }
+make check || { echo "pre-commit: make check failed on the content being committed" >&2; exit 1; }

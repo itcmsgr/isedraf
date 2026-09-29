@@ -51,7 +51,16 @@ D_HOST = "ISEDRAF:HOST-ID:V1"
 D_STATE = "ISEDRAF:STATE:V1"
 D_MANIFEST = "ISEDRAF:SNAPSHOT-MANIFEST:V1"
 D_RECORD = "ISEDRAF:LEDGER-RECORD:V1"
-DOMAINS_USED = {D_HOST, D_STATE, D_MANIFEST, D_RECORD}
+D_AUXILIARY = "ISEDRAF:AUXILIARY-ARTIFACT:V1"          # D-115
+
+
+def _skip(*_args, **_kw):
+    """Falsification seam: a no-op the Z-14 mutation substitutes for a real check.
+
+    Present so the mutated tree still imports. A mutation that cannot run proves
+    nothing, and HARNESS_ERROR is how this harness says so."""
+    return None
+DOMAINS_USED = {D_HOST, D_STATE, D_MANIFEST, D_RECORD, D_AUXILIARY}
 import hashlib
 import json
 import pathlib
@@ -281,6 +290,30 @@ for case in sorted(d for d in VEC.iterdir() if d.is_dir()):
     unframe_check(D_MANIFEST, mc, mh[7:], f"{name}/manifest_hash")
     if b'"manifest_hash"' in mc:
         bad(f"{name}: manifest_hash present in its own preimage")
+
+    # D-115. The auxiliary binding, recomputed INDEPENDENTLY from the artifact's bytes.
+    # Declaring the domain without using it would prove non-prefixing over a literal
+    # nothing reads, which is the defect Z-10 exists to prevent.
+    core = json.loads(mc)
+    auxiliary = core.get("auxiliary_artifacts")
+    if not isinstance(auxiliary, dict):
+        bad(f"{name}: D-115 auxiliary_artifacts is missing or is not a canonical map")
+    else:
+        if "method/host_identity.json" not in auxiliary:
+            bad(f"{name}: D-115 method/host_identity.json is not bound")
+        for rel, digest in sorted(auxiliary.items()):
+            artifact = {"method/host_identity.json": e / "method.canonical"}.get(rel)
+            if artifact is None or not artifact.exists():
+                bad(f"{name}: D-115 bound artifact {rel} has no vector to verify against")
+                continue
+            unframe_check(D_AUXILIARY, rd(artifact), digest[7:],
+                          f"{name}/auxiliary/{rel}")
+        # The separation D-115 exists to preserve: an auxiliary digest is never a state
+        # hash, so it must never equal one.
+        state_hash = (core.get("sections", {}).get("host_identity", {})
+                      .get("state_hash"))
+        if state_hash and state_hash in auxiliary.values():
+            bad(f"{name}: D-115 an auxiliary digest equals state_hash")
 
     rc = rd(e / "record-core.canonical")
     canon_structural(rc, f"{name}/record_core")

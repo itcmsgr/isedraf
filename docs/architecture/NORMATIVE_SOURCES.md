@@ -28,6 +28,7 @@ three; one privilege topology in three, in two incompatible orderings.
 | Baseline storage and verification | `BASE-007` | Snapshot/Baseline/Delta |
 | Tracking vs completeness | `BASE-020`…`BASE-025` | Snapshot/Baseline/Delta |
 | Storage layout | `STORE-001` | Snapshot/Baseline/Delta |
+| Artifact class, `state_root` literal, user-mode store | `STORE-026`, `STORE-027` | Snapshot/Baseline/Delta |
 | Ledger storage and recovery | `STORE-010`, `STORE-016` | Snapshot/Baseline/Delta |
 | Collection method identity | `CMP-020` | Snapshot/Baseline/Delta |
 | Field classification | `SCOPE-045` | v0.1 Implementation Scope |

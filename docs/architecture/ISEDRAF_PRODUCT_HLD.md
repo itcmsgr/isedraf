@@ -165,6 +165,62 @@ decidable from one host. Whole-regime compliance is never inferred from Linux ev
    └── licensed mappings  if authorized
 ```
 
+### The evidence boundary — `D-115`, R1.5-P
+
+ISEDRAF reports not only what it observed, but also **the boundary of what the collection
+was capable of proving**. Missing visibility is recorded explicitly rather than silently
+interpreted as absence.
+
+The report therefore separates:
+
+```text
+HOST FACTS                      what was observed
+EVIDENCE COVERAGE               which requested sources were obtained
+PRIVILEGE-LIMITED EVIDENCE      not observed because the collection identity lacked access
+OTHER UNAVAILABLE EVIDENCE      not observed for reasons additional authority would not change
+EVIDENCE LIMITATIONS            what those gaps forbid being claimed
+ADDITIONAL ACCESS REQUIREMENTS  the class of access that would obtain each missing source
+```
+
+The limitations are rendered from **structured fields**, never by parsing an English reason
+string. A consumer that had to read a sentence to learn whether privilege caused a gap is a
+consumer that would eventually read it wrong.
+
+`root` is not an answer this design gives. Blanket elevation is not recommended as the normal
+response to missing evidence, because **root does not imply completeness**: a privileged run
+can still lack evidence from an unsupported source, a missing tool, an absent kernel feature,
+a namespace boundary or a universe the operator excluded, and elevation changes none of them.
+Completeness is always completeness over the explicit requested evidence universe.
+
+### Three identities, deliberately distinct
+
+```text
+state_hash                  host-state identity
+coverage_digest             observation-capability identity
+manifest auxiliary binding  snapshot-bundle integrity
+```
+
+`D-115` binds authoritative auxiliary bundle artifacts — currently
+`method/host_identity.json` and `coverage/evidence_limits.json` — through `manifest_core`,
+`manifest_hash` and the ledger chain. Those artifacts are **not** part of `state_hash`.
+
+`coverage_digest` is *not* the integrity anchor for snapshot membership: a self-digest proves
+only that the bytes hash to a value, and an artifact and its digest can be substituted
+together. Membership of a particular snapshot is what the `manifest_core` binding asserts.
+
+The consequence is the invariant the delta layer depends on:
+
+```text
+auxiliary evidence changed  ->  manifest_hash and the ledger chain change
+                            ->  state_hash does NOT change
+
+COLLECTION VISIBILITY DELTA   !=   HOST STATE DELTA
+```
+
+The regenerated W1-A corpus demonstrates it rather than asserting it: under `D-115`,
+`manifest-core.canonical`, `manifest-hash.txt` and the record files changed, while
+`state.canonical`, `state.sha256` and `host-id.txt` did not.
+
 **No mapping installed is a normal, fully supported state**, rendered as `Framework mappings: None
 installed` or omitted. Locked provider names are never shown as teasers. Where a licensed mapping is
 present, the report records provider, framework, version, pack digest, entitlement status at

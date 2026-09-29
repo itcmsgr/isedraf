@@ -9,7 +9,7 @@ body:
         reported as passing, that is a security-sensitive defect — consider reporting it privately via
         `SECURITY.md` instead.
 
-        **Redact first.** Use `--redact`.
+        **Redact first.** ISEDRAF 0.1 has no automatic redaction: remove names, host names and key material by hand.
   - type: input
     id: version
     attributes: {label: ISEDRAF version}
@@ -57,5 +57,5 @@ body:
     id: sanitized
     attributes:
       label: Sanitized evidence
-      description: "Redacted output (`--redact`). Never paste an unredacted identity or evidence bundle."
+      description: "Output, redacted by hand. Never paste an unredacted identity or evidence bundle."
     validations: {required: true}

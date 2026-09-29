@@ -27,11 +27,54 @@ import os
 import re
 
 from . import model
-from ._exec import Outcome, read_file, read_lines, run, which
+from .. import coverage
+from ..hostio import (IO_ERROR, NOT_FOUND, PERMISSION_DENIED, TRUNCATED, Outcome,
+                      read_file, read_lines, run, which)
 
 PROC = "/proc"
 SYS = "/sys"
 
+
+
+class _Reads(object):
+    """Every file read of one subdomain, and whether any of them failed to be complete.
+
+    Hardening re-check N4 and N7: once hostio stopped returning silently truncated values,
+    each caller read "not ok" as "nothing there" - a truncated os-release fell back to
+    another file, a truncated stub resolver dropped the upstream servers, a truncated
+    cpuinfo left virtualization unknown - all under COLLECTED. A read that was TRUNCATED
+    or failed with an I/O error (a directory, a FIFO) is not evidence of absence, so the
+    subdomain becomes PARTIAL and names the sources. A permission refusal (a mode-000 file,
+    a MAC denial) is not absence either: an unreadable /etc/hosts was read as "no FQDN"
+    under COLLECTED (re-check R4-3), so it counts the same way. Absence (NOT_FOUND) keeps
+    its own meaning.
+    """
+
+    def __init__(self, root):
+        self.root = root
+        self.incomplete = []
+
+    def _note(self, outcome, path):
+        if not outcome.ok and outcome.detail in (TRUNCATED, IO_ERROR, PERMISSION_DENIED):
+            rel = "/" + os.path.relpath(path, self.root) if self.root not in ("", "/") else path
+            self.incomplete.append("%s (%s)" % (rel, outcome.detail))
+        return outcome
+
+    def file(self, path):
+        return self._note(read_file(path), path)
+
+    def lines(self, path):
+        return self._note(read_lines(path), path)
+
+    def subdomain(self, status, data, **kw):
+        if self.incomplete:
+            note = ("SOURCE_INCOMPLETE: %s could not be read as complete evidence"
+                    % ", ".join(self.incomplete))
+            reason = kw.get("reason")
+            kw["reason"] = "%s; %s" % (reason, note) if reason else note
+            if status == model.COLLECTED:
+                status = model.PARTIAL
+        return model.subdomain(status, data, **kw)
 
 def _live(root):
     """True when we are inspecting the running system rather than a fixture root.
@@ -43,9 +86,14 @@ def _live(root):
     return root in ("/", "")
 
 
-def _osrelease(root="/"):
+def _osrelease(root="/", reads=None):
     for candidate in ("etc/os-release", "usr/lib/os-release"):
-        outcome = read_file(os.path.join(root, candidate))
+        path = os.path.join(root, candidate)
+        outcome = reads.file(path) if reads is not None else read_file(path)
+        if not outcome.ok and outcome.detail != NOT_FOUND:
+            # /etc/os-release exists and could not be read: reporting the fallback file
+            # as the active one would describe a different file (re-check N4).
+            return None, None
         if outcome.ok:
             values = {}
             for line in outcome.value.splitlines():
@@ -64,16 +112,27 @@ def collect_host(root="/"):
     No resolver is consulted. A network lookup would make the inventory depend on DNS
     being up, and would let a DNS answer decide what this host is called.
     """
-    outcome = read_file(os.path.join(root, "proc/sys/kernel/hostname"))
+    reads = _Reads(root)
+    outcome = reads.file(os.path.join(root, "proc/sys/kernel/hostname"))
     if not outcome.ok:
-        return model.subdomain(model.ERROR, {}, method="/proc/sys/kernel/hostname",
+        return reads.subdomain(model.ERROR, {}, method="/proc/sys/kernel/hostname",
+                               access_outcome=_acquisition(outcome,
+                                                           coverage.OP_FILE_READ)[0],
+                               operation=coverage.OP_FILE_READ,
                                reason=outcome.reason)
     hostname = outcome.value.strip()
-    fqdn, source, status = None, None, model.COLLECTED
+    fqdn, source, status, reason = None, None, model.COLLECTED, None
     if "." in hostname:
         fqdn, source = hostname, "kernel hostname"
     else:
-        hosts = read_lines(os.path.join(root, "etc/hosts"))
+        hosts = reads.lines(os.path.join(root, "etc/hosts"))
+        if not hosts.ok and hosts.detail == TRUNCATED:
+            # Truncated input is never complete evidence: "no FQDN found" would be a
+            # claim about a file that was not read (hardening red team F7).
+            status = model.PARTIAL
+            reason = ("SOURCE_TRUNCATED: /etc/hosts is larger than the read bound; the "
+                      "FQDN was not determined")
+            source = "SOURCE_TRUNCATED"
         if hosts.ok:
             for line in hosts.value:
                 line = line.split("#", 1)[0].strip()
@@ -87,7 +146,7 @@ def collect_host(root="/"):
                             break
                 if fqdn:
                     break
-    if fqdn is None:
+    if fqdn is None and source is None:
         # Stated, never fabricated: <hostname>.<some domain> would be an invention.
         #
         # And NOT a partial collection. Most standalone, lab and edge Linux hosts have no
@@ -99,16 +158,17 @@ def collect_host(root="/"):
         # The absence is still reported, explicitly, in fqdn_source. Presence encodes
         # presence (NORM-040); it is not hidden, it is simply not a defect.
         source = "NOT_AVAILABLE_LOCALLY"
-    return model.subdomain(status, {"hostname": hostname, "fqdn": fqdn,
+    return reads.subdomain(status, {"hostname": hostname, "fqdn": fqdn,
                                     "fqdn_source": source},
-                           method="/proc/sys/kernel/hostname + /etc/hosts")
+                           method="/proc/sys/kernel/hostname + /etc/hosts", reason=reason)
 
 
 # --- platform ----------------------------------------------------------------------------
 def collect_platform(root="/"):
-    values, source = _osrelease(root)
+    reads = _Reads(root)
+    values, source = _osrelease(root, reads)
     uname = os.uname()
-    init = read_file(os.path.join(root, "proc/1/comm"))
+    init = reads.file(os.path.join(root, "proc/1/comm"))
     data = {
         "id": (values or {}).get("id"),
         "version_id": (values or {}).get("version_id"),
@@ -119,7 +179,7 @@ def collect_platform(root="/"):
         "init_system": init.value.strip() if init.ok else None,
     }
     status = model.COLLECTED if values else model.PARTIAL
-    return model.subdomain(status, data, method="%s + uname(2) + /proc/1/comm"
+    return reads.subdomain(status, data, method="%s + uname(2) + /proc/1/comm"
                            % (source or "os-release absent"),
                            reason=None if values
                            else "SOURCE_ABSENT: neither /etc/os-release nor "
@@ -129,8 +189,9 @@ def collect_platform(root="/"):
 # --- machine / virtualization -------------------------------------------------------------
 def collect_machine(root="/"):
     """Deliberately excludes the DMI system UUID and every hardware serial."""
+    reads = _Reads(root)
     def dmi(name):
-        outcome = read_file(os.path.join(root, "sys/class/dmi/id", name))
+        outcome = reads.file(os.path.join(root, "sys/class/dmi/id", name))
         return outcome.value.strip() if outcome.ok and outcome.value.strip() else None
 
     hypervisor = None
@@ -138,7 +199,7 @@ def collect_machine(root="/"):
     if detect.ok:
         hypervisor = detect.value.strip()
     else:
-        hv = read_file(os.path.join(root, "sys/hypervisor/type"))
+        hv = reads.file(os.path.join(root, "sys/hypervisor/type"))
         if hv.ok:
             hypervisor = hv.value.strip()
     if hypervisor in ("none", ""):
@@ -148,7 +209,7 @@ def collect_machine(root="/"):
     if hypervisor:
         virtualized = True
     else:
-        cpuinfo = read_file(os.path.join(root, "proc/cpuinfo"))
+        cpuinfo = reads.file(os.path.join(root, "proc/cpuinfo"))
         if cpuinfo.ok:
             virtualized = bool(re.search(r"^flags\s*:.*\bhypervisor\b", cpuinfo.value,
                                          re.M))
@@ -179,7 +240,7 @@ def collect_machine(root="/"):
                   "and on virtualized or containerized hosts without SMBIOS. "
                   "Virtualization detection is reported separately and does not "
                   "establish machine identity." % " or ".join(missing))
-    return model.subdomain(
+    return reads.subdomain(
         status, data,
         method="systemd-detect-virt | /sys/hypervisor + /sys/class/dmi/id",
         reason=reason)
@@ -187,9 +248,13 @@ def collect_machine(root="/"):
 
 # --- compute and memory --------------------------------------------------------------------
 def collect_compute(root="/"):
-    outcome = read_file(os.path.join(root, "proc/cpuinfo"))
+    reads = _Reads(root)
+    outcome = reads.file(os.path.join(root, "proc/cpuinfo"))
     if not outcome.ok:
-        return model.subdomain(model.ERROR, {}, method="/proc/cpuinfo",
+        return reads.subdomain(model.ERROR, {}, method="/proc/cpuinfo",
+                               access_outcome=_acquisition(outcome,
+                                                           coverage.OP_FILE_READ)[0],
+                               operation=coverage.OP_FILE_READ,
                                reason=outcome.reason)
     vendor = modelname = None
     logical = 0
@@ -215,13 +280,19 @@ def collect_compute(root="/"):
     data = {"cpu_vendor": vendor, "cpu_model": modelname,
             "sockets": len(sockets) or None, "cores_per_socket": cores,
             "logical_cpus": logical or None}
-    return model.subdomain(model.COLLECTED, data, method="/proc/cpuinfo")
+    return reads.subdomain(model.COLLECTED, data, method="/proc/cpuinfo",
+                           access_outcome=coverage.READ_OK,
+                           operation=coverage.OP_FILE_READ)
 
 
 def collect_memory(root="/"):
-    outcome = read_file(os.path.join(root, "proc/meminfo"))
+    reads = _Reads(root)
+    outcome = reads.file(os.path.join(root, "proc/meminfo"))
     if not outcome.ok:
-        return model.subdomain(model.ERROR, {}, method="/proc/meminfo",
+        return reads.subdomain(model.ERROR, {}, method="/proc/meminfo",
+                               access_outcome=_acquisition(outcome,
+                                                           coverage.OP_FILE_READ)[0],
+                               operation=coverage.OP_FILE_READ,
                                reason=outcome.reason)
     fields = {}
     for line in outcome.value.splitlines():
@@ -229,7 +300,7 @@ def collect_memory(root="/"):
         parts = value.split()
         if parts and parts[0].isdigit():
             fields[key.strip()] = int(parts[0]) * 1024        # kB in /proc/meminfo
-    return model.subdomain(
+    return reads.subdomain(
         model.COLLECTED,
         {"total_bytes": fields.get("MemTotal"),
          "swap_total_bytes": fields.get("SwapTotal")},
@@ -239,18 +310,19 @@ def collect_memory(root="/"):
 # --- storage -------------------------------------------------------------------------------
 def collect_storage(root="/"):
     """Topology and mount configuration are separated from utilisation, which is volatile."""
+    reads = _Reads(root)
     devices = []
     block = os.path.join(root, "sys/block")
     if os.path.isdir(block):
         for name in sorted(os.listdir(block)):
             if name.startswith(("loop", "ram", "zram", "dm-")):
                 continue
-            size = read_file(os.path.join(block, name, "size"))
-            rotational = read_file(os.path.join(block, name, "queue/rotational"))
-            devmodel = read_file(os.path.join(block, name, "device/model"))
-            removable = read_file(os.path.join(block, name, "removable"))
-            scsi_type = read_file(os.path.join(block, name, "device/type"))
-            devvendor = read_file(os.path.join(block, name, "device/vendor"))
+            size = reads.file(os.path.join(block, name, "size"))
+            rotational = reads.file(os.path.join(block, name, "queue/rotational"))
+            devmodel = reads.file(os.path.join(block, name, "device/model"))
+            removable = reads.file(os.path.join(block, name, "removable"))
+            scsi_type = reads.file(os.path.join(block, name, "device/type"))
+            devvendor = reads.file(os.path.join(block, name, "device/vendor"))
 
             # D-114. Each dimension is recorded as itself. Nothing here infers a
             # physical medium, a transport, or that this block device corresponds to
@@ -307,7 +379,7 @@ def collect_storage(root="/"):
             })
 
     filesystems, utilisation = [], []
-    mounts = read_lines(os.path.join(root, "proc/self/mounts"))
+    mounts = reads.lines(os.path.join(root, "proc/self/mounts"))
     if mounts.ok:
         for line in mounts.value:
             parts = line.split()
@@ -341,12 +413,13 @@ def collect_storage(root="/"):
                     "used_permille": int(round((total - free) * 1000.0 / total)),
                 })
     status = model.COLLECTED if (devices or filesystems) else model.PARTIAL
-    return model.subdomain(status, {"devices": devices, "filesystems": filesystems,
+    reason = None if status == model.COLLECTED else ("SOURCE_ABSENT: neither /sys/block "
+                                                     "nor /proc/self/mounts yielded any "
+                                                     "entry")
+    return reads.subdomain(status, {"devices": devices, "filesystems": filesystems,
                                     "utilisation": utilisation},
                            method="/sys/block + /proc/self/mounts + statvfs(2)",
-                           reason=None if status == model.COLLECTED
-                           else "SOURCE_ABSENT: neither /sys/block nor "
-                                "/proc/self/mounts yielded any entry")
+                           reason=reason)
 
 
 # --- network --------------------------------------------------------------------------------
@@ -366,6 +439,8 @@ def _classify_ipv6(address, scope, flags):
 def collect_network(root="/"):
     if not _live(root):
         return model.subdomain(model.NOT_TESTED, {}, method="ip(8)",
+                               access_outcome=coverage.NOT_SUPPORTED,
+                               operation=coverage.OP_COMMAND,
                                reason="NOT_TESTED: netlink is not readable from a "
                                       "fixture root")
     if which("ip") is None:
@@ -376,6 +451,8 @@ def collect_network(root="/"):
     route6 = run(["ip", "-json", "-6", "route", "show", "default"])
     if not addr.ok:
         return model.subdomain(model.ERROR, {}, method="ip -json addr",
+                               access_outcome=coverage.IO_ERROR,
+                               operation=coverage.OP_COMMAND,
                                reason=addr.reason)
     try:
         links = json.loads(addr.value)
@@ -428,10 +505,11 @@ def collect_network(root="/"):
 # --- DNS -------------------------------------------------------------------------------------
 def collect_dns(root="/"):
     """resolv.conf alone is not effective DNS state when a local stub is in front of it."""
+    reads = _Reads(root)
     servers, method, note = [], None, None
     stub = os.path.join(root, "run/systemd/resolve/resolv.conf")
     primary = os.path.join(root, "etc/resolv.conf")
-    outcome = read_file(primary)
+    outcome = reads.file(primary)
     if outcome.ok:
         method = "/etc/resolv.conf"
         for line in outcome.value.splitlines():
@@ -442,7 +520,7 @@ def collect_dns(root="/"):
         # A local stub resolver. The configured upstreams live elsewhere, and reporting
         # 127.0.0.53 as "the DNS servers" would be true and useless.
         note = "LOCAL_STUB_RESOLVER"
-        upstream = read_file(stub)
+        upstream = reads.file(stub)
         if upstream.ok:
             upstream_servers = [l.split()[1] for l in upstream.value.splitlines()
                                 if l.split()[:1] == ["nameserver"] and len(l.split()) >= 2]
@@ -450,10 +528,10 @@ def collect_dns(root="/"):
                 servers = upstream_servers
                 method = "/run/systemd/resolve/resolv.conf (upstream behind the stub)"
     if not outcome.ok:
-        return model.subdomain(model.NOT_TESTED, {"servers": [], "method": None,
+        return reads.subdomain(model.NOT_TESTED, {"servers": [], "method": None,
                                                   "note": None},
                                method=primary, reason=outcome.reason)
-    return model.subdomain(model.COLLECTED if servers else model.PARTIAL,
+    return reads.subdomain(model.COLLECTED if servers else model.PARTIAL,
                            {"servers": servers, "method": method, "note": note},
                            method=method, dimension=model.RESOLVED,
                            reason=None if servers
@@ -467,6 +545,7 @@ def collect_time(root="/"):
     `synchronized` is what REC-005 needs: when it is false, every event-time observation
     elsewhere must carry CLOCK_UNSYNCHRONIZED.
     """
+    reads = _Reads(root)
     timezone = None
     link = os.path.join(root, "etc/localtime")
     try:
@@ -474,11 +553,11 @@ def collect_time(root="/"):
         if "zoneinfo/" in target:
             timezone = target.split("zoneinfo/", 1)[1]
     except OSError:
-        tz = read_file(os.path.join(root, "etc/timezone"))
+        tz = reads.file(os.path.join(root, "etc/timezone"))
         if tz.ok:
             timezone = tz.value.strip() or None
 
-    uptime, seconds = read_file(os.path.join(root, "proc/uptime")), None
+    uptime, seconds = reads.file(os.path.join(root, "proc/uptime")), None
     if uptime.ok:
         try:
             seconds = int(float(uptime.value.split()[0]))
@@ -535,6 +614,34 @@ def collect_time(root="/"):
                         # deterministically has no business in evidence.
                         data["offset_nanoseconds"] = int(round(float(m.group(1)) * 1e9))
             method += " + chronyc tracking"
-    return model.subdomain(status, data, method=method, dimension=model.RESOLVED,
+    return reads.subdomain(status, data, method=method, dimension=model.RESOLVED,
                            reason=None if status == model.COLLECTED
                            else partial_reason)
+
+
+def _acquisition(outcome, operation):
+    """Map a hostio Outcome onto the R1.5-P acquisition axes.
+
+    The rule that matters is the one the owner named: A NONZERO EXIT IS NOT A PRIVILEGE
+    PROBLEM. hostio.run cannot tell a refusal from any other failure - it returns ERROR
+    for a nonzero exit, a timeout and an OSError alike - and parsing stderr for the word
+    "permission" would be a privilege detector built on other people's error messages.
+    So a command failure is IO_ERROR with ACCESS_NONE, and a missing tool is NOT_SUPPORTED
+    with ACCESS_NONE. Neither claims additional authority would help, because neither is
+    evidence that it would.
+
+    File reads are different: read_file knows EACCES from ENOENT, and that answer is
+    carried through unchanged.
+    """
+    if outcome is None:
+        return None, operation
+    if getattr(outcome, "ok", False):
+        return coverage.READ_OK, operation
+    detail = getattr(outcome, "detail", None)
+    if detail in (coverage.NOT_FOUND, coverage.PERMISSION_DENIED, coverage.IO_ERROR):
+        return detail, operation
+    # hostio.run: no detail. NOT_TESTED means the binary was absent from the fixed search
+    # path; anything else means present-and-failed.
+    if getattr(outcome, "reason", None) == "NOT_TESTED":
+        return coverage.NOT_SUPPORTED, operation
+    return coverage.IO_ERROR, operation

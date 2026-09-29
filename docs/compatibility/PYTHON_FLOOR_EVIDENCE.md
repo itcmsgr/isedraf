@@ -41,7 +41,7 @@ declared floor.
 | openSUSE Leap 15.6 | 3.6.15 | `/usr/bin/python3.6` | none | 13 | 0 | — |
 | Debian 12 | 3.11.2 | stock | none | 13 | 0 | PASS |
 | Fedora 44 | 3.14.7 | stock | none | 13 | 0 | PASS |
-| *(CI)* | 3.9.25 · 3.12.14 · 3.12.3 | setup-python / runner | — | corpus digest `5f2ac4d7a9ddeec1…` | 0 | PASS |
+| *(CI)* | 3.9.25 · 3.12.14 · 3.12.3 | setup-python / runner | — | corpus digest `5f2ac4d7a9ddeec1…` — Historical, superseded by `D-115` | 0 | PASS |
 
 Campaign under the 3.6 floor, both hosts: **10 runs · 10 chained ledger records · 1 state object · one
 exit code `[0]` · independent verifier PASS with zero problems · 7/7 frozen negative cases**.
@@ -128,7 +128,7 @@ certification tooling stays unconstrained. The amendment that carried the change
 `AMENDMENTS.md` as history — implementation reads the requirement, never the amendment (`D-106`).
 
 **One frozen artifact changed**, `EVIDENCE_AND_TRUST_MODEL.md`, and `W1A_CORE.sha256` was regenerated over
-the same eight paths. The corpus digest `5f2ac4d7a9ddeec1…` is unchanged: **no canonical evidence byte
+the same eight paths. The corpus digest at the time was `5f2ac4d7a9ddeec1…` — Historical, superseded by `D-115`, which regenerated the corpus to `f55c297aa7868e34…`. Across the interpreter matrix it was unchanged: **no canonical evidence byte
 moved**, which is what a specification clarification should look like.
 
 `make check-python-floor` now holds `lib/isedraf/` and `scripts/compat/` to the floor permanently. Syntax

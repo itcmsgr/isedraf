@@ -19,7 +19,7 @@
 import os
 
 from . import artifact, model, profile, render
-from .model import build, content_digest
+from .model import build, committed_run, content_digest
 from .profile import ProfileError
 
 REPORTS_DIRECTORY = "reports"

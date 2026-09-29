@@ -21,7 +21,7 @@ A lower layer never contradicts a higher one. On conflict: keep the higher state
 - **Installed docs:** man page `isedraf.8` and `/usr/share/doc/isedraf/` for offline servers.
 
 ## 3. Positioning
-Canonical description: *ISEDRAF is an open-source Linux host assurance, state-delta and evidence bridge.
+Canonical description: *ISEDRAF is an open-source Linux host assurance, state-delta and evidence engine.
 It collects normalized local host state, establishes approved baselines, detects and classifies meaningful
 state changes, gives system administrators concise operational visibility, preserves evidence for security
 auditors, and exports machine-readable data for organizational governance workflows.*
@@ -54,7 +54,7 @@ clearly labelled architecture reservations. Stubs contain headings and `Status: 
 docs/
 ├── README.md  CURRENT_STATE.md* REPOSITORY_MAP.md  STYLE_GUIDE.md  IMPLEMENTATION_QUESTIONS.md
 ├── architecture/   HLD, EVIDENCE_AND_TRUST_MODEL, SNAPSHOT_BASELINE_DELTA_MODEL, V0_1_IMPLEMENTATION_SCOPE,
-│                   OPEN_DECISIONS, DECISIONS_REGISTER, AMENDMENTS, FROZEN_MANIFEST.sha256
+│                   OPEN_DECISIONS, DECISIONS_REGISTER, AMENDMENTS, freeze/ (per-set manifests)
 ├── getting-started/ INSTALLATION, QUICKSTART, FIRST_BASELINE, PACKAGE_VERIFICATION
 ├── operator/       OPERATOR_GUIDE, IDENTITY_AND_PRIVILEGE, RECORDING_COVERAGE, BASELINES_AND_DELTA,
 │                   CHANGE_ACCEPTANCE, EXPLAIN, EXIT_CODES*, TROUBLESHOOTING
@@ -93,7 +93,7 @@ VERSION CLAUDE.md` · `.github/ISSUE_TEMPLATE/` · `.github/pull_request_templat
 
 ## 9. LLM repository-reading protocol
 Before any change read, in order: `CLAUDE.md` → `docs/architecture/INTERNAL_RECORDS.md` →
-`FROZEN_MANIFEST.sha256` → relevant frozen documents → `docs/CURRENT_STATE.md` →
+the freeze manifests in `docs/architecture/freeze/` → relevant frozen documents → `docs/CURRENT_STATE.md` →
 `docs/REPOSITORY_MAP.md` → `docs/development/requirements-trace.md` *(PLANNED — not yet created)* → VERSION/CHANGELOG → relevant module
 → tests/corpus → `docs/IMPLEMENTATION_QUESTIONS.md`. Never infer architecture from code; code may be
 incomplete. Before changing a domain, list requirement IDs, canonical schema, collector/parser versions,

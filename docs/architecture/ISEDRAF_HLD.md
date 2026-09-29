@@ -5,8 +5,8 @@ Copyright © 2026 Antonios Voulvoulis / ITCMS · SPDX-License-Identifier: MPL-2.
 
 ## 1. Product definition
 
-**HLD-001 (D-04) SHALL** ISEDRAF is an open-source Linux **host** assurance, state-delta and evidence
-bridge. It collects normalized local host state, establishes approved baselines, detects and classifies
+**HLD-001 (D-04, D-113) SHALL** ISEDRAF is an open-source Linux **host** assurance, state-delta and
+evidence engine. It collects normalized local host state, establishes approved baselines, detects and classifies
 meaningful state changes, gives administrators concise operational visibility, preserves evidence for
 auditors, and exports machine-readable data for organizational governance workflows.
 
@@ -128,6 +128,12 @@ separate concepts and separate lines.
 `isedraf resolve-rollback --reason` · `isedraf checkpoint` ·
 `isedraf export [--redact]` · `isedraf report [--redact]` ·
 `isedraf accept <id> --reason` · `isedraf verify` · `isedraf prune` · `isedraf purge-data`.
+
+**GA v0.1 (`D-117`).** `isedraf audit` is the GA v0.1 main path. It runs unprivileged, collects each
+built domain once, commits one snapshot at `D-50`'s commit boundary and renders its report from that
+committed run. `isedraf report` renders exactly one committed, ledgered run and never collects host
+evidence. `sudo isedraf audit` is the form of the later Full Audit release (`D-118`), to which the
+`sudo isedraf` journeys J-1 and J-3 belong; GA v0.1 does not implement it.
 
 **HLD-050 (D-74) SHALL** Quick and detailed identity views SHALL derive from **one** canonical identity
 collection. A second audit SHALL NOT be run merely to render a different view.
@@ -283,8 +289,9 @@ the frozen-manifest verifier, `lib/isedraf/exitcodes.json`, the runtime import a
 configuration. `make check` verifies it and compares installed `.git/hooks/*` against the repository
 copies. Agent deny rules and hooks are defense in depth, **not a security boundary**.
 
-**GOV-004 (D-68) SHALL** Frozen architecture changes **only** through an owner-written
-`docs/architecture/AMENDMENTS.md` entry plus a regenerated `FROZEN_MANIFEST.sha256`.
+**GOV-004 (D-68, D-107) SHALL** Frozen architecture changes **only** through an owner-written
+`docs/architecture/AMENDMENTS.md` entry plus a regenerated manifest for every affected freeze set
+under `docs/architecture/freeze/`.
 
 **GOV-005 (D-93) SHALL** Every commit carries `Assisted-by: <tool> (<role>)` or
 `Assisted-by: none`. A `Co-Authored-By:` trailer naming an AI tool or provider (Claude/Anthropic,

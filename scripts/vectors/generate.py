@@ -147,10 +147,27 @@ def build(fx, raw):
               "parser_version": 1, "source_id": "file:/etc/machine-id"}
     art["method"], art["method_canonical"] = method, canonical_bytes(method)
 
+    # D-115. Auxiliary bundle artifacts are bound in manifest_core and therefore covered
+    # by manifest_hash. These fixtures are identity-only snapshots, so the authoritative
+    # auxiliary set here is method/host_identity.json alone; coverage/evidence_limits.json
+    # appears only in a bundle that produced one.
+    #
+    # Written out independently, like everything else in this file: the generator is a
+    # SECOND implementation of the contract and imports nothing from lib/. That is what
+    # made it useful here - it did not move when production did, so the drift showed up as
+    # a failure instead of as two copies of the same mistake agreeing with each other.
+    # A map keyed by bundle-relative path. NORM-037 refuses an array-typed field with no
+    # declared total ordering, and a map has none to declare: canonical_bytes sorts object
+    # keys, exactly as it does for `sections`.
+    auxiliary = {"method/host_identity.json":
+                 rendered(frame("ISEDRAF:AUXILIARY-ARTIFACT:V1",
+                                art["method_canonical"]))}
+
     core = {
         "schema_version": 1, "host_id": host_id, "snapshot_id": fx["snapshot_id"],
         "run_id": fx["run_id"], "created_at": fx["created_at"],
         "state_root": fx["state_root"], "engine_version": fx["engine_version"],
+        "auxiliary_artifacts": auxiliary,
         "sections": {"host_identity": {
             "collection_status": status, "state_hash": state_hash, "reason": reason,
             "collector_id": "host_identity", "collector_version": 1,

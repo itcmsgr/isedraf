@@ -91,3 +91,22 @@ jobs:
       - run: make check-vectors check-vectors-negative check-tests
       # Byte determinism WITHIN the lane, across every interpreter present on the runner.
       - run: bash scripts/vectors/crossversion.sh
+
+  dco:
+    # D-91, OpenSSF LE-01.01: every commit a pull request adds carries its author's DCO
+    # sign-off. Pull requests only: history before the policy is in no pull request range.
+    name: DCO
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - env:
+          DCO_BASE: ${{ github.event.pull_request.base.sha }}
+          DCO_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: make check-dco-pr

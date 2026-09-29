@@ -47,6 +47,23 @@ CORE = [
 # were enforced entirely outside the authoritative index. The denominator now includes them.
 EXTRA = [ROOT / "docs" / "development" / "HEADER_POLICY.md"]
 
+# D-107: frozen means listed in a per-set freeze manifest. The status column is read from
+# those manifests, not written as a constant: every row once said FROZEN CANDIDATE while
+# all five documents were hash-locked in W1A_CORE, and nothing could notice either way.
+FREEZE = ARCH / "freeze"
+FROZEN_IN = collections.defaultdict(list)
+for manifest in sorted(FREEZE.glob("*.sha256")):
+    for line in manifest.read_text(encoding="utf-8").splitlines():
+        parts = line.split()
+        if len(parts) == 2:
+            FROZEN_IN[parts[1]].append(manifest.stem)
+
+
+def status_of(path):
+    sets = FROZEN_IN.get(path.relative_to(ROOT).as_posix())
+    return "FROZEN (%s)" % ", ".join(sets) if sets else "CANDIDATE"
+
+
 rows, total = [], 0
 for src in [ARCH / n for n in CORE] + EXTRA:
     name = src.name
@@ -61,7 +78,7 @@ for src in [ARCH / n for n in CORE] + EXTRA:
     ranges = " · ".join(
         f"`{pre}-{min(v):03d}`…`{pre}-{max(v):03d}`" for pre, v in sorted(ids.items())
     )
-    rows.append(f"| `{name}` | FROZEN CANDIDATE | {ranges} | {n} |")
+    rows.append(f"| `{name}` | {status_of(p)} | {ranges} | {n} |")
 
 table = "\n".join(rows) + f"\n| **Total requirements** | | | **{total}** |"
 

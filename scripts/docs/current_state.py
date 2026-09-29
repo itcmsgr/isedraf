@@ -98,7 +98,12 @@ def counted():
     gates = json.loads((ROOT / "scripts" / "ci" / "gate_coverage.json").read_text())
     return {
         "gates": len(gates["gates"]),
-        "injections": count("grep -c '^inject ' scripts/ci/falsifiable.sh"),
+        # Anchored at the line start this undercounted by one: a single injection is
+        # indented inside a next_requires guard, so the page published 194 while the
+        # harness executed 195. An undercount is a smaller lie than an overcount and
+        # still a lie.
+        "injections": count(
+            "grep -cE '^[[:space:]]*inject ' scripts/ci/falsifiable.sh"),
         "vector_cases": count("ls -d test-vectors/w1a/v1/*/ | wc -l"),
         # The PUBLISHED freeze set, deliberately - this page describes the published
         # project, and counting the engineering set would make the same page generate

@@ -165,14 +165,14 @@ class TestEvidenceBinding(ReportCase):
         inv = m["inventory"]
         self.assertTrue(inv["collection_id"].startswith("INV-"))
         self.assertTrue(inv["artifact_digest"].startswith("sha256:"))
-        self.assertIn("NOT part of the frozen W1-A snapshot", inv["maturity"])
+        self.assertIn("NOT part of the snapshot's host-state hash", inv["maturity"])
         self.assertNotIn("manifest_hash", inv)
         self.assertNotIn("snapshot_id", inv)
 
     def test_the_two_maturities_are_different(self):
         m = self.build()
         self.assertNotEqual(m["identity_evidence"]["maturity"], m["inventory"]["maturity"])
-        self.assertIn("CERTIFIED", m["identity_evidence"]["maturity"])
+        self.assertIn("ledger-chained", m["identity_evidence"]["maturity"])
 
     def test_artifact_digest_covers_the_artifact_without_itself(self):
         inv = synthetic_inventory()
@@ -373,6 +373,22 @@ class TestStorageAndCLI(ReportCase):
         self.assertNotIn("/var/log", path)
 
     def test_cli_markdown_and_json(self):
+        # GA track: a report renders one committed AUDIT run and never collects, so an
+        # audit of a small fixture host is committed first (it used to collect inventory
+        # live beside committed identity).
+        host = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, host)
+        for rel, text in (("etc/machine-id", "3f9a1c0b7d2e4a68b5c6d7e8f9a0b1c2\n"),
+                          ("etc/passwd", "root:x:0:0:root:/root:/bin/sh\n"),
+                          ("etc/group", "root:x:0:\n"),
+                          ("etc/nsswitch.conf", "passwd: files\ngroup: files\n"),
+                          ("proc/sys/kernel/hostname", "fixturehost\n")):
+            path = os.path.join(host, rel)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w") as fh:
+                fh.write(text)
+        audit_args = type("A", (), {"root": host})()
+        self.assertIn(cli.cmd_audit(audit_args, out=io.StringIO(), err=io.StringIO()), (0, 2))
         for as_json in (False, True):
             out, err = io.StringIO(), io.StringIO()
             args = type("A", (), {"json": as_json, "profile": None, "save": False})()

@@ -1,0 +1,456 @@
+{
+  "cycles": [],
+  "edges": {
+    "isedraf": [],
+    "isedraf.accounts.acquire": [
+      "isedraf",
+      "isedraf.accounts",
+      "isedraf.accounts.model",
+      "isedraf.accounts.sources",
+      "isedraf.canonical",
+      "isedraf.coverage",
+      "isedraf.hostio",
+      "isedraf.nss",
+      "isedraf.nss.model",
+      "isedraf.textbytes"
+    ],
+    "isedraf.accounts.model": [
+      "isedraf.status",
+      "isedraf.status.COLLECTED",
+      "isedraf.status.ERROR",
+      "isedraf.status.NOT_TESTED",
+      "isedraf.status.PARTIAL"
+    ],
+    "isedraf.accounts.sources": [
+      "isedraf",
+      "isedraf.accounts",
+      "isedraf.accounts.model",
+      "isedraf.textbytes"
+    ],
+    "isedraf.audit": [
+      "isedraf",
+      "isedraf.accounts",
+      "isedraf.accounts.acquire",
+      "isedraf.authorizedkeys",
+      "isedraf.authorizedkeys.acquire",
+      "isedraf.hostname",
+      "isedraf.hostname.acquire",
+      "isedraf.inventory",
+      "isedraf.loginpolicy",
+      "isedraf.loginpolicy.acquire",
+      "isedraf.mounts",
+      "isedraf.mounts.acquire",
+      "isedraf.nss",
+      "isedraf.nss.acquire",
+      "isedraf.pam",
+      "isedraf.pam.acquire",
+      "isedraf.snapshot",
+      "isedraf.ssh",
+      "isedraf.ssh.acquire",
+      "isedraf.status",
+      "isedraf.status.COLLECTED",
+      "isedraf.status.ERROR",
+      "isedraf.status.NOT_TESTED",
+      "isedraf.status.PARTIAL",
+      "isedraf.sudo",
+      "isedraf.sudo.acquire"
+    ],
+    "isedraf.authorizedkeys.acquire": [
+      "isedraf",
+      "isedraf.authorizedkeys",
+      "isedraf.authorizedkeys.model",
+      "isedraf.authorizedkeys.sources",
+      "isedraf.coverage",
+      "isedraf.hostio",
+      "isedraf.hostpath",
+      "isedraf.shared",
+      "isedraf.shared.bounded",
+      "isedraf.shared.filemeta",
+      "isedraf.shared.result",
+      "isedraf.textbytes"
+    ],
+    "isedraf.authorizedkeys.model": [
+      "isedraf.shared.result",
+      "isedraf.shared.result.DIGEST_VALUE",
+      "isedraf.shared.result.NOT_RETAINED",
+      "isedraf.shared.result.REDACT_VALUE",
+      "isedraf.shared.result.RETAIN_VALUE",
+      "isedraf.status",
+      "isedraf.status.COLLECTED",
+      "isedraf.status.ERROR",
+      "isedraf.status.NOT_TESTED",
+      "isedraf.status.PARTIAL"
+    ],
+    "isedraf.authorizedkeys.sources": [
+      "isedraf",
+      "isedraf.authorizedkeys",
+      "isedraf.authorizedkeys.model",
+      "isedraf.shared.result",
+      "isedraf.shared.result.NOT_RETAINED",
+      "isedraf.shared.result.RETAIN_VALUE",
+      "isedraf.textbytes"
+    ],
+    "isedraf.canonical": [],
+    "isedraf.cli": [
+      "isedraf",
+      "isedraf.ENGINE_VERSION",
+      "isedraf.audit",
+      "isedraf.exitcodes",
+      "isedraf.exitcodes.INCOMPLETE",
+      "isedraf.exitcodes.OK",
+      "isedraf.exitcodes.PRIVILEGE_REFUSED",
+      "isedraf.exitcodes.USAGE_OR_ENGINE",
+      "isedraf.identity",
+      "isedraf.inventory",
+      "isedraf.ledger",
+      "isedraf.report",
+      "isedraf.snapshot",
+      "isedraf.stateroot",
+      "isedraf.verify"
+    ],
+    "isedraf.coverage": [
+      "isedraf",
+      "isedraf.canonical",
+      "isedraf.status",
+      "isedraf.status.COLLECTED",
+      "isedraf.status.ERROR",
+      "isedraf.status.NOT_TESTED",
+      "isedraf.status.PARTIAL"
+    ],
+    "isedraf.exitcodes": [],
+    "isedraf.hostio": [],
+    "isedraf.hostname.acquire": [
+      "isedraf",
+      "isedraf.coverage",
+      "isedraf.hostio",
+      "isedraf.hostname",
+      "isedraf.hostname.model",
+      "isedraf.hostname.sources",
+      "isedraf.hostpath"
+    ],
+    "isedraf.hostname.model": [
+      "isedraf.status",
+      "isedraf.status.COLLECTED",
+      "isedraf.status.ERROR",
+      "isedraf.status.NOT_TESTED",
+      "isedraf.status.PARTIAL"
+    ],
+    "isedraf.hostname.sources": [
+      "isedraf",
+      "isedraf.hostname",
+      "isedraf.hostname.model",
+      "isedraf.textbytes"
+    ],
+    "isedraf.hostpath": [],
+    "isedraf.identity": [
+      "isedraf",
+      "isedraf.canonical"
+    ],
+    "isedraf.ids": [],
+    "isedraf.inventory": [
+      "isedraf",
+      "isedraf.collectors",
+      "isedraf.model",
+      "isedraf.model.CLASSIFICATION",
+      "isedraf.model.COLLECTED",
+      "isedraf.model.ERROR",
+      "isedraf.model.INVENTORY_SCHEMA_VERSION",
+      "isedraf.model.NOT_TESTED",
+      "isedraf.model.PARTIAL",
+      "isedraf.model.SUBDOMAINS",
+      "isedraf.model.VOLATILE_FIELDS"
+    ],
+    "isedraf.inventory.collectors": [
+      "isedraf",
+      "isedraf.coverage",
+      "isedraf.hostio",
+      "isedraf.hostio.IO_ERROR",
+      "isedraf.hostio.NOT_FOUND",
+      "isedraf.hostio.Outcome",
+      "isedraf.hostio.PERMISSION_DENIED",
+      "isedraf.hostio.TRUNCATED",
+      "isedraf.hostio.read_file",
+      "isedraf.hostio.read_lines",
+      "isedraf.hostio.run",
+      "isedraf.hostio.which",
+      "isedraf.inventory",
+      "isedraf.inventory.model"
+    ],
+    "isedraf.inventory.model": [
+      "isedraf.status",
+      "isedraf.status.COLLECTED",
+      "isedraf.status.ERROR",
+      "isedraf.status.NOT_TESTED",
+      "isedraf.status.PARTIAL",
+      "isedraf.status.requires_reason"
+    ],
+    "isedraf.ledger": [
+      "isedraf",
+      "isedraf.canonical",
+      "isedraf.stateroot"
+    ],
+    "isedraf.loginpolicy.acquire": [
+      "isedraf",
+      "isedraf.coverage",
+      "isedraf.hostio",
+      "isedraf.loginpolicy",
+      "isedraf.loginpolicy.model",
+      "isedraf.loginpolicy.sources",
+      "isedraf.shared",
+      "isedraf.shared.bounded",
+      "isedraf.shared.filemeta",
+      "isedraf.shared.keyvalue",
+      "isedraf.shared.result",
+      "isedraf.textbytes"
+    ],
+    "isedraf.loginpolicy.model": [
+      "isedraf.shared",
+      "isedraf.shared.keyvalue",
+      "isedraf.shared.result",
+      "isedraf.status",
+      "isedraf.status.COLLECTED",
+      "isedraf.status.ERROR",
+      "isedraf.status.NOT_TESTED",
+      "isedraf.status.PARTIAL"
+    ],
+    "isedraf.loginpolicy.sources": [
+      "isedraf.loginpolicy",
+      "isedraf.loginpolicy.model"
+    ],
+    "isedraf.mounts.acquire": [
+      "isedraf",
+      "isedraf.coverage",
+      "isedraf.hostio",
+      "isedraf.hostpath",
+      "isedraf.mounts",
+      "isedraf.mounts.model",
+      "isedraf.mounts.sources",
+      "isedraf.shared",
+      "isedraf.shared.compare",
+      "isedraf.shared.result"
+    ],
+    "isedraf.mounts.model": [
+      "isedraf.shared",
+      "isedraf.shared.compare",
+      "isedraf.status",
+      "isedraf.status.COLLECTED",
+      "isedraf.status.ERROR",
+      "isedraf.status.NOT_TESTED",
+      "isedraf.status.PARTIAL"
+    ],
+    "isedraf.mounts.sources": [
+      "isedraf",
+      "isedraf.mounts",
+      "isedraf.mounts.model",
+      "isedraf.textbytes"
+    ],
+    "isedraf.nss.acquire": [
+      "isedraf",
+      "isedraf.canonical",
+      "isedraf.coverage",
+      "isedraf.hostio",
+      "isedraf.hostpath",
+      "isedraf.nss",
+      "isedraf.nss.model",
+      "isedraf.nss.sources"
+    ],
+    "isedraf.nss.model": [
+      "isedraf.status",
+      "isedraf.status.COLLECTED",
+      "isedraf.status.ERROR",
+      "isedraf.status.NOT_TESTED",
+      "isedraf.status.PARTIAL"
+    ],
+    "isedraf.nss.sources": [
+      "isedraf",
+      "isedraf.nss",
+      "isedraf.nss.model",
+      "isedraf.textbytes"
+    ],
+    "isedraf.pam.acquire": [
+      "isedraf",
+      "isedraf.coverage",
+      "isedraf.hostio",
+      "isedraf.pam",
+      "isedraf.pam.model",
+      "isedraf.pam.sources",
+      "isedraf.shared",
+      "isedraf.shared.bounded",
+      "isedraf.shared.filemeta",
+      "isedraf.shared.result"
+    ],
+    "isedraf.pam.model": [
+      "isedraf.shared",
+      "isedraf.shared.result",
+      "isedraf.status",
+      "isedraf.status.COLLECTED",
+      "isedraf.status.ERROR",
+      "isedraf.status.NOT_TESTED",
+      "isedraf.status.PARTIAL"
+    ],
+    "isedraf.pam.sources": [
+      "isedraf",
+      "isedraf.pam",
+      "isedraf.pam.model",
+      "isedraf.textbytes"
+    ],
+    "isedraf.report": [
+      "isedraf",
+      "isedraf.artifact",
+      "isedraf.model",
+      "isedraf.model.build",
+      "isedraf.model.committed_run",
+      "isedraf.model.content_digest",
+      "isedraf.profile",
+      "isedraf.profile.ProfileError",
+      "isedraf.render"
+    ],
+    "isedraf.report.artifact": [
+      "isedraf",
+      "isedraf.canonical",
+      "isedraf.ids"
+    ],
+    "isedraf.report.model": [
+      "isedraf",
+      "isedraf.ENGINE_VERSION",
+      "isedraf.coverage",
+      "isedraf.ids",
+      "isedraf.inventory",
+      "isedraf.inventory.model",
+      "isedraf.ledger",
+      "isedraf.report",
+      "isedraf.report.artifact",
+      "isedraf.report.profile",
+      "isedraf.report.profile.IDENTITY_DISCLAIMER",
+      "isedraf.report.sections",
+      "isedraf.verify"
+    ],
+    "isedraf.report.profile": [],
+    "isedraf.report.render": [
+      "isedraf.inventory",
+      "isedraf.inventory.model",
+      "isedraf.report.sections",
+      "isedraf.report.sections.ORDER"
+    ],
+    "isedraf.report.sections": [],
+    "isedraf.shared.bounded": [
+      "isedraf",
+      "isedraf.shared",
+      "isedraf.shared.result",
+      "isedraf.textbytes"
+    ],
+    "isedraf.shared.compare": [
+      "isedraf",
+      "isedraf.canonical",
+      "isedraf.shared",
+      "isedraf.shared.result"
+    ],
+    "isedraf.shared.filemeta": [
+      "isedraf.shared",
+      "isedraf.shared.result"
+    ],
+    "isedraf.shared.include_graph": [
+      "isedraf",
+      "isedraf.hostio",
+      "isedraf.shared",
+      "isedraf.shared.result"
+    ],
+    "isedraf.shared.keyvalue": [
+      "isedraf",
+      "isedraf.canonical",
+      "isedraf.shared",
+      "isedraf.shared.result",
+      "isedraf.textbytes"
+    ],
+    "isedraf.shared.result": [
+      "isedraf.status",
+      "isedraf.status.COLLECTED",
+      "isedraf.status.ERROR",
+      "isedraf.status.NOT_TESTED",
+      "isedraf.status.PARTIAL",
+      "isedraf.status.requires_reason"
+    ],
+    "isedraf.snapshot": [
+      "isedraf",
+      "isedraf.canonical",
+      "isedraf.identity",
+      "isedraf.ids",
+      "isedraf.stateroot"
+    ],
+    "isedraf.ssh.acquire": [
+      "isedraf",
+      "isedraf.coverage",
+      "isedraf.hostpath",
+      "isedraf.shared",
+      "isedraf.shared.filemeta",
+      "isedraf.shared.include_graph",
+      "isedraf.shared.result",
+      "isedraf.ssh",
+      "isedraf.ssh.model",
+      "isedraf.ssh.sources",
+      "isedraf.textbytes"
+    ],
+    "isedraf.ssh.model": [
+      "isedraf.inventory.model",
+      "isedraf.inventory.model.ACTIVE",
+      "isedraf.inventory.model.DECLARED",
+      "isedraf.inventory.model.RESOLVED",
+      "isedraf.shared",
+      "isedraf.shared.result",
+      "isedraf.status",
+      "isedraf.status.COLLECTED",
+      "isedraf.status.ERROR",
+      "isedraf.status.NOT_TESTED",
+      "isedraf.status.PARTIAL"
+    ],
+    "isedraf.ssh.sources": [
+      "isedraf",
+      "isedraf.ssh",
+      "isedraf.ssh.model",
+      "isedraf.textbytes"
+    ],
+    "isedraf.stateroot": [],
+    "isedraf.status": [],
+    "isedraf.sudo.acquire": [
+      "isedraf",
+      "isedraf.coverage",
+      "isedraf.hostpath",
+      "isedraf.shared",
+      "isedraf.shared.bounded",
+      "isedraf.shared.filemeta",
+      "isedraf.shared.include_graph",
+      "isedraf.shared.result",
+      "isedraf.sudo",
+      "isedraf.sudo.model",
+      "isedraf.sudo.sources",
+      "isedraf.textbytes"
+    ],
+    "isedraf.sudo.model": [
+      "isedraf.shared.result",
+      "isedraf.shared.result.DERIVED",
+      "isedraf.shared.result.OBSERVATION",
+      "isedraf.shared.result.PROVENANCE",
+      "isedraf.shared.result.STATE",
+      "isedraf.status",
+      "isedraf.status.COLLECTED",
+      "isedraf.status.ERROR",
+      "isedraf.status.NOT_TESTED",
+      "isedraf.status.PARTIAL"
+    ],
+    "isedraf.sudo.sources": [
+      "isedraf",
+      "isedraf.sudo",
+      "isedraf.sudo.model",
+      "isedraf.textbytes"
+    ],
+    "isedraf.textbytes": [],
+    "isedraf.verify": [
+      "isedraf",
+      "isedraf.canonical",
+      "isedraf.ledger",
+      "isedraf.snapshot",
+      "isedraf.stateroot"
+    ]
+  },
+  "layer_inversions": []
+}

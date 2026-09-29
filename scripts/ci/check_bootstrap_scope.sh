@@ -63,11 +63,17 @@ if git grep -nIE '^[[:space:]]*(import|from)[[:space:]]+(socket|ssl|urllib|http|
     fail "network/database import found in repository tooling (D-84)"
 fi
 
+# IQ-018: never `producer | grep -q` under pipefail. grep -q exits at the first match, the
+# producer can die of SIGPIPE (141), pipefail makes the pipeline "fail", and the check is
+# silently skipped - measured at 0.1% idle and 6% under load for the bytecode check below.
+# The producer runs to completion first; the match reads a variable, not a pipe.
+tracked="$(git ls-files)"
+
 # D-17/D-86: bytecode must never be committed.
-git ls-files | grep -qE '\.pyc$|__pycache__/' && fail "committed bytecode (D-17, D-86)"
+grep -qE '\.pyc$|__pycache__/' <<<"$tracked" && fail "committed bytecode (D-17, D-86)"
 
 # Internal planning material must never be tracked.
-git ls-files | grep -qE '^(planning|INIT)/' && fail "internal planning material is tracked (must stay local-only)"
+grep -qE '^(planning|INIT)/' <<<"$tracked" && fail "internal planning material is tracked (must stay local-only)"
 
 [ "$FAIL" -eq 0 ] && echo "  OK    bootstrap scope clean" || echo "  bootstrap scope FAILED" >&2
 exit "$FAIL"

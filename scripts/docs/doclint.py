@@ -134,13 +134,14 @@ def check(path: pathlib.Path) -> None:
                 continue
             failures.append(f"{rel}: competitive framing {m.group(0)!r} (C-06)")
 
-    # T-27: architecture documents declare status EXTERNALLY, via membership in
-    # FROZEN_MANIFEST.sha256. A status string inside the bytes would mean the reviewed
-    # bytes and the frozen bytes differ, so none is required or permitted there.
+    # T-27: architecture documents declare status EXTERNALLY, via membership in a
+    # per-set freeze manifest under docs/architecture/freeze/ (D-107). A status string
+    # inside the bytes would mean the reviewed bytes and the frozen bytes differ, so
+    # none is required or permitted there.
     if rel.startswith("docs/architecture/") and re.search(r"^Status:", text, re.M):
         failures.append(
             f"{rel}: architecture documents declare status externally via "
-            f"FROZEN_MANIFEST.sha256, not with a Status: line (T-27)"
+            f"the freeze manifests (D-107), not with a Status: line (T-27)"
         )
 
     # C-08: a declared status must be a known value.

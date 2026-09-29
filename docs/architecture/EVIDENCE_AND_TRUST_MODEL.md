@@ -62,6 +62,10 @@ User-supplied paths are refused or treated as untrusted data. A sudoers example 
 unset. It is refused under root or via sudo. Every artifact produced there is marked `"state_root": "DEV"`
 and SHALL NEVER be approvable or mistakable for production evidence.
 
+`PRIV-004` is unchanged by `D-116`: `ISEDRAF_STATE_ROOT` selects the `DEV` class and no other, and a
+`USER_PRODUCTION` artifact is never produced under it. The artifact classes and their `state_root`
+literals have one normative source, `STORE-026`.
+
 **PRIV-005 (D-26, T-01) SHALL** **This is the single normative definition of execution topology**
 (`NRM-001`). There are exactly **two** execution modes, and the sandbox claim is scoped to the mode that
 actually has it.
