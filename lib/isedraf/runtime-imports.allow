@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: MPL-2.0
+# SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
+#
+# D-84 runtime import allowlist. OWNER-CONTROLLED (CLAUDE.md §1).
+#
+# Every import in lib/isedraf/ must name a module on this list; anything else fails
+# `make check-imports`, and a missing, empty or malformed list fails closed. The first-party
+# package `isedraf` is always permitted. The network and database modules D-84 names are
+# refused even if listed here.
+#
+# Each entry is a Python 3.6 standard-library module (D-12 production floor): the list is
+# never derived from whichever interpreter runs CI. One top-level name per line, sorted.
+# Initial content: exactly the modules the runtime imported on 2026-09-23.
+argparse
+base64
+binascii
+datetime
+errno
+fcntl
+fnmatch
+hashlib
+json
+os
+re
+secrets
+shutil
+stat
+struct
+subprocess
+sys

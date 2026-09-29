@@ -20,7 +20,7 @@ instead of reverse-engineering the project from whatever source file it happens 
 | `docs/development/LLM_PROTOCOL.md` | tool-neutral AI contract | **owner only** |
 | `docs/architecture/` | frozen architecture + requirement IDs | **owner only, via AMENDMENTS.md** |
 | `docs/architecture/INTERNAL_RECORDS.md` | D-/OD- decisions; the **only** repository copy | **owner only** |
-| `docs/architecture/FROZEN_MANIFEST.sha256` *(PLANNED — not yet created)* | hash lock over the above | regenerated per amendment |
+| `docs/architecture/freeze/` | per-set hash locks (D-107): `W1A_CORE`, `W1A_CORE_PUBLIC` | **owner only**, regenerated per amendment |
 | `docs/architecture/INTERNAL_RECORDS.md` | the **only** way frozen material changes | **owner only** |
 
 ## Governance — integrity-protected
@@ -97,7 +97,7 @@ before Prompt 04.
 
 ## Reading order for a new session
 
-`CLAUDE.md` → `docs/development/LLM_PROTOCOL.md` → `DECISIONS_REGISTER.md` → `FROZEN_MANIFEST.sha256` →
+`CLAUDE.md` → `docs/development/LLM_PROTOCOL.md` → `DECISIONS_REGISTER.md` → the freeze manifests in `docs/architecture/freeze/` →
 relevant frozen documents → `CURRENT_STATE.md` → this file → `requirements-trace.md` → `VERSION` →
 `CHANGELOG.md` → the module → its tests → `IMPLEMENTATION_QUESTIONS.md`.
 

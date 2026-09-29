@@ -135,7 +135,9 @@ if command -v rpm >/dev/null 2>&1; then
         [ "$arch" = "noarch" ] || bad "rpm: BuildArch is '$arch', expected noarch"
         # RPM's generator re-adds this on its own, and it breaks EL8, which ships no
         # /usr/bin/python3 and runs ISEDRAF on its vendor interpreter.
-        if rpm -qp --requires "$pkg" 2>/dev/null | grep -qx "/usr/bin/python3"; then
+        # IQ-018: captured first; `rpm | grep -q` under pipefail could report "ok" on SIGPIPE.
+        requires="$(rpm -qp --requires "$pkg" 2>/dev/null)"
+        if grep -qx "/usr/bin/python3" <<<"$requires"; then
             bad "rpm: an unconditional /usr/bin/python3 requirement reappeared — it would"
             bad "      force a runtime onto EL8 hosts that already have a working one"
         else

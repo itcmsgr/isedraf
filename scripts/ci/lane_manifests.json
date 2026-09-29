@@ -1,0 +1,128 @@
+{
+  "$comment": "Write manifests for Batch 2 lanes. A worker returning green tests with an out-of-manifest modification is a LANE_SCOPE_VIOLATION even when the edit is correct, because the control is about who is entitled to change what, not about whether the change works. Checked BEFORE integration.",
+  "base": "794d754e3138f279e77787a74d48fbed3253edae",
+  "lanes": {
+    "lane/sudo": {
+      "role": "production",
+      "write": [
+        "lib/isedraf/sudo/",
+        "tests/test_sudo.py",
+        "tests/fixtures/sudo/"
+      ],
+      "write_with_coordinator_review": [
+        "Makefile",
+        "scripts/ci/falsifiable.sh",
+        "scripts/ci/gate_coverage.json",
+        "docs/CURRENT_STATE.md",
+        "docs/development/architecture/generated/"
+      ],
+      "$note": "COMPLETED pilot. Retained so the control can be shown to catch the violation it was built from."
+    },
+    "lane/sudo-adversarial": {
+      "role": "adversarial",
+      "write": [
+        "tests/test_sudo_adversarial.py",
+        "tests/fixtures/sudo/adversarial/",
+        "CONTRACT-sudo.md"
+      ],
+      "write_with_coordinator_review": []
+    },
+    "lane/loginpolicy": {
+      "role": "production",
+      "write": [
+        "lib/isedraf/loginpolicy/",
+        "tests/test_loginpolicy.py",
+        "tests/fixtures/loginpolicy/"
+      ],
+      "write_with_coordinator_review": [
+        "Makefile",
+        "scripts/ci/falsifiable.sh",
+        "scripts/ci/gate_coverage.json",
+        "docs/CURRENT_STATE.md",
+        "docs/development/architecture/generated/"
+      ]
+    },
+    "lane/ssh": {
+      "role": "production",
+      "write": [
+        "lib/isedraf/ssh/",
+        "tests/test_ssh.py",
+        "tests/fixtures/ssh/"
+      ],
+      "write_with_coordinator_review": [
+        "Makefile",
+        "scripts/ci/falsifiable.sh",
+        "scripts/ci/gate_coverage.json",
+        "docs/CURRENT_STATE.md",
+        "docs/development/architecture/generated/"
+      ]
+    },
+    "lane/pam": {
+      "role": "production",
+      "write": [
+        "lib/isedraf/pam/",
+        "tests/test_pam.py",
+        "tests/fixtures/pam/"
+      ],
+      "write_with_coordinator_review": [
+        "Makefile",
+        "scripts/ci/falsifiable.sh",
+        "scripts/ci/gate_coverage.json",
+        "docs/CURRENT_STATE.md",
+        "docs/development/architecture/generated/"
+      ]
+    },
+    "lane/redteam": {
+      "role": "adversarial",
+      "write": [
+        "tests/test_loginpolicy_adversarial.py",
+        "tests/test_ssh_adversarial.py",
+        "tests/test_pam_adversarial.py",
+        "tests/fixtures/loginpolicy/adversarial/",
+        "tests/fixtures/ssh/adversarial/",
+        "tests/fixtures/pam/adversarial/"
+      ],
+      "write_with_coordinator_review": [],
+      "$note": "No production write of any kind. If it finds a defect it writes a failing test and stops; it never repairs the implementation."
+    },
+    "lane/authorizedkeys": {
+      "role": "production",
+      "write": [
+        "lib/isedraf/authorizedkeys/",
+        "tests/test_authorizedkeys.py",
+        "tests/fixtures/authorizedkeys/"
+      ],
+      "write_with_coordinator_review": [
+        "Makefile",
+        "scripts/ci/falsifiable.sh",
+        "scripts/ci/gate_coverage.json",
+        "docs/CURRENT_STATE.md",
+        "docs/development/architecture/generated/"
+      ],
+      "$note": "Placing a new domain in the architecture gate's LAYERS is a COORDINATOR act, not a lane one. It was listed here as coordinator-reviewed and the control refused it anyway, because never_writable_by_any_worker outranks a per-lane manifest - which is the right precedence."
+    },
+    "lane/authorizedkeys-adversarial": {
+      "role": "adversarial",
+      "write": [
+        "tests/test_authorizedkeys_adversarial.py",
+        "tests/fixtures/authorizedkeys/adversarial/"
+      ],
+      "write_with_coordinator_review": [],
+      "$note": "RED R1. Forked from the base SHA and never given the implementation: the worktree contains the contract and nothing under lib/isedraf/authorizedkeys/."
+    }
+  },
+  "never_writable_by_any_worker": [
+    "lib/isedraf/shared/",
+    "lib/isedraf/status.py",
+    "lib/isedraf/hostio.py",
+    "lib/isedraf/textbytes.py",
+    "lib/isedraf/canonical.py",
+    "lib/isedraf/identity.py",
+    "lib/isedraf/snapshot.py",
+    "lib/isedraf/ledger.py",
+    "lib/isedraf/verify.py",
+    "docs/architecture/",
+    "scripts/ci/check_architecture.py",
+    "REUSE.toml"
+  ]
+}

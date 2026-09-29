@@ -1,0 +1,138 @@
+module,file,function,effect,markers,ambiguous
+isedraf.accounts.acquire,lib/isedraf/accounts/acquire.py,acquire,FS_READ,read_file_lossless,no
+isedraf.authorizedkeys.acquire,lib/isedraf/authorizedkeys/acquire.py,_observe_file,FS_READ,read_file_lossless,no
+isedraf.cli,lib/isedraf/cli.py,_commit_run,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,_refused,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,_render,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,_render_inventory,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,cmd_audit,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,cmd_inventory,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,cmd_report,FS_WRITE,write,yes
+isedraf.hostio,lib/isedraf/hostio.py,_read_bytes,FS_READ,fstat open read stat,no
+isedraf.hostio,lib/isedraf/hostio.py,read_lines,FS_READ,read_file,no
+isedraf.hostio,lib/isedraf/hostio.py,run,SUBPROCESS,Popen,no
+isedraf.hostname.acquire,lib/isedraf/hostname/acquire.py,_active,FS_READ,read_file_lossless,no
+isedraf.hostname.acquire,lib/isedraf/hostname/acquire.py,_declared,FS_READ,read_file_lossless,no
+isedraf.hostname.acquire,lib/isedraf/hostname/acquire.py,_not_regular,FS_READ,stat,yes
+isedraf.identity,lib/isedraf/identity.py,read_source,FS_READ,open read,no
+isedraf.ids,lib/isedraf/ids.py,now_utc,CLOCK,now,no
+isedraf.inventory.collectors,lib/isedraf/inventory/collectors.py,_osrelease,FS_READ,read_file,no
+isedraf.inventory.collectors,lib/isedraf/inventory/collectors.py,collect_machine,SUBPROCESS,run,yes
+isedraf.inventory.collectors,lib/isedraf/inventory/collectors.py,collect_network,SUBPROCESS,run,yes
+isedraf.inventory.collectors,lib/isedraf/inventory/collectors.py,collect_storage,FS_READ,listdir readlink,no
+isedraf.inventory.collectors,lib/isedraf/inventory/collectors.py,collect_time,FS_READ,readlink,no
+isedraf.inventory.collectors,lib/isedraf/inventory/collectors.py,collect_time,SUBPROCESS,run,yes
+isedraf.inventory.collectors,lib/isedraf/inventory/collectors.py,file,FS_READ,read_file,no
+isedraf.inventory.collectors,lib/isedraf/inventory/collectors.py,lines,FS_READ,read_lines,no
+isedraf.ledger,lib/isedraf/ledger.py,append,FS_READ,open,no
+isedraf.ledger,lib/isedraf/ledger.py,append,FS_WRITE,fsync write,no
+isedraf.ledger,lib/isedraf/ledger.py,read_records,FS_READ,open,no
+isedraf.ledger,lib/isedraf/ledger.py,unledgered_snapshots,FS_READ,listdir,no
+isedraf.loginpolicy.acquire,lib/isedraf/loginpolicy/acquire.py,collect,FS_READ,read_file_lossless,no
+isedraf.mounts.acquire,lib/isedraf/mounts/acquire.py,_namespace,FS_READ,readlink,no
+isedraf.mounts.acquire,lib/isedraf/mounts/acquire.py,collect_active,FS_READ,read_file_lossless,no
+isedraf.mounts.acquire,lib/isedraf/mounts/acquire.py,collect_declared,FS_READ,read_file_lossless,no
+isedraf.nss.acquire,lib/isedraf/nss/acquire.py,_regular_file,FS_READ,stat,yes
+isedraf.nss.acquire,lib/isedraf/nss/acquire.py,collect,FS_READ,read_file_lossless,no
+isedraf.pam.acquire,lib/isedraf/pam/acquire.py,collect,FS_READ,read_file_lossless,no
+isedraf.pam.acquire,lib/isedraf/pam/acquire.py,load,FS_READ,read_file_lossless,no
+isedraf.report,lib/isedraf/report/__init__.py,write,FS_READ,open,no
+isedraf.report,lib/isedraf/report/__init__.py,write,FS_WRITE,fsync makedirs write,no
+isedraf.report.model,lib/isedraf/report/model.py,committed_run,FS_READ,listdir open read,no
+isedraf.report.model,lib/isedraf/report/model.py,identity_evidence,FS_READ,open read,no
+isedraf.report.profile,lib/isedraf/report/profile.py,load,FS_READ,open read,no
+isedraf.shared.bounded,lib/isedraf/shared/bounded.py,_entry,FS_READ,stat,yes
+isedraf.shared.bounded,lib/isedraf/shared/bounded.py,_type,FS_READ,stat,yes
+isedraf.shared.bounded,lib/isedraf/shared/bounded.py,descend,FS_READ,listdir lstat stat,no
+isedraf.shared.bounded,lib/isedraf/shared/bounded.py,enumerate_paths,FS_READ,listdir lstat stat,no
+isedraf.shared.filemeta,lib/isedraf/shared/filemeta.py,_add_digest,FS_READ,fstat open read stat,no
+isedraf.shared.filemeta,lib/isedraf/shared/filemeta.py,observe,FS_READ,lstat readlink stat,no
+isedraf.shared.include_graph,lib/isedraf/shared/include_graph.py,_default_expand,FS_READ,listdir,no
+isedraf.shared.include_graph,lib/isedraf/shared/include_graph.py,resolve,FS_READ,read read_file_lossless,no
+isedraf.shared.include_graph,lib/isedraf/shared/include_graph.py,walk,FS_READ,read,yes
+isedraf.snapshot,lib/isedraf/snapshot.py,commit,FS_WRITE,makedirs rename,no
+isedraf.stateroot,lib/isedraf/stateroot.py,__enter__,FS_READ,open,no
+isedraf.stateroot,lib/isedraf/stateroot.py,_under_sudo,ENVIRONMENT,environ,no
+isedraf.stateroot,lib/isedraf/stateroot.py,check_user_root,FS_READ,lstat stat,no
+isedraf.stateroot,lib/isedraf/stateroot.py,fsync_dir,FS_READ,open,no
+isedraf.stateroot,lib/isedraf/stateroot.py,fsync_dir,FS_WRITE,fsync,no
+isedraf.stateroot,lib/isedraf/stateroot.py,prepare,FS_WRITE,makedirs,no
+isedraf.stateroot,lib/isedraf/stateroot.py,resolve,ENVIRONMENT,environ,no
+isedraf.stateroot,lib/isedraf/stateroot.py,storage_suitability,FS_READ,open read,no
+isedraf.stateroot,lib/isedraf/stateroot.py,user_root,ENVIRONMENT,environ,no
+isedraf.stateroot,lib/isedraf/stateroot.py,write_file,FS_READ,open,no
+isedraf.stateroot,lib/isedraf/stateroot.py,write_file,FS_WRITE,fsync write,no
+isedraf.verify,lib/isedraf/verify.py,_auxiliary,FS_READ,open read,no
+isedraf.verify,lib/isedraf/verify.py,verify_snapshot,FS_READ,open read,no
+isedraf.verify,lib/isedraf/verify.py,verify_store,FS_READ,listdir,no
+scripts.analysis._common,scripts/analysis/_common.py,parse,FS_READ,open read,no
+scripts.analysis.artifacts,scripts/analysis/artifacts.py,_out_dir,FS_WRITE,makedirs,no
+scripts.analysis.artifacts,scripts/analysis/artifacts.py,falsification_coverage,FS_READ,open read,no
+scripts.analysis.artifacts,scripts/analysis/artifacts.py,falsification_coverage,FS_WRITE,write,yes
+scripts.analysis.artifacts,scripts/analysis/artifacts.py,field_lineage,FS_READ,open,no
+scripts.analysis.artifacts,scripts/analysis/artifacts.py,gate_graph,FS_READ,listdir open read,no
+scripts.analysis.artifacts,scripts/analysis/artifacts.py,gate_graph,FS_WRITE,write,yes
+scripts.analysis.artifacts,scripts/analysis/artifacts.py,gate_graph,SUBPROCESS,run,yes
+scripts.analysis.artifacts,scripts/analysis/artifacts.py,prose,FS_READ,open read,no
+scripts.analysis.artifacts,scripts/analysis/artifacts.py,prose,FS_WRITE,write,yes
+scripts.analysis.io_surface,scripts/analysis/io_surface.py,_out_dir,FS_WRITE,makedirs,no
+scripts.analysis.io_surface,scripts/analysis/io_surface.py,main,FS_READ,open,no
+scripts.analysis.module_graph,scripts/analysis/module_graph.py,_out_dir,FS_WRITE,makedirs,no
+scripts.analysis.module_graph,scripts/analysis/module_graph.py,main,FS_READ,open,no
+scripts.analysis.module_graph,scripts/analysis/module_graph.py,main,FS_WRITE,write,yes
+scripts.ci.check_architecture,scripts/ci/check_architecture.py,check,FS_READ,open read,no
+scripts.ci.check_architecture,scripts/ci/check_architecture.py,files,SUBPROCESS,check_output,no
+scripts.ci.check_architecture,scripts/ci/check_architecture.py,self_test,FS_READ,open,no
+scripts.ci.check_architecture,scripts/ci/check_architecture.py,self_test,FS_WRITE,makedirs mkdtemp write,no
+scripts.ci.check_architecture_artifacts,scripts/ci/check_architecture_artifacts.py,generators,FS_READ,listdir,no
+scripts.ci.check_architecture_artifacts,scripts/ci/check_architecture_artifacts.py,main,FS_READ,listdir open read,no
+scripts.ci.check_architecture_artifacts,scripts/ci/check_architecture_artifacts.py,main,FS_WRITE,mkdtemp,no
+scripts.ci.check_architecture_artifacts,scripts/ci/check_architecture_artifacts.py,main,SUBPROCESS,run,yes
+scripts.ci.check_architecture_artifacts,scripts/ci/check_architecture_artifacts.py,run,SUBPROCESS,run,yes
+scripts.ci.check_dco,scripts/ci/check_dco.py,git,SUBPROCESS,run,yes
+scripts.ci.check_dco,scripts/ci/check_dco.py,main,ENVIRONMENT,environ,no
+scripts.ci.check_dco,scripts/ci/check_dco.py,self_test,ENVIRONMENT,environ,no
+scripts.ci.check_dco,scripts/ci/check_dco.py,self_test,FS_WRITE,mkdtemp,no
+scripts.ci.check_docs_truth,scripts/ci/check_docs_truth.py,_git_path,SUBPROCESS,check_output,no
+scripts.ci.check_docs_truth,scripts/ci/check_docs_truth.py,tracked,SUBPROCESS,check_output,no
+scripts.ci.check_licensing,scripts/ci/check_licensing.py,listing,FS_READ,open,no
+scripts.ci.check_licensing,scripts/ci/check_licensing.py,listing,FS_WRITE,mkdtemp,no
+scripts.ci.check_licensing,scripts/ci/check_licensing.py,listing,SUBPROCESS,check_output,no
+scripts.ci.check_licensing,scripts/ci/check_licensing.py,tracked,SUBPROCESS,check_output,no
+scripts.ci.check_privacy,scripts/ci/check_privacy.py,main,SUBPROCESS,check_output,no
+scripts.ci.check_sbom,scripts/ci/check_sbom.py,archive_members,FS_READ,open,no
+scripts.ci.check_sbom,scripts/ci/check_sbom.py,archive_members,FS_WRITE,mkdtemp,no
+scripts.ci.check_sbom,scripts/ci/check_sbom.py,archive_members,SUBPROCESS,check_output,no
+scripts.ci.check_sbom,scripts/ci/check_sbom.py,rpm_dump,SUBPROCESS,check_output,no
+scripts.ci.check_sbom,scripts/ci/check_sbom.py,sha256_file,FS_READ,open read,no
+scripts.ci.check_storage_vocabulary,scripts/ci/check_storage_vocabulary.py,tracked_files,SUBPROCESS,check_output,no
+scripts.ci.generate_sbom,scripts/ci/generate_sbom.py,main,CLOCK,now,no
+scripts.ci.generate_sbom,scripts/ci/generate_sbom.py,main,FS_WRITE,mkdir mkdtemp,no
+scripts.ci.generate_sbom,scripts/ci/generate_sbom.py,main,SUBPROCESS,check_output,no
+scripts.ci.generate_sbom,scripts/ci/generate_sbom.py,sha256_file,FS_READ,open read,no
+scripts.ci.generate_sbom,scripts/ci/generate_sbom.py,unpack,FS_READ,open,no
+scripts.ci.generate_sbom,scripts/ci/generate_sbom.py,unpack,FS_WRITE,mkdir,no
+scripts.ci.generate_sbom,scripts/ci/generate_sbom.py,unpack,SUBPROCESS,Popen check_output,no
+scripts.compat.floor_experiment,scripts/compat/floor_experiment.py,compare_case,FS_READ,listdir open read,no
+scripts.compat.floor_experiment,scripts/compat/floor_experiment.py,compare_case,FS_WRITE,makedirs write,no
+scripts.compat.floor_experiment,scripts/compat/floor_experiment.py,main,FS_READ,listdir,no
+scripts.compat.floor_experiment,scripts/compat/floor_experiment.py,main,FS_WRITE,mkdtemp write,no
+scripts.compat.floor_experiment,scripts/compat/floor_experiment.py,read,FS_READ,open read,no
+scripts.compat.probe,scripts/compat/probe.py,machine_id_shape,FS_READ,open read,no
+scripts.compat.probe,scripts/compat/probe.py,main,CLOCK,now,no
+scripts.compat.probe,scripts/compat/probe.py,main,ENVIRONMENT,environ,no
+scripts.compat.probe,scripts/compat/probe.py,main,FS_WRITE,write,yes
+scripts.compat.probe,scripts/compat/probe.py,read_text,FS_READ,open read,no
+scripts.compat.reboot_pass,scripts/compat/reboot_pass.py,describe,FS_READ,listdir open read,no
+scripts.compat.reboot_pass,scripts/compat/reboot_pass.py,main,ENVIRONMENT,environ,no
+scripts.compat.reboot_pass,scripts/compat/reboot_pass.py,main,FS_WRITE,write,yes
+scripts.docs.current_state,scripts/docs/current_state.py,count,SUBPROCESS,check_output,no
+scripts.docs.current_state,scripts/docs/current_state.py,counted,SUBPROCESS,check_output,no
+scripts.docs.public_ux,scripts/docs/public_ux.py,_write_tree,FS_WRITE,mkdir,no
+scripts.docs.public_ux,scripts/docs/public_ux.py,self_test,FS_WRITE,mkdtemp,no
+scripts.docs.sample_report,scripts/docs/sample_report.py,build,FS_READ,open read,no
+scripts.docs.sample_report,scripts/docs/sample_report.py,main,FS_READ,open read,no
+scripts.docs.sample_report,scripts/docs/sample_report.py,main,FS_WRITE,write,yes
+scripts.vectors.generate,scripts/vectors/generate.py,domain_separation,FS_WRITE,mkdir,no
+scripts.vectors.generate,scripts/vectors/generate.py,main,FS_WRITE,mkdir,no
+scripts.vectors.generate,scripts/vectors/generate.py,serializer_conformance,FS_WRITE,mkdir,no

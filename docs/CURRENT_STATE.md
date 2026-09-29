@@ -17,7 +17,7 @@ version drifted until it announced that no product code existed while three comm
 
 | | |
 |---|---|
-| Project stage | **TECHNICAL_PREVIEW_CANDIDATE** |
+| Project stage | **GENERAL_AVAILABILITY** |
 | Public release | **AWAITING_OWNER_AUTHORIZATION** |
 | Production Python floor | 3.6 |
 | Tooling Python floor | 3.9 |
@@ -111,15 +111,14 @@ Not asserted. Each number is counted at generation time.
 
 | | |
 |---|---|
-| Gates | 20 |
-| Falsification injections | 113 |
+| Gates | 28 |
+| Falsification injections | 372 |
 | Golden vector cases | 15 |
 | Frozen artifacts | 7 |
-| Test files | 3 |
+| Test files | 33 |
 
 ## Release blockers
 
 The public repository is **not** authorized while any of these is open.
 
-- an external integration boundary is under review; the Technical Preview is not released until the required repository-isolation condition is verified
 - no GitHub Release or tag is published; publication is a separate owner-authorized act (D-110)

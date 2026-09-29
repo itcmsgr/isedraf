@@ -27,6 +27,9 @@ DOMAIN_HOST_ID = "ISEDRAF:HOST-ID:V1"
 DOMAIN_STATE = "ISEDRAF:STATE:V1"
 DOMAIN_SNAPSHOT_MANIFEST = "ISEDRAF:SNAPSHOT-MANIFEST:V1"
 DOMAIN_LEDGER_RECORD = "ISEDRAF:LEDGER-RECORD:V1"
+DOMAIN_AUXILIARY_ARTIFACT = "ISEDRAF:AUXILIARY-ARTIFACT:V1"
+# D-115. Separate from DOMAIN_STATE so an auxiliary digest can never be mistaken
+# for a state hash, and so NORM-038 keeps the two domains un-confusable.
 
 _SHORT = {0x08: "\\b", 0x09: "\\t", 0x0A: "\\n", 0x0C: "\\f", 0x0D: "\\r"}
 _INT64_MIN = -(2 ** 63)

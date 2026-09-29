@@ -30,6 +30,7 @@
 """Documentation is an evidence surface. It is checked like one."""
 import hashlib
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -71,6 +72,17 @@ def line_of(text, index):
     return text[:index].count("\n") + 1
 
 
+def _git_path(candidate):
+    """Where `.git/<x>` actually lives for THIS checkout, worktree or clone."""
+    try:
+        out = subprocess.check_output(
+            ["git", "rev-parse", "--git-path", candidate.split("/", 1)[1]],
+            cwd=str(ROOT), universal_newlines=True).strip()
+    except (subprocess.CalledProcessError, IndexError, OSError):
+        return pathlib.Path(os.devnull + "/never")
+    return (ROOT / out) if not os.path.isabs(out) else pathlib.Path(out)
+
+
 for rel in CURRENT_STATE_DOCS:
     text = (ROOT / rel).read_text(encoding="utf-8")
     lines = text.splitlines()
@@ -86,6 +98,15 @@ for rel in CURRENT_STATE_DOCS:
         # this, "3.9/3.12/3.14", "CapEff/CapPrm/CapBnd" and "192.168.122.54/24" all look
         # like paths, and a gate that cries wolf 110 times teaches everyone to skip it.
         first = candidate.split("/", 1)[0]
+        if first == ".git":
+            # git's own directory is not tracked content and its LAYOUT depends on the
+            # checkout: in a linked worktree `.git` is a FILE pointing elsewhere, so
+            # `.git/hooks` resolves on disk in a clone and not in a worktree. The gate
+            # was reporting a true statement as a dangling reference for that reason
+            # alone, which made `make check` unrunnable inside a worktree. git knows
+            # where the path really is; ask it instead of the filesystem.
+            if _git_path(candidate).exists():
+                continue
         resolves_here = (here / candidate).exists()
         at_root = (ROOT / candidate).exists()
         if resolves_here or at_root:

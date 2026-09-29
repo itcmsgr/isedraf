@@ -61,7 +61,7 @@ release · `LATER` = deferred with a recorded reason. There is **no warning tier
 | P-02 scoped `os.execv*` | permitted **only** in `lib/isedraf/launcher/` with fixed absolute paths | D-71 | `make check-constructs` | same | PR | fail | **W0** | new |
 | P-03 bytecode-free syntax | in-memory `ast.parse`/`compile` on 3.9 **and** 3.12; **never** `python -m py_compile` | D-86 | `make check-syntax` | `ci-python / syntax` | PR | fail | **W0** | `check-build-provenance.sh` (ADAPT) |
 | P-04 no `.pyc` | no `.pyc`/`__pycache__` in tree or package | D-17, D-86 | `make check-syntax` | same | PR | fail | **W0** | same |
-| P-05 runtime import allowlist | every runtime import in `lib/isedraf/runtime-imports.allow` *(PLANNED — not yet created)* | D-84 | `make check-imports` | `ci-python / imports` | PR | fail | **W0** | new |
+| P-05 runtime import allowlist | every runtime import in `lib/isedraf/runtime-imports.allow` (IQ-034) | D-84 | `make check-imports` | `ci-python / imports` | PR | fail | **W0** | new |
 | P-06 no third-party runtime | dev/CI deps in `requirements-dev.txt`, never imported by runtime | D-12 | `make check-imports` | same | PR | fail | **W0** | new |
 | P-07 Python pin parity | 3.9 floor and 3.12 both green | D-12 | `make check-pin` | `ci-python / matrix` | PR | fail | W1 | `check-toolchain-pin-parity.sh` (ADAPT) |
 | P-08 subprocess hygiene | argv list, `shell=False`, clean env, fixed `PATH`, `LC_ALL=C`, timeout, bounded output, `stdin=DEVNULL` | D-18 | `make check-constructs` | `ci-python / constructs` | PR | fail | W1 | new |

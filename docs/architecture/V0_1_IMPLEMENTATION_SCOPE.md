@@ -309,9 +309,14 @@ implementers exiting `64` and `70` would both conform, so W1 pins them. W1 prece
 It runs under `ISEDRAF_STATE_ROOT` with every artifact carrying **`PRIV-004`'s DEV marker** — the
 spelling is `PRIV-004`'s and is not restated here (W-19, `NRM-001`).
 
+**GA v0.1 (`D-117`).** GA v0.1 stays inside `SCOPE-070`: it is an unprivileged evidence release. It
+MAY also commit to the `USER_PRODUCTION` class (`STORE-026`, `STORE-027`). Its reports state
+`PRIVILEGE LEVEL: UNPRIVILEGED`, root-required evidence is `NOT_TESTED`, and it SHALL NOT be described
+as a "full host audit". `SCOPE-071` and `SCOPE-072` are unchanged.
+
 **SCOPE-071 (owner directive) SHALL** If W1 is executed as root or through sudo it **REFUSES**, with the
-message *"prototype W1 does not yet support privileged execution"*, exit `70` (`SCOPE-076`). This is temporary and explicit, not a
-silent degradation.
+message *"Privileged execution is not supported in ISEDRAF 0.1. Run ISEDRAF as your normal user. Evidence requiring elevated privilege is reported as NOT_TESTED."*,
+exit `70` (`SCOPE-076`). This is temporary and explicit, not a silent degradation.
 
 **SCOPE-072 (owner directive) SHALL** The privileged execution model — sandbox, root supervisor, capability
 ceiling, pre/post privileged collection, engine privilege reduction, SELinux enforcing — is

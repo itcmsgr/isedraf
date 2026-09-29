@@ -1,0 +1,14 @@
+```mermaid
+graph TD
+    SRC["Linux source: /etc /proc /sys, fixed-argv commands"] --> ACQ
+    ACQ["ACQUISITION - isedraf.hostio, accounts.acquire, shared.bounded, shared.filemeta, shared.include_graph"] --> PARSE
+    PARSE["PURE PARSERS - accounts.sources, shared.keyvalue (no I/O)"] --> NORM
+    NORM["NORMALIZED EVIDENCE - shared.result.Evidence, inventory.model.subdomain"] --> CLASS
+    CLASS["SCOPE-045 - STATE / OBSERVATION / DERIVED / PROVENANCE"] --> STORE
+    CLASS --> CMP["COMPARISON - shared.compare (no I/O)"]
+    STORE["SNAPSHOT / LEDGER - snapshot, ledger, canonical"] --> REP
+    CMP --> REP
+    STORE --> CRIT["FUTURE native ISE-* criteria"]
+    STORE --> DELTA["FUTURE baseline / delta"]
+    REP["REPORT - report.model, report.render (reads committed evidence only)"]
+```

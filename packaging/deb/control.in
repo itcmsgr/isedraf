@@ -8,12 +8,17 @@ Maintainer: @MAINTAINER@
 Depends: python3 (>= 3.6)
 Homepage: https://github.com/itcmsgr/isedraf
 Description: @DESCRIPTION@
- ISEDRAF collects Linux host state, normalizes it into canonical bytes, commits
- immutable snapshots with a hash-chained ledger, and produces evidence that can be
- verified independently of the tool that produced it.
+ ISEDRAF collects evidence about a local Linux host on demand: host and platform
+ inventory, local accounts and groups, NSS configuration, hostname, sudo, SSH server
+ configuration, PAM, login policy, mounts and SSH authorized keys. `isedraf audit`
+ normalizes what it collects and commits it as one evidence run in the invoking
+ user's own store, with the provenance of every fact and a hash-chained ledger
+ record. `isedraf report` renders a committed run - as a readable report, JSON or
+ static HTML - and never collects again.
  .
- This is an early technical preview. It collects host identity and a host inventory
- and renders a report; account, SSH, audit and comparison domains are not implemented.
+ This release runs unprivileged. Facts that need root are reported NOT_TESTED - not
+ observed, never passed. It makes no pass/fail judgement and does not compare runs.
+ Uninstalling the package does not remove collected evidence.
  .
  Python standard library only: no compiled component, no third-party runtime module,
  and no interpreter is installed, bundled or downgraded by this package.

@@ -21,6 +21,22 @@
 
 """Field classification, collection status, and the shape of the inventory object."""
 
+# NOT SCOPE-045. Read this before assuming there are two competing taxonomies.
+#
+# SCOPE-045 is frozen and has exactly four categories - STATE, OBSERVATION, DERIVED,
+# PROVENANCE - and it answers one question: what is hashed and diffed. Only STATE is.
+#
+# The five labels below are a DOMAIN-LOCAL INVENTORY SUB-CLASSIFICATION. They answer a
+# different question - "does this legitimately change on an untouched host?" - for data
+# that sits entirely outside the snapshot contract (SNAP-021 keeps the inventory out of
+# the frozen snapshot, and the report says so in as many words). They exist to stop a
+# live-migrated VM reporting drift, not to decide what is hashed.
+#
+# Nothing here is an alternative definition of SCOPE-045, and a future reader - human or
+# model - must not treat it as one. Account state, which IS security configuration and
+# IS hashed and diffed, is classified under the frozen four in
+# lib/isedraf/accounts/model.py.
+
 # --- how a field behaves over time ------------------------------------------------------
 PLATFORM_FACT = "PLATFORM_FACT"
 # Identifies the operating system itself. A change is a real, reportable event.
@@ -43,10 +59,13 @@ VOLATILE_OBSERVATION = "VOLATILE_OBSERVATION"
 # reporting them as drift is how a tool teaches its operator to ignore it.
 
 # --- collection status (SCOPE-022, IDENT-004 vocabulary) --------------------------------
-COLLECTED = "COLLECTED"
-PARTIAL = "PARTIAL"
-NOT_TESTED = "NOT_TESTED"
-ERROR = "ERROR"
+# Defined in isedraf.status and re-exported here so existing callers keep working.
+# It used to be defined HERE, which meant every consumer of SCOPE-022 imported a domain
+# model to learn what COLLECTED means - and made the shared primitives depend on the
+# inventory domain. ARCH-01 found it; the vocabulary moved down rather than the
+# dependency being documented as acceptable.
+from ..status import (COLLECTED, ERROR, NOT_TESTED, PARTIAL,     # noqa: F401
+                      requires_reason)
 
 # --- block device classes ---------------------------------------------------------------
 # `rotational == 0` does not mean "SSD". An optical drive reports 0 too, which is how a
@@ -142,7 +161,8 @@ VOLATILE_FIELDS = frozenset(
     k for k, v in CLASSIFICATION.items() if v == VOLATILE_OBSERVATION)
 
 
-def subdomain(status, data, method=None, reason=None, dimension=ACTIVE):
+def subdomain(status, data, method=None, reason=None, dimension=ACTIVE,
+              access_outcome=None, operation=None):
     """One subdomain result. Status and data never contradict each other.
 
     An empty result with status COLLECTED would be a lie; callers that found nothing
@@ -152,9 +172,14 @@ def subdomain(status, data, method=None, reason=None, dimension=ACTIVE):
     incomplete observations explain themselves, and a PARTIAL row with an em dash in the
     reason column makes that sentence false.
     """
-    if status != COLLECTED and not reason:
+    if requires_reason(status) and not reason:
         raise ValueError(
             "collection status %s requires a reason: an unexplained incomplete "
             "observation tells the reader nothing" % status)
     return {"collection_status": status, "reason": reason, "method": method,
-            "state_dimension": dimension, "data": data}
+            "state_dimension": dimension, "data": data,
+            # R1.5-P acquisition provenance. Optional because a collector that cannot
+            # establish an access outcome must not invent one: absent means "this
+            # collector did not determine it", which is a different statement from
+            # "nothing was refused". The assembler classifies conservatively.
+            "access_outcome": access_outcome, "operation": operation}

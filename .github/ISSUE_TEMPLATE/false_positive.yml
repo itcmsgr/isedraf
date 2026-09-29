@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        **Redact first.** Use `--redact` and review what remains. Never paste an unredacted identity or
+        **Redact first**, by hand (0.1 has no automatic redaction), and review what remains. Never paste an unredacted identity or
         evidence bundle. See `SUPPORT.md`.
   - type: input
     id: version

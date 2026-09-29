@@ -11,66 +11,60 @@ Status: EXPERIMENTAL · Canonical operator reference for storage locations.
 If you remember one sentence from this page, remember that one. It decides what you back up, what you
 may rotate away, and where you look when something is wrong.
 
-## The four roots
+## Where evidence lives in ISEDRAF 0.1
+
+ISEDRAF 0.1 runs unprivileged, as your normal user, and keeps its evidence in **your own
+store**:
+
+| Store | Path | Status in 0.1 |
+|---|---|---|
+| user store | `$XDG_STATE_HOME/isedraf/` when that is an absolute path, otherwise `~/.local/state/isedraf/` | **the evidence store** - created mode `0700`, owned by you |
+| development store | the path in `ISEDRAF_STATE_ROOT` | for testing; every artifact is marked `DEV` and is never production evidence |
+| system store | `/var/lib/isedraf/` | **not used in 0.1** - it belongs to the later privileged release |
+
+The user store is refused - nothing is written - when it is a symlink, owned by someone else,
+not mode `0700`, or on a network or unknown filesystem (NFS, CIFS/SMB, FUSE and similar).
+Uninstalling the package never removes it: **back it up like any other data you keep.**
+
+The other roots below (`/etc/isedraf/`, the journal, `/run/isedraf/`) describe the intended
+shape; none of them is used by 0.1.
 
 | Root | Holds | Lifecycle |
 |---|---|---|
-| `/etc/isedraf/` | administrator configuration | you own it; ISEDRAF reads it |
-| `/var/lib/isedraf/` | **persistent canonical state and evidence** | ISEDRAF owns it; back this up |
-| journal (`journalctl -t isedraf`) | operational/execution records | rotated by journald policy |
-| `/run/isedraf/` | ephemeral runtime state | gone at reboot |
+| `/etc/isedraf/` | administrator configuration | PLANNED - 0.1 reads no configuration file |
+| journal (`journalctl -t isedraf`) | operational/execution records | PLANNED - 0.1 writes to stdout/stderr only |
+| `/run/isedraf/` | ephemeral runtime state | PLANNED |
 
-Two of those four are **not** where a reader coming from other tools expects them. That is deliberate and
-is explained in [Operational logs](#operational-logs) below.
+## What 0.1 creates in the store
 
-## Current implementation status
-
-W1-B implements the first vertical slice — `isedraf identity` — and nothing beyond it. Read this table
-before assuming a directory exists on your system.
-
-| Path | Status | Notes |
+| Path (under the store) | Status | Notes |
 |---|---|---|
-| `/var/lib/isedraf/` | **IMPLEMENTED** | created mode `0700` |
-| `/var/lib/isedraf/snapshots/` | **IMPLEMENTED** | one directory per committed snapshot |
-| `/var/lib/isedraf/ledger/segment-000001.jsonl` | **IMPLEMENTED** | hash-chained records |
-| `/var/lib/isedraf/tmp/` | **IMPLEMENTED** | staging for the atomic commit; not evidence |
-| `/var/lib/isedraf/.lock` | **IMPLEMENTED** | whole-run exclusive lock |
-| `/var/lib/isedraf/host/` | PLANNED | `host.json`, anchor key — not collected in W1 |
-| `/var/lib/isedraf/baselines/` | PLANNED | W1-B freeze set; approval is not implemented |
-| `/var/lib/isedraf/evaluations/` | PLANNED | requires comparison, which is W1-C |
-| `/var/lib/isedraf/acceptances/` | PLANNED | requires baseline approval |
-| `/var/lib/isedraf/reports/` | **IMPLEMENTED** under the development state root | `isedraf report --save` writes `reports/<YYYY>/<MM>/RPT-*.md` or `.json`, mode `0600` |
-| `/var/lib/isedraf/exports/` | PLANNED | no export path exists |
-| `/etc/isedraf/` | PLANNED | ISEDRAF reads no configuration file yet |
-| `/run/isedraf/` | PLANNED | see the note on runtime state |
-| journal records | PLANNED | `EXEC-005`; the CLI currently writes to stdout/stderr only |
+| `snapshots/` | **IMPLEMENTED** | one directory per committed run |
+| `snapshots/<id>/sections/` | **IMPLEMENTED** | one file per audited area (`isedraf audit`), bound by the manifest |
+| `ledger/segment-000001.jsonl` | **IMPLEMENTED** | hash-chained records; a run is committed when it is recorded here |
+| `tmp/` | **IMPLEMENTED** | staging for the atomic commit; not evidence |
+| `.lock` | **IMPLEMENTED** | one run at a time |
+| `reports/<YYYY>/<MM>/RPT-*` | **IMPLEMENTED** | written by `isedraf report --save` (`.md`, `.json` or `.html`), mode `0600` |
+| `host/`, `baselines/`, `evaluations/`, `acceptances/`, `exports/` | PLANNED | not created by 0.1 |
 
-Everything marked PLANNED is described here so the intended shape is knowable, **not** because it exists
-today. `isedraf identity` currently creates exactly four things under the state root: `snapshots/`,
-`ledger/`, `tmp/` and `.lock`.
+## The store layout
 
-## Persistent evidence — `/var/lib/isedraf/`
-
-This is the evidence store. Its layout is fixed by a frozen requirement (`STORE-001`), and W1-A's
-certified subset is fixed by `STORE-025`.
+The layout is fixed by a frozen requirement (`STORE-001`); the store that holds it in 0.1 is
+the user store above (`STORE-026`).
 
 ```text
-/var/lib/isedraf/                     mode 0700
-├── snapshots/                        IMPLEMENTED — immutable observed state
+<store>/                              mode 0700
+├── snapshots/                        immutable observed state
 │   └── SDS-20260918T142500Z-<16 hex>/
 │       ├── manifest.json             canonical bytes + manifest_hash
 │       ├── state/host_identity.json  the hashed state object
-│       └── method/host_identity.json how it was collected (provenance)
-├── ledger/                           IMPLEMENTED
+│       ├── method/host_identity.json how it was collected (provenance)
+│       └── sections/<area>.json      one audited area each (isedraf audit)
+├── ledger/
 │   └── segment-000001.jsonl          hash-chained evidence lifecycle records
-├── tmp/                              IMPLEMENTED — staging only
-├── .lock                             IMPLEMENTED — whole-run exclusive lock
-├── host/                             PLANNED
-├── baselines/                        PLANNED
-├── evaluations/                      PLANNED
-├── acceptances/                      PLANNED
-├── reports/                          PLANNED
-└── exports/                          PLANNED
+├── reports/                          saved renderings (isedraf report --save)
+├── tmp/                              staging only
+└── .lock                             one run at a time
 ```
 
 ### Snapshots
@@ -111,12 +105,12 @@ and what you approved; it does not certify a host.
 Re-running an evaluation with a newer rule set produces a new evaluation — it never rewrites the snapshot
 it interpreted. That separation is the reason a rule change can never look like a host change.
 
-### Reports and exports — PLANNED
+### Reports and exports
 
 | | |
 |---|---|
-| **report** | evidence-derived output for you or an auditor to read, kept under `/var/lib/isedraf/reports/` |
-| **export** | an artifact deliberately prepared to be carried elsewhere, under `/var/lib/isedraf/exports/` |
+| **report** | evidence-derived output for you or an auditor to read, kept under `<store>/reports/` (IMPLEMENTED: `isedraf report --save`) |
+| **export** | an artifact deliberately prepared to be carried elsewhere, under `<store>/exports/` (PLANNED) |
 
 Reports belong in the evidence root rather than alongside operational logs, for one practical reason:
 log retention may legitimately delete old logs, and evidence you may need to produce later must not
@@ -128,7 +122,7 @@ ISEDRAF has no network egress. An export is a file you move; nothing uploads it.
 
 **There is no `/var/log/isedraf/`, and there is not intended to be one.**
 
-A frozen requirement (`SCOPE-062`) limits ISEDRAF to writing inside `/var/lib/isedraf`, with two named
+A frozen requirement (`SCOPE-062`) limits ISEDRAF to writing inside its evidence store, with two named
 exceptions: journald-mediated log records, and systemd transient-unit runtime state. Run start and end go
 to the **journal** with a run ID (`EXEC-005`), not to a private log tree.
 
@@ -137,7 +131,7 @@ journalctl -t isedraf                  # PLANNED: once journal logging is implem
 journalctl -t isedraf --since today
 ```
 
-Today, `isedraf identity` writes its operator output to stdout and its errors to stderr, and nothing else.
+In 0.1, every command writes its operator output to stdout and its errors to stderr, and nothing else.
 Per-run diagnostic directories are **not implemented** and would require an amendment to `SCOPE-062`
 before they could be.
 
@@ -147,15 +141,15 @@ evidence relied upon for comparison. If you keep only the logs, you have kept no
 
 ## Runtime state — `/run/isedraf/` (PLANNED)
 
-Ephemeral coordination only, and it disappears at reboot. Today the whole-run lock lives at
-`/var/lib/isedraf/.lock`, which is where `STORE-001` puts it. `/run/isedraf/` is listed here because it is
+Ephemeral coordination only, and it disappears at reboot. In 0.1 the whole-run lock lives at
+`<store>/.lock`, which is where `STORE-001` puts it. `/run/isedraf/` is listed here because it is
 the natural home for future runtime state, not because anything uses it.
 
 Nothing that must survive a reboot may live only in a runtime directory.
 
 ## Configuration — `/etc/isedraf/` (PLANNED)
 
-Administrator intent belongs in `/etc/isedraf/`; ISEDRAF's own state belongs in `/var/lib/isedraf/`. The
+Administrator intent belongs in `/etc/isedraf/`; ISEDRAF's own state belongs in its evidence store. The
 two are never mixed, so restoring configuration never overwrites evidence and restoring evidence never
 changes your intent. No configuration file is read yet.
 
@@ -176,22 +170,26 @@ artifacts with wrong-looking names and fully valid hashes.
 
 ## Where do I look?
 
+In this table `<store>` is your user store: `~/.local/state/isedraf/` (or
+`$XDG_STATE_HOME/isedraf/`).
+
 | I want to see… | Location | Status |
 |---|---|---|
-| Everything ISEDRAF persists | `/var/lib/isedraf/` | IMPLEMENTED |
-| Immutable observed state | `/var/lib/isedraf/snapshots/` | IMPLEMENTED |
-| The evidence lifecycle chain | `/var/lib/isedraf/ledger/segment-*.jsonl` | IMPLEMENTED |
-| Approved baseline | `/var/lib/isedraf/baselines/` | PLANNED |
-| Derived evaluations and deltas | `/var/lib/isedraf/evaluations/` | PLANNED |
-| Human/machine reports | `/var/lib/isedraf/reports/` | PLANNED |
-| Portable exports | `/var/lib/isedraf/exports/` | PLANNED |
-| Why a run failed | `journalctl -t isedraf`, plus the command's own stderr | PLANNED / IMPLEMENTED |
-| Locks and temporary state | `/var/lib/isedraf/.lock`, `/var/lib/isedraf/tmp/` | IMPLEMENTED |
+| Everything ISEDRAF persists | `<store>/` | IMPLEMENTED |
+| Immutable observed state | `<store>/snapshots/` | IMPLEMENTED |
+| One audited area of a run | `<store>/snapshots/<id>/sections/<area>.json` | IMPLEMENTED |
+| The evidence lifecycle chain | `<store>/ledger/segment-*.jsonl` | IMPLEMENTED |
+| Human/machine reports | `<store>/reports/` | IMPLEMENTED |
+| Approved baseline | `<store>/baselines/` | PLANNED |
+| Derived evaluations and deltas | `<store>/evaluations/` | PLANNED |
+| Portable exports | `<store>/exports/` | PLANNED |
+| Why a run failed | the command's own stderr (the journal is PLANNED) | IMPLEMENTED |
+| Locks and temporary state | `<store>/.lock`, `<store>/tmp/` | IMPLEMENTED |
 | Administrator configuration | `/etc/isedraf/` | PLANNED |
 
 ## Backup
 
-Back up **`/var/lib/isedraf/`**. That is the evidence.
+Back up **your store** (`~/.local/state/isedraf/`). That is the evidence.
 
 Add `/etc/isedraf/` once configuration exists. Journal retention is a separate concern, useful for
 troubleshooting and not a substitute for evidence.
@@ -224,13 +222,12 @@ ISEDRAF_STATE_ROOT=/tmp/isedraf-lab isedraf identity
 ## Use the CLI, not the filesystem
 
 ```bash
-isedraf identity          # IMPLEMENTED — collect host identity, commit a snapshot
-isedraf inventory         # IMPLEMENTED — host inventory; --json for the object
-                          #   not written into a snapshot yet: SNAP-021 freezes a
-                          #   W1-A snapshot as exactly three files
+isedraf audit             # IMPLEMENTED — every area once, one committed run
+isedraf report            # IMPLEMENTED — report of the latest committed run;
+                          #   --html, --json, --profile <file>, --save
+isedraf identity          # IMPLEMENTED — host identity only, one committed snapshot
+isedraf inventory         # IMPLEMENTED — show the host inventory; commits nothing
 isedraf --version         # IMPLEMENTED
-isedraf report            # IMPLEMENTED — system assurance report; --json,
-                          #   --profile <file>, --save
 isedraf verify            # PLANNED
 isedraf explain <id>      # PLANNED
 isedraf snapshot          # PLANNED

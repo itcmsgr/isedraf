@@ -10,6 +10,69 @@ Implements: D-65, D-66, D-82, D-88
 Everything on this page is `PLANNED`, `FUTURE` or `OUT_OF_SCOPE`. Nothing here is released.
 For what exists, see [`../CURRENT_STATE.md`](../CURRENT_STATE.md).
 
+## GA release track — current priority (owner directive, 2026-09-27)
+
+The goal is a usable, GA-quality operational release: installable, operational,
+predictable, honest, with safe failure modes, a useful report and clear limitations, and
+no known major blocker. A GA release will still have bugs; it must not have those.
+
+```text
+1  CLI / command surface audit      install, run, collect, output, clear errors,
+                                    no built module left unreachable
+2  install / package audit
+3  end-to-end factual audit run
+4  first report                     factual JSON + readable HTML, coverage, limitations;
+                                    no comparison engine or findings required
+5  P0/P1 operational defects
+6  supported-platform smoke tests
+7  public documentation cleanup     the DOC-PUBLIC-01 gate
+8  GA candidate                     publication stays a separate owner act
+```
+
+### What GA means for ISEDRAF
+
+ISEDRAF produces evidence. Its principal failure is not a crash; it is evidence that
+claims more certainty than the collection supports. GA is judged against six priorities,
+and each one names what would block it.
+
+| # | Priority | GA blocker if |
+|---|---|---|
+| 1 | Install and upgrade integrity | DEB or RPM install fails; an upgrade loses evidence or state; an upgrade on an unchanged host reports a security change; uninstall deletes the evidence under `/var/lib/isedraf` (it never may) |
+| 2 | CLI truth | a command does not exist or does not do what it says; an exit code disagrees with the frozen exit-code contract; an error is silent or gives the operator nothing to act on |
+| 3 | Do no harm | ISEDRAF changes the host it inspects, or makes a network connection |
+| 4 | Run and snapshot lifecycle | the run lock fails; a snapshot is committed non-atomically; an interrupted run leaves evidence that looks valid; orphaned runs are not handled deterministically |
+| 5 | Evidence truthfulness | a source is reported `COLLECTED` without complete evidence; something is reported absent that was not fully observed; a result passes without the evidence for it |
+| 6 | Supported production paths | the supported distributions, the unprivileged run with its user-mode store, or a human-readable first report do not work (privileged runs belong to the Full Audit release, D-117) |
+
+**Privacy is a blocker in every priority.** Evidence is made to leave the host, so a
+secret, a password hash or other raw sensitive material reaching output stops GA however
+rare the input that causes it.
+
+GA does not mean zero bugs. It means none of the above is known.
+
+### How a newly found issue is handled
+
+Before any code is written, one question: **does this stop GA? Yes or no.**
+
+- **Yes** when it breaks install, run or report; gives wrong exit semantics; mutates the
+  host or reaches the network; corrupts a snapshot or the ledger; produces false confident
+  evidence; crashes or hangs on a supported path; or leaks sensitive material.
+- **No** when it can be contained as an explicit conservative result - `PARTIAL`,
+  `NOT_TESTED`, `NOT_ASSERTED` - without misleading the operator.
+
+```text
+DISCOVER -> CLASSIFY -> CONTAIN (if needed) -> REGISTER
+```
+
+A **no** is registered and the roadmap continues; it does not open a new investigation. A
+**yes** gets the smallest correction that restores the property, and a weakness found
+beside it is classified on its own rather than folded in. A bounded defect never becomes
+a subsystem redesign. The roadmap decides which investigations happen, not the other way
+round.
+
+The phase model below still describes where each capability belongs; this track sets the
+order of work until GA.
+
 ## Canonical phase model — the single roadmap interpretation
 
 Owner decision, 2026-09-20. This section is the authoritative reading of the roadmap. It exists
@@ -174,13 +237,14 @@ entirely.
 | **Control & Evidence Map** — one row per observable fact: expected system state · state dimension (`DECLARED`/`RESOLVED`/`ACTIVE`) · assessment class · system source · effective collector · native setting or parameter · normalized ISEDRAF field · evidence location · collection status · evaluation result · **limitations** | PLANNED | The structure is seeded in [`reference/CONTROL_EVIDENCE_MAP.md`](../reference/CONTROL_EVIDENCE_MAP.md) with the one domain that exists. A row per unimplemented domain would be a design sketch wearing a reference document's clothes, and the whole value of the map is that a row means something is actually collected. **Each domain gains its row in the milestone that implements it**, not before. |
 | PDF publication of the map | PLANNED | Markdown stays canonical and the PDF is generated from it, never maintained beside it. No PDF toolchain is approved yet, and none will be added merely to publish one document (D-84). |
 | Machine-readable control/fact registry → generated Markdown → generated PDF → JSON export | FUTURE | Only once enough domains exist for hand-maintenance to be the actual problem. Not a database (`STORE-002`). |
-| `git-hooks/` are not installed in `.git/hooks` (`Z-22`) | OPEN | `make check` and CI remain the authoritative gates; a separate owner-controlled governance lane. |
+| `git-hooks/` are not installed in `.git/hooks` (`Z-22`) | CLOSED | Installed and byte-identical to `git-hooks/`; rejections observed for a failing tree, a missing `Assisted-by:` and an AI `Co-Authored-By:` (`IQ-021`). What the pre-commit hook validates is still open (`IQ-029`). |
 
 ### Public technical preview — the remaining condition
 
-The engine is not what is missing. What is missing is everything that lets a third party install it, run
-it, understand it and send back a finding: packaging, a quick start, a fresh-machine install and removal
-test, and the support matrix.
+The engine is not what is missing. Packaging exists (`.deb` and `.rpm`), install, run, remove and
+reinstall are proven on Debian 12, AlmaLinux 8.10 and AlmaLinux 9.7, and the support matrix is
+`../reference/PLATFORM_COMPATIBILITY.md`. What is still missing for a third party is a quick start, and
+the two release blockers in `../CURRENT_STATE.md`.
 
 ARM64 does **not** block the preview. `x86_64` with the measured distributions is a coherent, honest
 first release, and ARM64 validation lands beside it or immediately after.
@@ -213,6 +277,62 @@ already exists. `docs/architecture/ISEDRAF_PRODUCT_HLD.md` holds the full model.
 
 Step 7 is deliberately not last. Platform validation has no dependency on steps 2-6 and should not
 queue behind them.
+
+## R1.5 execution sequence — canonical
+
+**This table is the authoritative execution order.** It was not here before DOC-R15P, and
+the sequence lived only in `../development/INVENTORY_COVERAGE_MATRIX.md`, which meant the
+canonical roadmap and the order work actually followed were two documents that did not
+reference each other. The matrix is now the domain coverage detail and cites these
+milestones; it no longer defines the order.
+
+A row says COMPLETE only when a merged or frozen SHA proves it.
+
+| Milestone | Contents | State |
+|---|---|---|
+| Batch 0 | account-source contract; `IQ-012` closed by amending the requirement | **COMPLETE** `723459ad` frozen · `9db3de42` merged |
+| Batch 1 | shared primitives S1–S5, one serialized lane | **COMPLETE** |
+| ARCH-01 | structural and evidence-flow review | **COMPLETE** |
+| Batch 2 | sudo · SSH · PAM · login policy | **COMPLETE** `ace82d58` frozen · `3235e7d1` merged |
+| ARCH-02 | architecture review with the semantic oracle matrix | **COMPLETE** |
+| bridge | `authorized_keys`; `IQ-014` closed by owner ruling | **COMPLETE** `79f885f7` frozen |
+| **R1.5-P** | privilege and evidence acquisition contract (`D-115`) | **COMPLETE** `f256c9ce` frozen |
+| **DOC-R15P** | repository-wide documentation reconciliation | **ACTIVE** — runs in parallel with Batch 3, not ahead of it (owner sequencing, 2026-09-23) |
+| Batch 3 | fstab/mounts declared-vs-active · NSS/hostname — S3's first natural consumer | **ACTIVE** — mounts lane merged `ded73ec` (182 tests), awaiting owner closure, and not yet reachable from any command; NSS/hostname not started |
+| **TA-1 … TA-9** | trust and assurance — source/governance, build identity, reproducibility, SBOM, runtime trust, adversarial testing, offline verification, independent review (`docs/development/TRUST_AND_ASSURANCE_DOCTRINE.md`) | `PLANNED` — cross-cutting, does not block unprivileged R1.5 work; TA-1 and TA-4 are startable independently |
+| **R1.5-P2** | verifiable least-authority acquisition — portable core + platform confinement backends (`docs/development/R15P2_LEAST_AUTHORITY_ACQUISITION_CONTRACT.md`) | `PLANNED` — **DESIGN ONLY**, awaiting owner architecture review; four conflicts with frozen authority open as `IQ-024`…`IQ-027` |
+| Batch 4 | audit policy · journald/logging · time | `PLANNED` |
+| ARCH-03 | architecture review after Batches 3–4 | `PLANNED` |
+| Batch 5 | services · timers/cron · kernel · LSM · listeners | `PLANNED` — **governance-dependent** |
+| Batch 6 | packages · repositories · offline update observation · crypto | `PLANNED` — **governance-dependent** |
+| Batch 7 | network · DNS · local packet-filter state | `PLANNED` — **governance-dependent** |
+| Batch 8 | certificates · targeted files · bounded capabilities/setuid | `PLANNED` |
+| ARCH-04 | architecture review at full R1.5 completion | `PLANNED` |
+| R1.5 freeze | the factual inventory layer closes | `PLANNED` |
+| R2 | native `ISE-*` criteria — interpretation begins | `PLANNED` |
+
+### Why R2 waits
+
+R1.5 collects facts; R2 interprets them. The boundary is enforced per domain, not as a
+slogan:
+
+```text
+service active            FACT      service insecure          NOT R1.5
+listener on a port        FACT      exposed to the Internet   NOT R1.5
+nft policy ACCEPT         FACT      host unprotected          NOT R1.5
+package version present   FACT      vulnerable                NOT R1.5
+LSM profile loaded        FACT      adequately confined       NOT R1.5
+cached update candidate   OBSERVATION   host out of date      NOT R1.5
+```
+
+### Governance dependency for Batches 5–7
+
+The `IQ-013` owner ruling admits services, kernel, LSM, listeners, packages, repositories,
+offline update observations, crypto, network, DNS and local packet-filter facts into R1.5.
+**`AMENDMENTS.md` does not yet formally record it.** Until it does, those batches have a
+ruling and not an amendment, and `PLANNED` in the table above is not authorization.
+
+Batches 3 and 4 are **not** affected: their domains were already inside the frozen scope.
 
 ## How a platform joins the matrix
 
@@ -293,10 +413,100 @@ CVE matching and remote patch availability remain external enrichment.
 **Export signing** — optional, via `ssh-keygen -Y sign`. Claims only: unchanged since signing, signed by a
 pinned host key. Never non-repudiation or trusted time.
 
-**Documentation publishing** — publish `/docs` itself; blocked by OD-11 and OD-01.
+**Documentation publishing** — publish `/docs` itself; blocked by OD-11 (OD-01, the project name, is resolved by D-108).
 
 **Provider-neutral concepts** — canonical concepts describe outcomes, not Linux technologies, so future
 Unix-like providers could be added without redefining host concepts. **This is not BSD support.**
+
+## Release direction after GA (owner decision, 2026-09-27)
+
+No calendar is attached to these releases; each is re-estimated after the one before it.
+
+```text
+v0.1  GA - unprivileged evidence product
+      Python standard-library engine; user-mode production store; `isedraf audit`;
+      committed evidence; first report; DEB/RPM; upgrade, reboot and uninstall proven.
+      No privileged component and no compiled code.
+
+v0.2  Full Audit - prove the privilege architecture
+      root supervisor, systemd sandbox, a dedicated non-login isedraf identity for the
+      engine, authority classes, bounded one-run IPC, root-only acquisition, and the
+      system production store.
+
+later compiled acquisition core, when measurement justifies it
+      the same IPC contract and authority classes, no engine redesign.
+```
+
+**The security property this protects** - and the language is secondary to it:
+
+```text
+main engine        large, feature-rich, UNPRIVILEGED
+privileged worker  tiny, fixed authority, minimal logic
+IPC                narrow, typed, bounded, one run, no generic privileged operation
+```
+
+**The v0.2 worker.** The first implementation may be a minimal Python worker, used to
+prove the authority and IPC model; it is permitted, not required. It accepts a fixed
+operation identifier - "the shadow file", "the audit status", "the resolved sudoers" -
+performs that one predefined acquisition and returns bounded bytes and a status. It never
+takes a path, an argument vector or a tool name, never runs a shell, and holds no plugin,
+evaluator, normalization or report logic: a generic privileged broker would defeat the
+design. If the required privilege isolation cannot be demonstrated with it, the release
+does not widen authority; the worker moves to the compiled lane instead.
+
+**The compiled acquisition core.** Rust is the preferred candidate, chosen by measurement,
+not in advance. It is taken up when there is evidence that it improves the privileged
+attack surface, memory-safety exposure, an interpreter inside the privileged boundary,
+kernel-interface quality, performance, cross-platform or embedded needs - or when a
+finding against the prototype worker calls for it. Rust can reduce classes of
+memory-safety defects in the privileged acquisition component when implemented
+predominantly in safe Rust; it does not make the IPC contract, the privilege model, the
+logic or any unsafe code automatically correct. Adopting it changes the package model -
+architecture-specific packages, a hybrid runtime statement, a reproducibility proof and
+provenance for compiled artifacts, a CI toolchain per architecture, a policy for
+third-party crates - and requires amending the rule that the runtime has no compiled
+component. The IPC contract is then tested against both implementations.
+
+## After GA — FUTURE: external standards and validation readiness
+
+Not current scope, and nothing in it is claimed. It begins only after GA, with the
+architecture stable enough to fix an evaluation boundary. Its question is which external
+standards and validation frameworks genuinely apply to what ISEDRAF does - host inspection,
+evidence collection and factual assessment reporting - and what evidence-based path would
+lead to independent validation. It does not assume that any one framework is the right
+destination, and it records "none applies" as a result rather than forcing a fit.
+
+```text
+1  product security purpose and evaluation boundary (supported configuration is not the
+   evaluated configuration)
+2  which external frameworks could apply - candidates to be assessed, not assumed:
+   Common Criteria protection profiles, CIS benchmarks, DISA STIG, SCAP formats,
+   NIST guidance - using the documents current when the phase starts
+3  requirement-by-requirement evidence matrix: PASS / PARTIAL / GAP / N/A /
+   NEEDS EVIDENCE / NEEDS CLARIFICATION, and a PASS carries its evidence
+4  a deterministic evaluated configuration
+5  independent pre-assessment
+6  confirmed gap roadmap, each change marked as improving the product itself, existing
+   only for evaluation, or restricting only the evaluated configuration
+7  a formal decision whether to pursue validation
+```
+
+For an assessment engine, false assurance is the failure that matters most. This lane
+measures false PASS, false FAIL and false PARTIAL, unsupported assumptions, incomplete
+evidence, platform semantic differences, parser ambiguity and benchmark version drift, and
+it requires each result to trace from its source requirement through collection,
+normalization, evaluation and evidence to the report. The existing glibc differential
+harness and the falsification suite are the kind of evidence it will reuse.
+
+Content that belongs to a third party - benchmark text, rules, mappings - enters only
+under the licensing modes above (validated open mappings, provider-authorized BYOL); this
+lane never copies it.
+
+**Project-level criteria that can be verified before any product standard.** Some
+evidence already exists and is recorded in `../CURRENT_STATE.md`: code scanning, the
+OpenSSF Scorecard workflow, a software bill of materials, a reproducible build and build
+provenance attestation. The OpenSSF Best Practices criteria are the next such checklist to
+assess. Each is reported as measured, never as a badge the project has not been granted.
 
 ## Permanently OUT_OF_SCOPE
 

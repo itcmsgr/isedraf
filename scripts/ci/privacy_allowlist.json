@@ -10,7 +10,10 @@
     "python.org": "upstream Python",
     "itcmsgr": "the owner's public GitHub organization handle",
     "anthropic.com": "same fixture as above",
-    "debian.org": "the DEP-5 machine-readable copyright format specification URL, required verbatim in packaging/deb/copyright"
+    "debian.org": "the DEP-5 machine-readable copyright format specification URL, required verbatim in packaging/deb/copyright",
+    "scorecard.dev": "OpenSSF Scorecard: the README badge and its public results viewer",
+    "bestpractices.dev": "OpenSSF Best Practices: the README Baseline badge and the project's public page",
+    "developercertificate.org": "the Developer Certificate of Origin text that CONTRIBUTING.md asks contributors to certify"
   },
   "synthetic_ranges": {
     "192.0.2.0/24": "RFC 5737 TEST-NET-1",

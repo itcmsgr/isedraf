@@ -52,5 +52,5 @@ body:
     id: sanitized
     attributes:
       label: Sanitized evidence
-      description: "Redacted output (`--redact`). Never paste an unredacted identity or evidence bundle."
+      description: "Output, redacted by hand. Never paste an unredacted identity or evidence bundle."
     validations: {required: true}

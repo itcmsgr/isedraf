@@ -4,7 +4,7 @@ labels: ["bug", "needs-evidence"]
 body:
   - type: markdown
     attributes:
-      value: "**Redact first** (`--redact`). Vulnerabilities go to `SECURITY.md`, never here."
+      value: "**Redact first**, by hand: 0.1 has no automatic redaction. Vulnerabilities go to `SECURITY.md`, never here."
   - type: input
     id: version
     attributes: {label: ISEDRAF version}
@@ -42,5 +42,5 @@ body:
     id: sanitized
     attributes:
       label: Sanitized evidence
-      description: "Redacted output (`--redact`). Never paste an unredacted identity or evidence bundle."
+      description: "Output, redacted by hand. Never paste an unredacted identity or evidence bundle."
     validations: {required: true}

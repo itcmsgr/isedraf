@@ -512,5 +512,92 @@ class TestIncompleteAlwaysExplains(unittest.TestCase):
                                 % (name, block["collection_status"]))
 
 
+class TruncationIsNeverAbsence(unittest.TestCase):
+    """Owner invariant: truncated input is never complete evidence.
+
+    Hardening red team F7. Once hostio stopped returning a silently truncated value, these
+    callers read "not ok" as "nothing there": an oversized /etc/hosts became "no FQDN"
+    and an oversized mount table became "no filesystems", both under COLLECTED.
+    """
+
+    def root(self):
+        base = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, base)
+        for d in ("etc", "proc/sys/kernel", "proc/self"):
+            os.makedirs(os.path.join(base, d))
+        with open(os.path.join(base, "proc/sys/kernel/hostname"), "w") as fh:
+            fh.write("myhost\n")
+        return base
+
+    def big(self, head):
+        from isedraf import hostio
+        filler = "# padding\n" * (hostio.OUTPUT_LIMIT // 10 + 10)
+        return head + filler
+
+    def test_an_oversized_hosts_file_is_partial_not_no_fqdn(self):
+        base = self.root()
+        with open(os.path.join(base, "etc/hosts"), "w") as fh:
+            fh.write(self.big("127.0.1.1 myhost.corp.example myhost\n"))
+        block = collectors.collect_host(base)
+        self.assertNotEqual(block["collection_status"], model.COLLECTED)
+        self.assertIn("TRUNCATED", block["reason"])
+
+    @unittest.skipIf(os.geteuid() == 0, "root is not refused by mode 000")
+    def test_r4_3_an_unreadable_hosts_file_is_partial_not_no_fqdn(self):
+        # A mode-000 /etc/hosts (or a MAC denial) was read as "no FQDN" under COLLECTED.
+        base = self.root()
+        path = os.path.join(base, "etc/hosts")
+        with open(path, "w") as fh:
+            fh.write("192.0.2.5 myhost.corp.example myhost\n")
+        os.chmod(path, 0)
+        self.addCleanup(os.chmod, path, 0o600)
+        block = collectors.collect_host(base)
+        self.assertNotEqual(block["collection_status"], model.COLLECTED)
+        self.assertIn("PERMISSION_DENIED", block["reason"])
+
+    def write(self, base, rel, text):
+        path = os.path.join(base, rel)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as fh:
+            fh.write(text)
+
+    def test_n4_a_truncated_os_release_never_falls_back_silently(self):
+        base = self.root()
+        self.write(base, "etc/os-release", self.big("ID=etcid\n"))
+        self.write(base, "usr/lib/os-release", "ID=libid\n")
+        block = collectors.collect_platform(base)
+        self.assertNotEqual(block["collection_status"], model.COLLECTED)
+        self.assertNotEqual(block["data"]["id"], "libid")
+
+    def test_n4_a_truncated_stub_resolver_file_is_partial(self):
+        base = self.root()
+        self.write(base, "etc/resolv.conf", "nameserver 127.0.0.53\n")
+        self.write(base, "run/systemd/resolve/resolv.conf", self.big("nameserver 192.0.2.9\n"))
+        block = collectors.collect_dns(base)
+        self.assertNotEqual(block["collection_status"], model.COLLECTED)
+
+    def test_n4_a_truncated_cpuinfo_is_partial_in_machine(self):
+        base = self.root()
+        self.write(base, "proc/cpuinfo", self.big("flags : fpu hypervisor\n"))
+        for name in ("sys_vendor", "product_name"):
+            self.write(base, "sys/class/dmi/id/" + name, "X\n")
+        block = collectors.collect_machine(base)
+        self.assertNotEqual(block["collection_status"], model.COLLECTED)
+
+    def test_n7_an_unreadable_hosts_file_is_not_absence(self):
+        base = self.root()
+        os.makedirs(os.path.join(base, "etc/hosts"))            # a directory: IO_ERROR
+        block = collectors.collect_host(base)
+        self.assertNotEqual(block["collection_status"], model.COLLECTED)
+
+    def test_an_oversized_mount_table_is_partial_not_no_filesystems(self):
+        base = self.root()
+        with open(os.path.join(base, "proc/self/mounts"), "w") as fh:
+            fh.write(self.big("/dev/sda1 / ext4 rw 0 0\n"))
+        block = collectors.collect_storage(base)
+        self.assertNotEqual(block["collection_status"], model.COLLECTED)
+        self.assertIn("TRUNCATED", block["reason"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

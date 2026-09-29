@@ -1,0 +1,134 @@
+field,origin,module,scope_045,hashed_if_state,privacy
+compat_directive_topology,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,PROVENANCE,no,medium
+compat_directive_topology_digest,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,PROVENANCE,no,medium
+directive.ageing_values,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,OBSERVATION,no,medium
+directive.anomalies,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,DERIVED,no,medium
+directive.field_count,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,OBSERVATION,no,medium
+directive.kind,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,OBSERVATION,no,medium
+directive.line,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,PROVENANCE,no,medium
+directive.malformed,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,DERIVED,no,medium
+directive.name,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,OBSERVATION,no,medium
+directive.name_bytes_hex,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,OBSERVATION,no,medium
+directive.name_length,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,OBSERVATION,no,medium
+directive.override_fields,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,OBSERVATION,no,medium
+directive.override_shape,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,OBSERVATION,no,medium
+directive.password_field_state,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,OBSERVATION,no,medium
+directive.target,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,OBSERVATION,no,medium
+gecos,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,OBSERVATION,no,medium
+group.explicit_members,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+group.gid,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+group.group_anomalies,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,DERIVED,no,medium
+group.group_line,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,PROVENANCE,no,medium
+group.member_count,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,OBSERVATION,no,medium
+group.name,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+group.name_bytes_hex,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+group.name_encoding,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,PROVENANCE,no,medium
+group.name_length,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,OBSERVATION,no,medium
+group.name_non_ascii,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,DERIVED,no,medium
+group.nss_source,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+home,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+name,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+name_bytes_hex,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+name_encoding,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,PROVENANCE,no,medium
+name_length,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,OBSERVATION,no,medium
+name_non_ascii,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,DERIVED,no,medium
+nss_compat_context,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,PROVENANCE,no,medium
+nss_file_effectiveness,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,PROVENANCE,no,medium
+nss_source,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+passwd_anomalies,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,DERIVED,no,medium
+passwd_line,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,PROVENANCE,no,medium
+primary_gid,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+shadow.expire_days,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+shadow.expire_days_source,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,PROVENANCE,no,medium
+shadow.inactive_days,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+shadow.inactive_days_source,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,PROVENANCE,no,medium
+shadow.last_change_days,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+shadow.last_change_days_source,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,PROVENANCE,no,medium
+shadow.max_days,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+shadow.max_days_source,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,PROVENANCE,no,medium
+shadow.min_days,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+shadow.min_days_source,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,PROVENANCE,no,medium
+shadow.password_state.content,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+shadow.password_state.hash_scheme,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+shadow.password_state.lock_prefix,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+shadow.shadow_line,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,PROVENANCE,no,medium
+shadow.warn_days,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+shadow.warn_days_source,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,PROVENANCE,no,medium
+shadow_record,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,PROVENANCE,no,medium
+shell,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+uid,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,STATE,yes,medium
+uninterpreted_compat_syntax,"/etc/passwd,/etc/group,/etc/shadow",accounts.model,OBSERVATION,no,medium
+device,lstat(2),shared.filemeta,OBSERVATION,no,low
+digest,lstat(2),shared.filemeta,STATE,yes,low
+digest_bytes,lstat(2),shared.filemeta,OBSERVATION,no,low
+digest_reason,lstat(2),shared.filemeta,PROVENANCE,no,low
+digest_status,lstat(2),shared.filemeta,PROVENANCE,no,low
+exists,lstat(2),shared.filemeta,STATE,yes,low
+file_type,lstat(2),shared.filemeta,STATE,yes,low
+gid,lstat(2),shared.filemeta,STATE,yes,low
+inode,lstat(2),shared.filemeta,OBSERVATION,no,low
+is_symlink,lstat(2),shared.filemeta,STATE,yes,low
+mode,lstat(2),shared.filemeta,STATE,yes,low
+mode_octal,lstat(2),shared.filemeta,DERIVED,no,low
+nlink,lstat(2),shared.filemeta,OBSERVATION,no,low
+permission_bits,lstat(2),shared.filemeta,DERIVED,no,low
+requested_path,lstat(2),shared.filemeta,PROVENANCE,no,low
+setgid,lstat(2),shared.filemeta,STATE,yes,low
+setuid,lstat(2),shared.filemeta,STATE,yes,low
+size,lstat(2),shared.filemeta,OBSERVATION,no,low
+sticky,lstat(2),shared.filemeta,STATE,yes,low
+symlink_target_text,lstat(2),shared.filemeta,STATE,yes,low
+uid,lstat(2),shared.filemeta,STATE,yes,low
+anomalies,shared primitives,shared.result,DERIVED,no,low
+directive,shared primitives,shared.result,PROVENANCE,no,low
+duplicate_of,shared primitives,shared.result,DERIVED,no,low
+expansion_ordinal,shared primitives,shared.result,PROVENANCE,no,low
+ordinal,shared primitives,shared.result,PROVENANCE,no,low
+parent,shared primitives,shared.result,PROVENANCE,no,low
+reason,shared primitives,shared.result,PROVENANCE,no,low
+retention,shared primitives,shared.result,PROVENANCE,no,low
+source,shared primitives,shared.result,PROVENANCE,no,low
+source_kind,shared primitives,shared.result,PROVENANCE,no,low
+source_line,shared primitives,shared.result,PROVENANCE,no,low
+source_path,shared primitives,shared.result,PROVENANCE,no,low
+status,shared primitives,shared.result,PROVENANCE,no,low
+inventory.compute.cores_per_socket,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.compute.cpu_model,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.compute.cpu_vendor,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.compute.logical_cpus,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.compute.sockets,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.dns.method,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.dns.note,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.dns.servers,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.host.fqdn,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.host.fqdn_source,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.host.hostname,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.machine.hypervisor,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.machine.product,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.machine.vendor,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.machine.virtualized,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.memory.swap_total_bytes,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.memory.total_bytes,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.network.default_routes,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.network.interfaces,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.network.ipv4,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.network.ipv6_stable,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.network.ipv6_volatile,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.platform.architecture,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.platform.family,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.platform.id,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.platform.init_system,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.platform.kernel_release,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.platform.pretty_name,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.platform.version_id,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.storage.devices,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.storage.filesystems,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.storage.utilisation,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.time.ntp_enabled,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.time.offset_nanoseconds,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.time.provider,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.time.source,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.time.stratum,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.time.synchronized,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.time.timezone,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low
+inventory.time.uptime_seconds,inventory collectors,inventory.model,(domain sub-classification),n/a - outside the snapshot (SNAP-021),low

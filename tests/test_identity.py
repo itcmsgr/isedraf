@@ -186,16 +186,27 @@ class TestStateRoot(unittest.TestCase):
             stateroot.resolve(environ={"SUDO_USER": "someone",
                                        "ISEDRAF_STATE_ROOT": "/tmp/x"}, euid=1000)
 
-    def test_w1_has_no_production_mode_and_says_so(self):
-        """IQ-010. SCOPE-070 puts W1 under ISEDRAF_STATE_ROOT; Mode A owns the production
-        root and is deferred by SCOPE-072. Falling back to it would offer a mode this
-        slice cannot reach, and fail later with a bare permission error."""
-        with self.assertRaises(stateroot.StateRootError) as caught:
-            stateroot.resolve(environ={}, euid=1000)
-        message = str(caught.exception)
-        self.assertIn("SCOPE-070", message)
-        self.assertIn("SCOPE-072", message)
-        self.assertIn(stateroot.ENV_STATE_ROOT, message)
+    def test_without_an_override_the_user_production_store_is_selected(self):
+        """STORE-026 (D-116): GA v0.1 has a real unprivileged production store.
+        It used to refuse here (IQ-010) because W1 had no production mode."""
+        root, cls = stateroot.resolve(environ={"XDG_STATE_HOME": "/xdg/state",
+                                               "HOME": "/home/u"}, euid=1000)
+        self.assertEqual((root, cls), ("/xdg/state/isedraf", stateroot.USER_PRODUCTION))
+
+    def test_a_relative_xdg_state_home_is_ignored(self):
+        root, cls = stateroot.resolve(environ={"XDG_STATE_HOME": "rel/state",
+                                               "HOME": "/home/u"}, euid=1000)
+        self.assertEqual(root, "/home/u/.local/state/isedraf")
+        self.assertEqual(cls, stateroot.USER_PRODUCTION)
+
+    def test_no_usable_home_is_refused_not_guessed(self):
+        with self.assertRaises(stateroot.StateRootError):
+            stateroot.resolve(environ={"HOME": "relative"}, euid=1000)
+
+    def test_system_production_is_never_selected(self):
+        for env in ({"HOME": "/home/u"}, {"ISEDRAF_STATE_ROOT": "/tmp/x"}):
+            self.assertNotEqual(stateroot.resolve(environ=env, euid=1000)[1],
+                                stateroot.SYSTEM_PRODUCTION)
 
     def test_override_marks_dev(self):
         path, cls = stateroot.resolve(environ={"ISEDRAF_STATE_ROOT": "/tmp/x"}, euid=1000)
@@ -318,7 +329,10 @@ class TestEndToEnd(unittest.TestCase):
         os.environ["SUDO_USER"] = "someone"
         code, _, err = self.run_cli()
         self.assertEqual(code, PRIVILEGE_REFUSED)
-        self.assertIn("does not yet support privileged execution", err)
+        self.assertIn("isedraf: Privileged execution is not supported in ISEDRAF 0.1. "
+                      "Run ISEDRAF as your normal user. Evidence requiring elevated "
+                      "privilege is reported as NOT_TESTED.\n", err)
+        self.assertEqual(err.count("\n"), 1)    # one line, no second guidance line
 
     def test_corrupted_evidence_is_reported_not_rendered_as_success(self):
         self.run_cli()

@@ -30,8 +30,11 @@ scan() {
     for f in "$@"; do
         [ -f "$f" ] || continue
         case "$f" in *20_review/*|*00_nftban/*|*/bootstrap/*|*/prompts/*) continue;; esac
-        if grep -nI 'ledger\.jsonl' "$f" | grep -qv 'paths:allow-legacy'; then
-            grep -nI 'ledger\.jsonl' "$f" | grep -v 'paths:allow-legacy' | while read -r l; do
+        # IQ-018: no `| grep -q` under pipefail (SIGPIPE can skip the check); the full
+        # match list is captured first and tested as a value.
+        hits="$(grep -nI 'ledger\.jsonl' "$f" | grep -v 'paths:allow-legacy')"
+        if [ -n "$hits" ]; then
+            printf '%s\n' "$hits" | while read -r l; do
                 echo "  FAIL  $f:${l%%:*}: singular 'ledger.jsonl'; canonical is ledger/segment-NNNNNN.jsonl (D-99)" >&2
             done
             FAIL=1

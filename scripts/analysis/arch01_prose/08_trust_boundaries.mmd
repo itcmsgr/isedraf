@@ -1,0 +1,16 @@
+```mermaid
+graph TD
+    subgraph UNTRUSTED["UNTRUSTED HOST INPUT"]
+        ETC["/etc"]; PROC["/proc"]; SYS["/sys"]; CMD["command output"]; FIX["fixture corpus"]
+    end
+    ETC --> B1; PROC --> B1; SYS --> B1; CMD --> B1; FIX --> B1
+    B1{{"ACQUISITION BOUNDARY - bounded reads, fixed argv, no shell, lstat only"}} --> P
+    P["PARSERS - pure, text in / records out"] --> N
+    N["NORMALIZED MODEL - status, reason, provenance, retention applied"] --> CAN
+    CAN["CANONICALIZATION - NORM-035"] --> H
+    H["HASH / SNAPSHOT / LEDGER"]
+    subgraph PUB["PUBLICATION BOUNDARY"]
+        PRIV["private engineering material"] -.->|"release_export + privacy gate"| PUBSURF["public release surface"]
+        PUBSURF --> ART["released artifact + SBOM + attestation"]
+    end
+```

@@ -37,7 +37,7 @@ RPM_RELEASE="0.${VERSION#*-}"
 DIST="$ROOT/dist"
 STAGE="$DIST/stage"
 MAINTAINER="Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
-DESCRIPTION="Linux host assurance, approved baseline, state delta and evidence engine"
+DESCRIPTION="Linux host evidence and assurance tool"
 
 say() { echo "  $*"; }
 die() { echo "  FAIL  $*" >&2; exit 1; }
@@ -45,6 +45,19 @@ die() { echo "  FAIL  $*" >&2; exit 1; }
 rm -rf "$DIST"; mkdir -p "$DIST/packages"
 
 # ---- 1. the payload, assembled once and shared by every artifact ----------------------
+# The .deb payload is staged from the working tree, while the .rpm is built from a
+# `git archive HEAD` tarball. With uncommitted changes the two formats of one build carried
+# DIFFERENT code - an "alpha2" rpm holding alpha1 (GA lifecycle proof, 2026-09-28). Both
+# must come from one committed source, so a tree with changes to tracked files is refused.
+[ -z "$(git status --porcelain --untracked-files=no)" ] \
+    || die "the working tree has uncommitted changes; packages are built from a commit only, so the deb and rpm carry the same code"
+# SNAP-020 embeds ENGINE_VERSION in the code as "the VERSION file verbatim", and it is
+# written into every snapshot manifest as provenance. A package whose VERSION was bumped
+# without the engine constant installs as one version and stamps another into evidence
+# (found by the GA lifecycle proof, 2026-09-28). Refuse to build that.
+ENGINE_VERSION="$(sed -n 's/^ENGINE_VERSION = "\([^"]*\)".*/\1/p' lib/isedraf/__init__.py)"
+[ "$ENGINE_VERSION" = "$VERSION" ] \
+    || die "VERSION is $VERSION but lib/isedraf/__init__.py ENGINE_VERSION is ${ENGINE_VERSION:-missing}; they must match (SNAP-020)"
 say "staging payload for $VERSION"
 install -d -m 0755 "$STAGE/usr/bin" "$STAGE/usr/lib/isedraf" \
                    "$STAGE/usr/share/doc/isedraf"
@@ -69,10 +82,17 @@ install -m 0644 docs/reference/PLATFORM_COMPATIBILITY.md \
     "$STAGE/usr/share/doc/isedraf/PLATFORM_COMPATIBILITY.md"
 install -m 0644 docs/operator/STORAGE_AND_OUTPUTS.md \
     "$STAGE/usr/share/doc/isedraf/STORAGE_AND_OUTPUTS.md"
+# The README links its five guides as docs/<GUIDE>.md; installing them at the same relative
+# path keeps those links working in an installed copy (GA v0.1 public docs).
+install -d -m 0755 "$STAGE/usr/share/doc/isedraf/docs"
+for guide in GETTING_STARTED EVIDENCE_MODEL AUDITOR_GUIDE REPORT_GUIDE SECURITY_AND_LIMITATIONS; do
+    install -m 0644 "docs/$guide.md" "$STAGE/usr/share/doc/isedraf/docs/$guide.md"
+done
 
 # D-17/D-86: bytecode is never shipped.
-find "$STAGE" -name '*.pyc' -o -name '__pycache__' | grep -q . \
-    && die "bytecode found in the staged payload (D-86)"
+# IQ-018: captured, not piped into `grep -q` (under pipefail SIGPIPE could skip it).
+stray_bytecode="$(find "$STAGE" -name '*.pyc' -o -name '__pycache__')"
+[ -z "$stray_bytecode" ] || die "bytecode found in the staged payload (D-86)"
 # The launcher resolves <prefix>/lib/isedraf from its own location. If the payload is
 # not exactly there, the package installs cleanly and the command does nothing.
 [ -f "$STAGE/usr/lib/isedraf/cli.py" ] || die "payload layout wrong: expected usr/lib/isedraf/cli.py"

@@ -156,8 +156,39 @@ object named here has a frozen field table.
 | `ISEDRAF:STATE:V1` | `canonical_bytes(section_state_object)` — `IDENT-002` |
 | `ISEDRAF:SNAPSHOT-MANIFEST:V1` | `canonical_bytes(snapshot_manifest_core)` — `SNAP-020` |
 | `ISEDRAF:LEDGER-RECORD:V1` | `canonical_bytes(record_core)` — `STORE-024` |
+| `ISEDRAF:AUXILIARY-ARTIFACT:V1` | the artifact's exact bytes — `D-115` |
 
 Where a component is a hash it is the **raw 32-byte digest**, never the rendered `sha256:` string.
+
+**`ISEDRAF:AUXILIARY-ARTIFACT:V1` (`D-115`).** Authoritative auxiliary bundle artifacts —
+currently `method/host_identity.json` and, when produced, `coverage/evidence_limits.json` —
+are bound by digest in `manifest_core.auxiliary_artifacts` and therefore participate in
+`manifest_hash` and the ledger chain. They are **not** incorporated into `state_hash`. A
+separate domain is what keeps an auxiliary digest from ever being mistaken for a state hash.
+
+**Audit section artifacts (`D-115`, extended).** The per-domain evidence of `isedraf audit` is bound
+the same way. The set is closed: at most ten files per snapshot, drawn only from these paths:
+`sections/inventory.json`, `sections/nss.json`, `sections/hostname.json`, `sections/accounts.json`,
+`sections/sudo.json`, `sections/ssh.json`, `sections/pam.json`, `sections/loginpolicy.json`,
+`sections/mounts.json` and `sections/authorizedkeys.json`. Each is **collected evidence** — one
+domain's collector output, with its collection status and reason — never a rendered report, which
+stays under `STORE-001`'s `reports/`; `HLD-032` therefore holds. They enter neither `state_hash` nor
+`coverage_digest`, and the `sections/` directory is distinct from `manifest_core.sections`.
+
+Three identities remain distinct and SHALL NOT be conflated:
+
+```text
+state_hash                  host-state identity
+coverage_digest             observation-capability identity
+manifest auxiliary binding  snapshot/bundle integrity
+```
+
+Consequently an auxiliary or provenance change MAY move `manifest_hash` and the ledger
+chain, and SHALL NOT imply a host-state change.
+
+`NORM-037` above is unaffected: `auxiliary_artifacts` is a canonical **map** keyed by
+bundle-relative path, not an array, so W1-A's frozen objects still contain no array-typed
+field. The map form was chosen for that reason — the `NORM-037` verifier refused the array.
 
 Domains for the baseline revision, evaluation manifest, evidence reference, profile and checkpoint are
 **not frozen**: W1-A computes none of them, and speculative bytes are not specified (`D-107`).
@@ -229,8 +260,9 @@ snapshot_manifest_core:
     snapshot_id           string   (SNAP-019)
     run_id                string   (SNAP-019)
     created_at            string   (SNAP-019)
-    state_root            string   "DEV" | "PRODUCTION" — PRIV-004's literal spelling, never a
-                          restatement (Y-03). PROVENANCE.
+    state_root            string   "DEV" | "USER_PRODUCTION" | "SYSTEM_PRODUCTION" — the literal
+                          spellings of PRIV-004 and STORE-026 (D-116), never a restatement
+                          (Y-03). PROVENANCE.
     engine_version        string  the VERSION file verbatim; W1-A literal "0.0.0-pre"   (Y-08)
     sections              object, keys sorted
 
@@ -274,6 +306,10 @@ method/host_identity.json = canonical_bytes({
     "source_id": "file:/etc/machine-id"
 })
 ```
+
+Beyond those three, a snapshot directory contains only the auxiliary artifacts that
+`manifest_core.auxiliary_artifacts` binds (`D-115`, extended). The W1-A golden vectors bind only
+`method/host_identity.json` and are unchanged.
 
 **SNAP-022 (Y-07, W1-A) SHALL** When `collection_status` is **not** `COLLECTED`, the snapshot **is still
 committed** — an honest record of what could not be collected is evidence. `state/host_identity.json` is
@@ -357,7 +393,8 @@ record_core:
     previous_record_hash  "sha256:<64 hex>"; genesis = sha256: followed by 64 zeros
     snapshot_id           string
     manifest_hash         string
-    state_root            string  "DEV" | "PRODUCTION"   (PRIV-004 marks EVERY artifact, Y-03)
+    state_root            string  "DEV" | "USER_PRODUCTION" | "SYSTEM_PRODUCTION"
+                                  (PRIV-004 / STORE-026 mark EVERY artifact, Y-03, D-116)
 
 record_hash = HASH_FRAME_V1("ISEDRAF:LEDGER-RECORD:V1", canonical_bytes(record_core))
 ```
@@ -675,6 +712,33 @@ created `O_NOFOLLOW|O_EXCL`, **not collected in W1** — W-29), `ledger/` holds 
 (D-99) and `baselines/` holds `BL-NNNNNN.json`,
 `baselines/events/BE-*.json` and `baselines/current` (U-16). This is the **single normative statement of
 storage layout** (`NRM-001`); no other document restates it.
+
+**STORE-026 (D-116, NEW) SHALL** **Three artifact classes, never confusable.** Every artifact carries
+exactly one `state_root` literal, and the literal names the class:
+
+| Class | `state_root` | Root | Owner, modes | Privilege |
+|---|---|---|---|---|
+| `DEV` | `"DEV"` | `ISEDRAF_STATE_ROOT` (`PRIV-004`, unchanged) | the invoking UID | UNPRIVILEGED |
+| `USER_PRODUCTION` | `"USER_PRODUCTION"` | `$XDG_STATE_HOME/isedraf/` when `XDG_STATE_HOME` is an absolute path, otherwise `~/.local/state/isedraf/` | the invoking UID; directories 0700, files 0600 | UNPRIVILEGED |
+| `SYSTEM_PRODUCTION` | `"SYSTEM_PRODUCTION"` | `/var/lib/isedraf/` (`STORE-001`) | root; 0700 | privileged, `DEFERRED_TO_FREEZE_SET_2` (`SCOPE-072`) |
+
+Each root holds `STORE-001`'s layout, within the subset `STORE-025` permits; it is not restated here.
+The class is fixed by how the root was selected, never inferred from a path, and never changes during
+a run. A relative `XDG_STATE_HOME` is ignored. `USER_PRODUCTION` is never selected under euid 0 or
+with `SUDO_USER` set (`SCOPE-071`), and `ISEDRAF_STATE_ROOT`, when honoured, selects `DEV`. An existing
+`USER_PRODUCTION` root that is not a directory owned by the invoking UID with mode 0700 is refused with
+a reason, never silently relocated. No literal is a substring of another. A `USER_PRODUCTION`
+artifact is unprivileged evidence: root-required facts are `NOT_TESTED` (`PRIV-001`) and `BASE-003`
+applies unchanged (OD-16).
+
+**STORE-027 (D-116, NEW) SHALL** **A `USER_PRODUCTION` commit fails closed on unsuitable storage.**
+`SNAP-014`'s commit relies on atomic `rename`, `flock` and `fsync` on one local filesystem. Before any
+collection, the run establishes the filesystem type of the `USER_PRODUCTION` root from locally
+observable mount information. A known remote or unsuitable type — NFS, CIFS/SMB, FUSE-based network
+filesystems — refuses the `USER_PRODUCTION` commit with a named reason. Where suitability cannot be
+established, the commit is refused as well. A refusal never falls back to another class or root;
+stdout-only output and an explicit `DEV` run (`PRIV-004`) remain available. Detection is
+deliberately small: a bounded list of known-unsuitable types and the fail-closed default.
 
 **STORE-002 (D-49) SHALL NOT** No database, no server, no API, no connectors, no credentials, no network
 egress in v0.1 — including no authoritative SQLite.

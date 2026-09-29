@@ -12,13 +12,19 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
      generation timestamp are pinned to the values of that collection so the document is
      stable; nothing else is edited, and no value is supplied by hand. -->
 
+> **Historical sample.** The evidence below was collected on 2026-09-20 with the
+> 0.1.0-alpha1 package and is kept as a record; this page is rendered from it by the
+> current build, whose version it shows. That evidence predates the manifest binding
+> of auxiliary artifacts, so today's verifier reports **FAIL** for it below, which is
+> correct for evidence of that age. For current output, see the Report Guide.
+
 # ISEDRAF System Assurance Report
 
 | | |
 |---|---|
 | Report ID | `RPT-20260920T171548Z-71072fdd5e6cd97e` |
 | Generated (UTC) | 2026-09-20T17:15:48Z |
-| ISEDRAF version | 0.1.0-alpha1 |
+| ISEDRAF version | 0.1.0 |
 | Report status | **COMPLETE** |
 
 > This report describes what was **observed**. It contains no secure/insecure verdict, because host inventory is evidence and a score would be a judgement the data does not support.
@@ -33,7 +39,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 
 ## Evidence
 
-### Host identity — W1-A CERTIFIED — snapshot-bound, manifest-hashed, ledger-chained
+### Host identity — committed host identity - part of the snapshot's host state, manifest-hashed and ledger-chained
 
 | | |
 |---|---|
@@ -43,9 +49,10 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 | Ledger record | sequence 1, `sha256:1dab505f28bdb65d63fe62e1ecaeecb4f099e6ef4b4109bd6784b2a319f12698` |
 | Collection status | COLLECTED |
 | Evidence root | `docs/reference/samples/evidence/state-root` (DEV) |
-| Independent verification | **PASS** — every hash recomputed from the stored preimages |
+| Independent verification | **FAIL** |
+| Verification problem | docs/reference/samples/evidence/state-root/snapshots/SDS-20260920T171541Z-4810e53a3805777d: D-115 manifest_core has no auxiliary_artifacts key |
 
-### Host inventory — W1-C1 — collected and normalized, bound by an artifact digest. NOT part of the frozen W1-A snapshot contract (SNAP-021)
+### Host inventory — collected and normalized; committed with the audit run as a bound section, NOT part of the snapshot's host-state hash
 
 | | |
 |---|---|
@@ -90,7 +97,7 @@ The artifact digest is a content SHA-256 over the deterministic inventory artifa
 |---|---|---|---|---|---|---|
 | `vda` | 6.4 GB | virtio | true | false | 0x1af4 | — |
 
-*Kernel-reported block-device attributes. `Queue rotational` and `Kernel removable flag` describe how Linux presents the block queue; neither establishes the physical storage medium, and a block device does not necessarily correspond to one physical disk (D-114).*
+*Kernel-reported block-device attributes. `Queue rotational` and `Kernel removable flag` describe how Linux presents the block queue; neither establishes the physical storage medium, and a block device does not necessarily correspond to one physical disk.*
 
 | Mount point | Source | Type | Mode | Options |
 |---|---|---|---|---|

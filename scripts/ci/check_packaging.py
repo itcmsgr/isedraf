@@ -101,9 +101,21 @@ if not CONTROL.exists():
 elif "Architecture: all" not in CONTROL.read_text(encoding="utf-8"):
     bad("%s does not declare Architecture: all" % CONTROL.relative_to(ROOT))
 
+# --- 4. the version a package installs is the version it stamps into evidence ---------
+# SNAP-020: ENGINE_VERSION is "the VERSION file verbatim" and goes into every snapshot
+# manifest as provenance. A VERSION bump without the constant built a package that
+# installed as one version and recorded another (GA lifecycle proof, 2026-09-28).
+version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+engine = re.search(r'^ENGINE_VERSION = "([^"]*)"', (ROOT / "lib" / "isedraf" / "__init__.py")
+                   .read_text(encoding="utf-8"), re.M)
+if not engine or engine.group(1) != version:
+    bad("VERSION is %s but ENGINE_VERSION in lib/isedraf/__init__.py is %s; a package "
+        "would install as one version and record the other in its evidence (SNAP-020)"
+        % (version, engine.group(1) if engine else "missing"))
+
 if FAIL:
     print("=== packaging metadata gate FAILED ===")
     print("  A package that builds on the author's distribution is not a package.")
     sys.exit(1)
 print("  OK    packaging metadata: no build dependencies, %d changelog date(s) correct, "
-       "architecture declared" % entries)
+       "architecture declared, VERSION matches ENGINE_VERSION" % entries)

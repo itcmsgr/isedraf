@@ -1,5 +1,6 @@
 {
   "assessment": null,
+  "audit_sections": null,
   "collection_summary": [
     {
       "collection_status": "COLLECTED",
@@ -56,6 +57,7 @@
       "subdomain": "time"
     }
   ],
+  "evidence_limits": null,
   "identity_evidence": {
     "available": true,
     "collection_status": "COLLECTED",
@@ -65,15 +67,17 @@
     "ledger_record_hash": "sha256:1dab505f28bdb65d63fe62e1ecaeecb4f099e6ef4b4109bd6784b2a319f12698",
     "ledger_sequence": 1,
     "manifest_hash": "sha256:32f41a2a89693063b85580791a257363833f0438f32732a645ec63fbcdd09c8f",
-    "maturity": "W1-A CERTIFIED — snapshot-bound, manifest-hashed, ledger-chained",
+    "maturity": "committed host identity - part of the snapshot's host state, manifest-hashed and ledger-chained",
     "reason": null,
     "run_id": "RUN-20260920T171541Z-706d3c21624288c6",
     "snapshot_id": "SDS-20260920T171541Z-4810e53a3805777d",
     "state_hash": "sha256:8a69abe5f51d61d333818427118548224c0bc9d3efb31415e7355caf60e8d5b4",
     "state_root_class": "DEV",
     "verification": {
-      "problems": [],
-      "verified": true
+      "problems": [
+        "docs/reference/samples/evidence/state-root/snapshots/SDS-20260920T171541Z-4810e53a3805777d: D-115 manifest_core has no auxiliary_artifacts key"
+      ],
+      "verified": false
     }
   },
   "inventory": {
@@ -81,7 +85,7 @@
     "collected_at": "2026-09-20T17:15:48Z",
     "collection_id": "INV-20260920T171548Z-11885ac7cb292572",
     "collection_status": "COLLECTED",
-    "maturity": "W1-C1 — collected and normalized, bound by an artifact digest. NOT part of the frozen W1-A snapshot contract (SNAP-021)",
+    "maturity": "collected and normalized; committed with the audit run as a bound section, NOT part of the snapshot's host-state hash",
     "schema_version": 1,
     "subdomains": {
       "compute": {
@@ -409,12 +413,12 @@
       "storage": "/sys/block + /proc/self/mounts + statvfs(2)",
       "time": "timedatectl show"
     },
-    "engine_version": "0.1.0-alpha1",
+    "engine_version": "0.1.0",
     "inventory_schema_version": 1,
     "report_schema_version": 1
   },
   "report": {
-    "engine_version": "0.1.0-alpha1",
+    "engine_version": "0.1.0",
     "generated_at": "2026-09-20T17:15:48Z",
     "report_id": "RPT-20260920T171548Z-71072fdd5e6cd97e",
     "status": "COMPLETE"

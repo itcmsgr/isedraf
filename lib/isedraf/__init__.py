@@ -20,7 +20,7 @@
 # meta:binaries=""
 # =============================================================================
 
-"""ISEDRAF — Linux host assurance, approved baseline, state delta and evidence engine."""
+"""ISEDRAF — Linux host evidence and assurance tool."""
 
-ENGINE_VERSION = "0.1.0-alpha1"        # SNAP-020: the VERSION file verbatim
+ENGINE_VERSION = "0.1.0"               # SNAP-020: the VERSION file verbatim
 __version__ = ENGINE_VERSION

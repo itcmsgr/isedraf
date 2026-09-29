@@ -18,11 +18,24 @@
 """Where evidence lives, and who is allowed to write it."""
 import fcntl
 import os
+import stat
 
 PRODUCTION_ROOT = "/var/lib/isedraf"        # STORE-001, the single normative statement
 ENV_STATE_ROOT = "ISEDRAF_STATE_ROOT"
-DEV = "DEV"                                 # PRIV-004's literal spelling
-PRODUCTION = "PRODUCTION"
+# STORE-026 (D-116): three artifact classes, never confusable. The literal is fixed
+# by how the root was selected, never inferred from a path.
+DEV = "DEV"                                 # PRIV-004's literal spelling, unchanged
+USER_PRODUCTION = "USER_PRODUCTION"         # GA v0.1: the invoking user's own store
+SYSTEM_PRODUCTION = "SYSTEM_PRODUCTION"     # /var/lib/isedraf; Full Audit, SCOPE-072
+STATE_ROOT_CLASSES = (DEV, USER_PRODUCTION, SYSTEM_PRODUCTION)
+
+# STORE-027: filesystems known to lack the local rename/flock/fsync semantics a commit
+# relies on (remote, or FUSE, which is how most network filesystems reach the kernel),
+# and the local ones known to have them. Anything else is not established - and refused.
+UNSUITABLE_FILESYSTEMS = ("nfs", "nfs4", "cifs", "smb3", "smbfs", "9p", "afs", "ceph",
+                          "glusterfs", "lustre", "davfs", "ncpfs", "fuse")
+SUITABLE_FILESYSTEMS = ("ext2", "ext3", "ext4", "xfs", "btrfs", "f2fs", "zfs", "bcachefs",
+                        "tmpfs", "overlay")
 
 # STORE-025: W1-A creates ONLY these. baselines/, evaluations/, acceptances/, reports/,
 # exports/ and host/anchor.key belong to later freeze sets and are not created.
@@ -54,30 +67,113 @@ def resolve(environ=None, euid=None):
     euid = os.geteuid() if euid is None else euid
     if euid == 0 or bool(environ.get("SUDO_USER")):
         raise PrivilegeRefused(
-            "prototype W1 does not yet support privileged execution")
+            "Privileged execution is not supported in ISEDRAF 0.1. Run ISEDRAF as your "
+            "normal user. Evidence requiring elevated privilege is reported as NOT_TESTED.")
     override = environ.get(ENV_STATE_ROOT)
     if override:
         if not os.path.isabs(override):
             raise StateRootError("%s must be an absolute path" % ENV_STATE_ROOT)
         return override, DEV
-    # IQ-010 RESOLVED. This used to fall back to PRODUCTION_ROOT, which W1 has no way to
-    # reach: STORE-001 puts it at mode 0700 under /var/lib, only root can create it, and
-    # SCOPE-071 refuses root. That looked like a contradiction between frozen rules.
-    #
-    # It is not. SCOPE-070 already states that W1 "runs under ISEDRAF_STATE_ROOT", and
-    # PRIV-005's Mode A - `sudo isedraf`, root supervisor, sandbox, state-root writability
-    # preflight - is the only thing that ever owns the production root. Mode A is
-    # DEFERRED_TO_FREEZE_SET_2 by SCOPE-072, so W1 HAS NO PRODUCTION MODE BY DESIGN.
-    #
-    # The defect was the implementation offering one. It now says so instead.
-    raise StateRootError(
-        "W1 is unprivileged only and runs under %s (SCOPE-070). The production evidence "
-        "root %s belongs to PRIV-005's Mode A - privileged supervisor inside a sandbox - "
-        "which is deferred to Freeze Set 2 (SCOPE-072), so this slice has no production "
-        "mode to fall back to. Set %s to an absolute path you own; every artifact will "
-        "carry the DEV marker (PRIV-004)." % (ENV_STATE_ROOT, PRODUCTION_ROOT,
-                                              ENV_STATE_ROOT))
+    # IQ-010 is superseded by D-116 (STORE-026): W1 had no production mode, and
+    # GA v0.1 has an unprivileged one - the invoking user's own store. The system store
+    # stays with the Full Audit release (SCOPE-072) and is never selected here.
+    return user_root(environ), USER_PRODUCTION
 
+
+def user_root(environ):
+    """STORE-026's USER_PRODUCTION root: $XDG_STATE_HOME/isedraf when XDG_STATE_HOME is
+    absolute (a relative value is ignored), otherwise ~/.local/state/isedraf.
+
+    The home directory comes from an absolute $HOME only; with none, the run is refused
+    rather than guessed, and says how to proceed.
+    """
+    xdg = environ.get("XDG_STATE_HOME")
+    if xdg and os.path.isabs(xdg):
+        return os.path.join(xdg, "isedraf")
+    home = environ.get("HOME")
+    if home and os.path.isabs(home):
+        return os.path.join(home, ".local", "state", "isedraf")
+    raise StateRootError(
+        "the user-mode evidence store cannot be located: neither XDG_STATE_HOME nor HOME "
+        "is an absolute path (STORE-026). Set one of them, or use %s=<an absolute path "
+        "you own> for a development run." % ENV_STATE_ROOT)
+
+
+def check_user_root(root, euid):
+    """STORE-026: an existing root must be a real directory owned by `euid`, mode 0700.
+
+    Refused with a reason otherwise - never relocated, never repaired behind the
+    operator's back. An absent root is fine: prepare() creates it with 0700.
+    """
+    try:
+        info = os.lstat(root)
+    except FileNotFoundError:
+        return
+    except OSError as exc:
+        raise StateRootError("the evidence store %s cannot be examined: %s" % (root, exc))
+    if not stat.S_ISDIR(info.st_mode):
+        raise StateRootError("the evidence store %s is not a directory (a symlink or file "
+                             "is refused, STORE-026)" % root)
+    if info.st_uid != euid:
+        raise StateRootError("the evidence store %s is owned by uid %d, not the invoking "
+                             "uid %d (STORE-026)" % (root, info.st_uid, euid))
+    if stat.S_IMODE(info.st_mode) != 0o700:
+        raise StateRootError("the evidence store %s has mode %04o; it must be 0700 "
+                             "(STORE-026). Fix its permissions; it is not changed for you."
+                             % (root, stat.S_IMODE(info.st_mode)))
+
+
+def _unescape(field):
+    """mountinfo writes space, tab, newline and backslash as a backslash and 3 octal digits."""
+    out, i = [], 0
+    while i < len(field):
+        code = field[i + 1:i + 4]
+        if field[i] == "\\" and len(code) == 3 and code.isdigit():
+            out.append(chr(int(code, 8)))
+            i += 4
+        else:
+            out.append(field[i])
+            i += 1
+    return "".join(out)
+
+
+def storage_suitability(path, mountinfo="/proc/self/mountinfo"):
+    """(ok, reason) for committing evidence under `path` (STORE-027).
+
+    The filesystem is the one mounted at the longest mount point containing `path`. A
+    known-unsuitable type is refused by name; a type not known to be suitable, or mount
+    information that cannot be read, is refused as not established. Fail closed.
+    """
+    try:
+        with open(mountinfo, "rb") as fh:
+            lines = fh.read(1 << 20).decode("utf-8", "replace").splitlines()
+    except OSError as exc:
+        return False, ("STORAGE_NOT_ESTABLISHED: mount information could not be read (%s), "
+                       "so the filesystem of %s is not known" % (exc.strerror, path))
+    target = os.path.normpath(path)
+    best, fstype = "", None
+    for line in lines:
+        left, sep, right = line.partition(" - ")
+        fields = left.split(" ")
+        if not sep or len(fields) < 5 or not right:
+            continue
+        mount = _unescape(fields[4])
+        inside = target == mount or target.startswith(mount.rstrip("/") + "/")
+        if inside and len(mount) >= len(best):
+            best, fstype = mount, right.split(" ")[0]
+    if fstype is None:
+        return False, "STORAGE_NOT_ESTABLISHED: no mount contains %s" % path
+    family = fstype.split(".")[0]
+    if fstype in UNSUITABLE_FILESYSTEMS or family in UNSUITABLE_FILESYSTEMS:
+        return False, ("STORAGE_UNSUITABLE: %s is on a %s filesystem, which does not give "
+                       "the local atomic rename, lock and sync a commit needs (STORE-027). "
+                       "No evidence was committed; use a local directory via "
+                       "XDG_STATE_HOME, or a %s development run." % (path, fstype, DEV))
+    if fstype not in SUITABLE_FILESYSTEMS:
+        return False, ("STORAGE_NOT_ESTABLISHED: %s is on a %s filesystem, whose commit "
+                       "semantics are not established (STORE-027). No evidence was "
+                       "committed." % (path, fstype))
+    return True, None
 
 def prepare(root):
     """Create the W1-A subset of STORE-001's layout. umask 077, directories 0700."""

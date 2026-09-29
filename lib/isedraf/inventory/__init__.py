@@ -21,6 +21,7 @@
 # =============================================================================
 
 """`collect()` returns the whole inventory; nothing here raises on a hostile system."""
+from .. import coverage
 from . import collectors, model
 from .model import (CLASSIFICATION, COLLECTED, ERROR, INVENTORY_SCHEMA_VERSION,
                     NOT_TESTED, PARTIAL, SUBDOMAINS, VOLATILE_FIELDS)
@@ -36,6 +37,25 @@ _COLLECTORS = (
     ("dns", collectors.collect_dns),
     ("time", collectors.collect_time),
 )
+
+# R1.5-P. The PRIMARY acquisition operation of each collector, declared once here rather
+# than threaded through eighteen return statements. It is a static property of the
+# collector - what kind of thing it reads - and declaring it at the registry keeps the
+# retrofit additive instead of a rewrite of code that is already frozen and working.
+#
+# Where a collector determines an access outcome for itself it passes one, and that answer
+# wins. Where it does not, the assembler classifies CONSERVATIVELY: see _coverage.
+_OPERATIONS = {
+    "host": coverage.OP_FILE_READ,
+    "platform": coverage.OP_FILE_READ,
+    "machine": coverage.OP_FILE_READ,
+    "compute": coverage.OP_FILE_READ,
+    "memory": coverage.OP_FILE_READ,
+    "storage": coverage.OP_FILE_READ,
+    "network": coverage.OP_COMMAND,
+    "dns": coverage.OP_FILE_READ,
+    "time": coverage.OP_COMMAND,
+}
 
 
 def collect(root="/"):
@@ -53,6 +73,7 @@ def collect(root="/"):
             out["subdomains"][name] = model.subdomain(
                 model.ERROR, {}, method=getattr(function, "__name__", name),
                 reason="INTERNAL_ERROR: %s" % type(exc).__name__)
+    out["coverage"] = _coverage(out["subdomains"])
     statuses = [s["collection_status"] for s in out["subdomains"].values()]
     if all(s == COLLECTED for s in statuses):
         out["collection_status"] = COLLECTED
@@ -60,6 +81,42 @@ def collect(root="/"):
         out["collection_status"] = ERROR
     else:
         out["collection_status"] = PARTIAL
+    return out
+
+
+def _coverage(subdomains):
+    """R1.5-P acquisition context for the inventory, classified conservatively.
+
+    THE RULE THE OWNER NAMED: a nonzero exit is not a privilege problem. hostio.run
+    returns ERROR for a nonzero exit, a timeout and an OSError alike, and it has no
+    contract for telling a refusal apart from any other failure. Parsing stderr for the
+    word "permission" would be a privilege detector built on other projects' error
+    messages, and it would be wrong the first time one of them changed its wording.
+
+    So a subdomain that did not determine an access outcome for itself gets one that
+    claims nothing about authority: NOT_TESTED becomes NOT_SUPPORTED and ERROR becomes
+    IO_ERROR, both with ACCESS_NONE and privilege_limited false. PERMISSION_DENIED appears
+    here ONLY when a collector established it - which today means a file read, because
+    read_file knows EACCES from ENOENT and hostio.run knows neither.
+
+    Under-claiming is the right failure direction. Telling an operator to obtain access
+    that would change nothing is worse than telling them a source could not be read.
+    """
+    out = []
+    for name in sorted(subdomains):
+        block = subdomains[name]
+        status = block["collection_status"]
+        outcome = block.get("access_outcome")
+        if outcome not in coverage.OUTCOMES:
+            outcome = (coverage.READ_OK if status == COLLECTED
+                       else coverage.NOT_SUPPORTED if status == NOT_TESTED
+                       else coverage.IO_ERROR)
+        out.append(coverage.source(
+            "inventory", name, status, outcome,
+            block.get("operation") or _OPERATIONS.get(name, coverage.OP_FILE_READ),
+            reason=block.get("reason"),
+            universe=(coverage.UNIVERSE_COMPLETE if status == COLLECTED
+                      else coverage.UNIVERSE_INCOMPLETE)))
     return out
 
 

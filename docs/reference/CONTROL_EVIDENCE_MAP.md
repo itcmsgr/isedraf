@@ -202,9 +202,9 @@ Report
 | Collection completeness | both | per-subdomain status |
 | Limitations | both | what the evidence does not support |
 
-A rendered sample of the real output is in [`samples/SAMPLE_REPORT.md`](samples/SAMPLE_REPORT.md),
-with the same report as JSON beside it. It is real `isedraf report` output, collected by an
-unprivileged user on a disposable Debian 12 VM using the released `0.1.0-alpha1` package.
+A historical sample of the real output is in [`samples/SAMPLE_REPORT.md`](samples/SAMPLE_REPORT.md),
+with the same report as JSON beside it. Its evidence was collected by an unprivileged user on
+a disposable Debian 12 VM using the `0.1.0-alpha1` package; the current build renders it.
 
 It is **generated from committed evidence**, not pasted in. The collection it came from is in
 [`samples/evidence/`](samples/evidence/) — the inventory as collected, and the snapshot, manifest

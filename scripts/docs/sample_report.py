@@ -86,6 +86,12 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
      generation timestamp are pinned to the values of that collection so the document is
      stable; nothing else is edited, and no value is supplied by hand. -->
 
+> **Historical sample.** The evidence below was collected on 2026-09-20 with the
+> 0.1.0-alpha1 package and is kept as a record; this page is rendered from it by the
+> current build, whose version it shows. That evidence predates the manifest binding
+> of auxiliary artifacts, so today's verifier reports **FAIL** for it below, which is
+> correct for evidence of that age. For current output, see the Report Guide.
+
 """
 
 

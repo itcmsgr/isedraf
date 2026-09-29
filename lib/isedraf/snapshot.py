@@ -27,9 +27,36 @@ from . import canonical, identity, ids, stateroot
 SCHEMA_VERSION = 1
 SECTION = "host_identity"
 
+# D-115. THE AUTHORITATIVE AUXILIARY SET, written out rather than discovered.
+#
+# Explicit and bounded, deliberately. A recursive "hash everything under the snapshot
+# directory" rule would make snapshot identity depend on whatever files happened to be
+# there - an editor swap file would change the manifest - and it would also silently
+# absorb a hostile addition instead of refusing it. Adding an artifact to the bundle is a
+# contract change, so it appears here.
+AUXILIARY_ARTIFACTS = ("coverage/evidence_limits.json", "method/host_identity.json")
+
+# GA v0.1, `isedraf audit` (owner decision 2026-09-27; D-115 extension pending the
+# owner's amendment): one report section per audited domain, bound as an auxiliary
+# artifact - integrity-bound by manifest_core, outside state_hash. Named, not globbed.
+SECTION_NAMES = ("inventory", "nss", "hostname", "accounts", "sudo", "ssh", "pam",
+                 "loginpolicy", "mounts", "authorizedkeys")
+SECTION_ARTIFACTS = tuple("sections/%s.json" % n for n in SECTION_NAMES)
+AUXILIARY_ARTIFACTS = AUXILIARY_ARTIFACTS + SECTION_ARTIFACTS
+
+# Which of them every snapshot must carry. `coverage/` is written only when a coverage
+# manifest was produced; `method/` always is.
+REQUIRED_AUXILIARY = ("method/host_identity.json",)
+
+
+def auxiliary_digest(data):
+    """The digest of one auxiliary artifact's exact bytes."""
+    return canonical.rendered(
+        canonical.hash_frame(canonical.DOMAIN_AUXILIARY_ARTIFACT, data))
+
 
 def manifest_core(ident, snapshot_id, run_id, created_at, state_root_class,
-                  engine_version):
+                  engine_version, auxiliary=None):
     """SNAP-020's field table, with SNAP-023 deciding host_id.
 
     SNAP-023: host_id is the canonical identifier iff COLLECTED and IDENT-005 derived it;
@@ -51,6 +78,21 @@ def manifest_core(ident, snapshot_id, run_id, created_at, state_root_class,
         "created_at": created_at,
         "state_root": state_root_class,          # PRIV-004's literal spelling
         "engine_version": engine_version,
+        # D-115. Bound here, and therefore covered by manifest_hash and by the ledger
+        # chain that binds it.
+        #
+        # A MAP keyed by bundle-relative path, not a list of objects. The first attempt
+        # was a list and NORM-037 refused it: an array-typed field in W1-A needs a
+        # schema-defined total ordering with a golden fixture, because an unordered
+        # array is a set whose serialization nobody has pinned. A map has no such
+        # question - canonical_bytes sorts object keys (NORM-035), so the ordering is
+        # the serializer's and not this function's. It also follows the precedent
+        # directly above: `sections` is a map keyed by section name for the same reason.
+        #
+        # This is NOT part of host-state identity. An auxiliary change moves
+        # manifest_hash and leaves state_hash untouched, which is the whole point: a
+        # coverage delta is not a host-state delta, and neither is a provenance delta.
+        "auxiliary_artifacts": dict(auxiliary or {}),
         "sections": {SECTION: {
             "collection_status": ident.status,
             "state_hash": ident.state_hash,      # null unless COLLECTED (SNAP-022)
@@ -64,10 +106,35 @@ def manifest_core(ident, snapshot_id, run_id, created_at, state_root_class,
     }
 
 
-def build(ident, snapshot_id, run_id, created_at, state_root_class, engine_version):
-    """Everything a snapshot needs, computed before anything touches the store."""
+def build(ident, snapshot_id, run_id, created_at, state_root_class, engine_version,
+          coverage_manifest=None, sections=None):
+    """Everything a snapshot needs, computed before anything touches the store.
+
+    R1.5-P adds `coverage_manifest`, and adds it BESIDE manifest_core rather than inside
+    it. SNAP-020 freezes that field table and the golden vectors bind its hash; adding a
+    key would change every committed manifest hash to record something that is not host
+    state. The Evidence Limits Manifest is PROVENANCE - what the collection could observe -
+    so it travels with the bundle as its own object.
+
+    Consequence, stated rather than hidden: in R1.5-P the coverage file is NOT covered by
+    manifest_hash. It carries its own coverage_digest, which is what a later comparison
+    needs. Binding it into the manifest requires a SNAP amendment and is an open question
+    for the owner, not something to do quietly here.
+    """
+    method = canonical.canonical_bytes(identity.method_object())
+    coverage_bytes = (None if coverage_manifest is None
+                      else canonical.canonical_bytes(coverage_manifest))
+    auxiliary = {"method/host_identity.json": auxiliary_digest(method)}
+    if coverage_bytes is not None:
+        auxiliary["coverage/evidence_limits.json"] = auxiliary_digest(coverage_bytes)
+    section_bytes = {}
+    for name, obj in sorted((sections or {}).items()):
+        if name not in SECTION_NAMES:
+            raise ValueError("section %r is not in the authoritative set" % name)
+        section_bytes[name] = canonical.canonical_bytes(obj)
+        auxiliary["sections/%s.json" % name] = auxiliary_digest(section_bytes[name])
     core = manifest_core(ident, snapshot_id, run_id, created_at, state_root_class,
-                         engine_version)
+                         engine_version, auxiliary)
     core_canonical = canonical.canonical_bytes(core)
     manifest_hash = canonical.rendered(
         canonical.hash_frame(canonical.DOMAIN_SNAPSHOT_MANIFEST, core_canonical))
@@ -77,8 +144,12 @@ def build(ident, snapshot_id, run_id, created_at, state_root_class, engine_versi
         "manifest_hash": manifest_hash,
         "manifest": canonical.canonical_bytes(
             {"manifest_core": core, "manifest_hash": manifest_hash}),
-        "method": canonical.canonical_bytes(identity.method_object()),
+        "method": method,
         "state": ident.state_canonical,
+        "coverage": coverage_bytes,
+        "coverage_digest": (None if coverage_manifest is None
+                            else coverage_manifest["coverage_digest"]),
+        "sections": section_bytes,
     }
 
 
@@ -107,6 +178,20 @@ def commit(root, built, snapshot_id):
             stateroot.write_file(os.path.join(staging, "state", "host_identity.json"),
                                  built["state"])
             stateroot.fsync_dir(os.path.join(staging, "state"))
+        if built.get("coverage") is not None:
+            os.makedirs(os.path.join(staging, "coverage"), mode=0o700)
+            stateroot.write_file(
+                os.path.join(staging, "coverage", "evidence_limits.json"),
+                built["coverage"])
+            stateroot.fsync_dir(os.path.join(staging, "coverage"))
+        if built.get("sections"):
+            # Inside the same private staging directory, so the one atomic rename below
+            # commits the identity snapshot and every section together, or neither.
+            os.makedirs(os.path.join(staging, "sections"), mode=0o700)
+            for name, data in sorted(built["sections"].items()):
+                stateroot.write_file(os.path.join(staging, "sections", name + ".json"),
+                                     data)
+            stateroot.fsync_dir(os.path.join(staging, "sections"))
         stateroot.fsync_dir(os.path.join(staging, "method"))
         stateroot.fsync_dir(staging)
         os.rename(staging, final)                       # atomic within the state root

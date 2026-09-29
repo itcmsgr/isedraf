@@ -27,16 +27,20 @@ import hashlib
 import json
 import os
 
-from .. import ENGINE_VERSION, ids, ledger, verify
+from .. import ENGINE_VERSION, coverage, ids, ledger, verify
 from ..inventory import model as inventory_model
 from . import artifact as artifact_module
+from . import sections as section_summaries
 from .profile import IDENTITY_DISCLAIMER
 
 REPORT_SCHEMA_VERSION = 1
 
-IDENTITY_MATURITY = "W1-A CERTIFIED — snapshot-bound, manifest-hashed, ledger-chained"
-INVENTORY_MATURITY = ("W1-C1 — collected and normalized, bound by an artifact digest. "
-                      "NOT part of the frozen W1-A snapshot contract (SNAP-021)")
+# Plain words on the report itself (GA v0.1 public docs review): the two blocks stay
+# distinct, because host identity is part of host state and inventory is not.
+IDENTITY_MATURITY = ("committed host identity - part of the snapshot's host state, "
+                     "manifest-hashed and ledger-chained")
+INVENTORY_MATURITY = ("collected and normalized; committed with the audit run as a bound "
+                      "section, NOT part of the snapshot's host-state hash")
 
 # Only limitations that say something. A reader who has to wade through boilerplate stops
 # reading the ones that matter.
@@ -59,11 +63,48 @@ BASE_LIMITATIONS = [
 
 
 def _latest_snapshot(root):
-    base = os.path.join(root, "snapshots")
+    """The snapshot of the LAST LEDGER RECORD - the latest committed run.
+
+    D-50: the ledger append is the commit. The newest directory under snapshots/ can be an
+    orphan whose run stopped between the atomic rename and the append; reporting it would
+    present uncommitted evidence as the run (GA track, found while wiring `audit`).
+    """
+    try:
+        records = list(ledger.read_records(root))
+    except (OSError, ValueError):
+        return None
+    if not records:
+        return None
+    name = records[-1]["record_core"]["snapshot_id"]
+    return name if os.path.isdir(os.path.join(root, "snapshots", name)) else None
+
+
+def committed_run(root):
+    """The latest committed run's audit sections, or None when it has none.
+
+    Read from the bundle, never collected. An identity-only run is a committed run but not
+    an audit run, and a report never mixes one run's identity with another's sections.
+    """
+    name = _latest_snapshot(root)
+    if name is None:
+        return None
+    base = os.path.join(root, "snapshots", name, "sections")
     if not os.path.isdir(base):
         return None
-    names = sorted(n for n in os.listdir(base) if n.startswith("SDS-"))
-    return names[-1] if names else None
+    sections = {}
+    for entry in sorted(os.listdir(base)):
+        if entry.endswith(".json"):
+            with open(os.path.join(base, entry), "rb") as fh:
+                sections[entry[:-5]] = json.loads(fh.read().decode("utf-8"))
+    if "inventory" not in sections:
+        return None
+    try:
+        with open(os.path.join(root, "snapshots", name, "manifest.json"), "rb") as fh:
+            bound = json.loads(fh.read().decode("utf-8"))["manifest_core"]["auxiliary_artifacts"]
+    except (OSError, ValueError, KeyError):
+        bound = {}
+    digests = {n: bound.get("sections/%s.json" % n) for n in sections}
+    return {"snapshot_id": name, "sections": sections, "digests": digests}
 
 
 def identity_evidence(root):
@@ -142,8 +183,47 @@ def _limitations(inventory):
     return out
 
 
+def _coverage_limitations(manifest):
+    """Limitation sentences derived from STRUCTURED coverage, never from prose.
+
+    R1.5-P's point in one function: the renderer reads fields. It does not parse the
+    English `reason` a collector wrote, because a consumer that has to parse a sentence to
+    learn whether privilege caused a gap is a consumer that will eventually parse it
+    wrong.
+    """
+    if not manifest:
+        return []
+    out = []
+    limited = [s for s in manifest["limitations"] if s["privilege_limited"]]
+    if limited:
+        classes = sorted(set(s["required_access"] for s in limited))
+        out.append(
+            "%d requested source(s) were not observed because the collection identity "
+            "lacked sufficient access. Additional evidence access required: %s. This is "
+            "a statement about who was asking, not about the host's security."
+            % (len(limited), ", ".join(classes)))
+    other = [s for s in manifest["limitations"] if not s["privilege_limited"]]
+    if other:
+        out.append(
+            "%d requested source(s) were not fully observed for reasons unrelated to "
+            "access. Additional authority would not change them." % len(other))
+    forbidden = [s for s in manifest["sources"] if not s["absence_claim_allowed"]]
+    if forbidden:
+        out.append(
+            "%d requested source(s) were not observed completely, so absence of a record "
+            "in them is NOT evidence that the record does not exist."
+            % len(forbidden))
+    if manifest["limitations"]:
+        out.append(
+            "This collection is incomplete over its requested evidence universe. No "
+            "acquisition mode makes it complete: additional authority would change the "
+            "access-limited sources above and nothing else.")
+    return out
+
+
 def build(root, inventory, assessment=None, generated_at=None, report_id=None,
-          inventory_artifact=None):
+          inventory_artifact=None, coverage_manifest=None, audit_sections=None,
+          audit_digests=None):
     """The whole model. Assessment metadata is presentation and touches no evidence."""
     generated_at = generated_at or ids.now_utc()
     report_id = report_id or ids.new_id("RPT", generated_at)
@@ -153,6 +233,9 @@ def build(root, inventory, assessment=None, generated_at=None, report_id=None,
 
     host = (inventory.get("subdomains", {}).get("host", {}).get("data") or {})
     statuses = [r["collection_status"] for r in summary]
+    # Every audited section counts, not only inventory: a run with a NOT_TESTED section
+    # was labelled COMPLETE and exited 0 (GA smoke test, 2026-09-27).
+    statuses += [s.get("collection_status") for s in (audit_sections or {}).values()]
     status = "COMPLETE" if all(s == inventory_model.COLLECTED for s in statuses) \
         else "PARTIAL"
 
@@ -185,7 +268,24 @@ def build(root, inventory, assessment=None, generated_at=None, report_id=None,
             "subdomains": inventory.get("subdomains", {}),
         },
         "collection_summary": summary,
-        "limitations": _limitations(inventory),
+        # GA track: one line per audited domain of the committed run. Status and reason
+        # only; the evidence itself stays in the bundle's section files.
+        "audit_sections": ({name: {"collection_status": s.get("collection_status"),
+                                   "reason": s.get("reason"),
+                                   "title": section_summaries.TITLES.get(name, name),
+                                   "summary": [[label, value] for label, value in
+                                               section_summaries.summarize(name, s)],
+                                   "evidence_ref": {
+                                       "path": "sections/%s.json" % name,
+                                       "digest": (audit_digests or {}).get(name)}}
+                            for name, s in sorted(audit_sections.items())}
+                           if audit_sections is not None else None),
+        # R1.5-P. The Evidence Limits Manifest is carried, not re-derived: the report
+        # RENDERS coverage evidence and does not compute it, for the same reason a
+        # renderer does not collect. Absent when the caller supplied none, so that
+        # "no manifest" and "an empty manifest" stay distinguishable (NORM-034).
+        "evidence_limits": coverage_manifest,
+        "limitations": _limitations(inventory) + _coverage_limitations(coverage_manifest),
         "provenance": {
             "engine_version": ENGINE_VERSION,
             "inventory_schema_version": inventory.get("schema_version"),

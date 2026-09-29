@@ -8,6 +8,11 @@ Status: IMPLEMENTED
 
 `/docs` is canonical. The repository `README.md` is the front door. There is no GitHub Wiki (D-87).
 
+**New to ISEDRAF?** Read the public guides first: [Getting started](GETTING_STARTED.md) ·
+[Evidence model](EVIDENCE_MODEL.md) · [Auditor guide](AUDITOR_GUIDE.md) ·
+[Report guide](REPORT_GUIDE.md) · [Security and limitations](SECURITY_AND_LIMITATIONS.md).
+The rest of `/docs` is the engineering and normative layer.
+
 **Start here:** [`CURRENT_STATE.md`](CURRENT_STATE.md) — what exists right now ·
 [`operator/STORAGE_AND_OUTPUTS.md`](operator/STORAGE_AND_OUTPUTS.md) — where snapshots, evidence,
 the ledger, reports and logs are stored ·

@@ -2,349 +2,149 @@
 
 **Linux Host Assurance with Approved Baselines, State Delta & Verifiable Evidence**
 
-> Measure once. Map everywhere. Fix only the delta.
-
 [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0--alpha1-lightgrey)](VERSION)
-[![Status](https://img.shields.io/badge/status-technical%20preview-orange)](docs/CURRENT_STATE.md)
+[![Version](https://img.shields.io/badge/version-0.1.0-lightgrey)](VERSION)
+[![Status](https://img.shields.io/badge/status-general%20availability-green)](docs/CURRENT_STATE.md)
 [![Platforms](https://img.shields.io/badge/platforms-11%20Linux%20distributions%20measured-informational)](docs/reference/PLATFORM_COMPATIBILITY.md)
+[![Governance](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml/badge.svg)](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/itcmsgr/isedraf/badge)](https://scorecard.dev/viewer/?uri=github.com/itcmsgr/isedraf) [![OpenSSF Baseline](https://www.bestpractices.dev/projects/15010/baseline)](https://www.bestpractices.dev/en/projects/15010/baseline-1)
 
-**CI / Correctness**
+> **Current release: 0.1.0 — General Availability.** ISEDRAF 0.1.0 provides production unprivileged
+> Linux host evidence collection. Privileged full-audit execution is not included in this release.
 
-[![Governance](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml/badge.svg)](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml)
+## What is ISEDRAF?
 
-> **Status:** Public technical preview. ISEDRAF is a codename. The source is published and the
-> supply-chain controls run against it; **no release has been published**, so there is nothing to
-> download from a releases page yet. Build from source if you want to try it.
+ISEDRAF is a command you run on one Linux host when you want evidence about that host.
+It reads what the host exposes locally, records where each fact came from and whether it
+could be read at all, and commits the result as a verifiable evidence run on local disk.
 
-> **Every mark above is backed by a control that runs, or by a file in this repository.** Decorative trust
-> badges are not used. Badges that cannot yet be earned are listed in
-> [Security & supply-chain assurance](#security--supply-chain-assurance) as *planned*, not displayed.
+ISEDRAF 0.1 is deliberately small and unprivileged:
 
-ISEDRAF is an open-source Linux host assurance project designed to bridge day-to-day system administration with security audit and governance evidence.
+- it runs as your own user, never as root;
+- it uses the system Python 3 (3.6 or later) and its standard library, nothing else;
+- it has no daemon, no database, no network connection and no remote control;
+- it is installed from a DEB or RPM package;
+- it is built not to change the host it inspects.
 
-It collects security-relevant state that the local operating system can actually prove, normalizes that state into stable machine-readable evidence, creates explicit approved baselines, and reports meaningful changes between runs.
+Approved baselines and state comparison, named in the subtitle above, are the direction of
+the project. They are not part of 0.1.
 
-The same evidence is intended to serve three views:
+## What does it collect?
 
-- the system administrator — what changed and what needs attention;
-- the security auditor — what was observed, how it was collected, and what can or cannot be concluded;
-- the organization — portable JSON/JSONL evidence that can later be ingested into existing governance, inventory or analytics workflows.
+One `isedraf audit` reads ten areas of the host, once:
 
-## Core model
+| Area | What is read |
+|---|---|
+| Host and platform | operating system, kernel, architecture, hardware and network inventory |
+| Local accounts and groups | `/etc/passwd`, `/etc/group`, and `/etc/shadow` when readable |
+| Name service (NSS) | which sources the system uses to look up accounts |
+| Hostname | the declared hostname and the one the kernel is using |
+| sudo | the sudo policy files, when readable |
+| SSH server | the SSH daemon configuration files |
+| PAM | the PAM configuration |
+| Login policy | password ageing and login defaults |
+| Mounts | declared and active mounts |
+| SSH authorized keys | key files named by the SSH configuration |
 
-```text
-local host evidence
-        ↓
-normalization
-        ↓
-immutable snapshot
-        ↓
-approved baseline
-        ↓
-comparable state
-        ↓
-classified delta
-        ↓
-explanation
-        ↓
-portable evidence
+Each area gets a status: **COLLECTED**, **PARTIAL**, **NOT_TESTED** or **ERROR**.
+Because 0.1 runs without root, anything that needs root (for example `/etc/shadow` or the
+sudo policy) is reported as NOT_TESTED, with the reason.
+
+## What it does not claim
+
+- **NOT_TESTED is not a pass.** It means the fact was not observed.
+- **It gives no verdicts.** There is no PASS/FAIL, no score and no findings in 0.1.
+- **It is not a compliance tool.** Host evidence is not organizational compliance, and no
+  framework mapping exists in this repository.
+- **It does not prove a host is uncompromised.** A local root user can alter what ISEDRAF
+  reads, and ISEDRAF itself.
+- **It is not remote attestation.** Evidence is protected by file permissions on the host.
+- **It does not assess firewalls, antivirus, EDR, SIEM, backups, cloud or network
+  controls, patch availability or CVEs.** A product missing from the host does not mean
+  the control is missing.
+
+The full list, with reasons, is in [Security and limitations](docs/SECURITY_AND_LIMITATIONS.md).
+
+## Install
+
+No published packages exist yet. Build them from a clean checkout of this repository:
+
+```sh
+bash packaging/build.sh
 ```
 
-A baseline means accepted state, not automatically secure state.
+The packages land in `dist/packages/`. Install the one for your distribution with the
+system package manager, for example `apt install ./dist/packages/isedraf-latest_all.deb`
+or `dnf install ./dist/packages/isedraf-latest.noarch.rpm`.
+The package installs `/usr/bin/isedraf` and `/usr/lib/isedraf/`, and depends only on
+`python3`. It creates no user and starts no service.
 
-No observed security-relevant delta does not prove that a host is uncompromised.
+[Getting started](docs/GETTING_STARTED.md) covers building, installing, and running from
+a checkout without installing.
 
-## Prototype scope
+## First run
 
-The initial prototype is deliberately narrow:
+Run it as your normal user. Do not use `sudo`: this release refuses to run as root.
 
-- host identity;
-- local users and groups;
-- local sudo privilege;
-- `authorized_keys` fingerprints;
-- password/account ageing;
-- SSH resolved state;
-- mounts — declared, resolved and active;
-- audit subsystem state;
-- journald recording coverage;
-- time synchronization quality required for trustworthy recording evidence.
-
-The objective is not maximum control count.
-
-The first objective is trustworthy state and trustworthy delta.
-
-## Explicitly outside the host evidence boundary
-
-ISEDRAF core does not assess:
-
-- firewall effectiveness;
-- AV/EDR/XDR;
-- IDS/IPS;
-- SIEM effectiveness;
-- cloud controls;
-- external network controls;
-- WAF;
-- external backup systems;
-- remote patch availability;
-- vulnerability-feed/CVE correlation.
-
-Absence of a locally detectable external product is not interpreted as absence of that security control.
-
-## Design principles
-
-ISEDRAF is designed around:
-
-- read-only host assessment;
-- no privileged daemon;
-- no internal sudo;
-- no embedded database;
-- no API server;
-- no network egress from the core collector;
-- canonical JSON/JSONL artifacts;
-- immutable snapshots;
-- explicit baseline approval;
-- granular accepted changes;
-- collection truth separate from evaluation;
-- `NOT_TESTED` and `NOT_COMPARABLE` instead of invented PASS/FAIL;
-- declared / resolved / active state where applicable;
-- operator and auditor views derived from the same evidence.
-
-## v0.1.0-alpha1 — what is claimed, and what is not
-
-**ISEDRAF Technical Preview — Linux Host Assurance & Evidence Engine.**
-
-Implemented and observed:
-
-| | |
-|---|---|
-| deterministic host identity | immutable identity evidence |
-| hash-chained ledger | independent verification |
-| host inventory | JSON + Markdown reports |
-| DEB / RPM / source packages | Python 3.6+ production-code compatibility |
-| validated Linux distribution families | CodeQL |
-| Scorecard execution | SPDX SBOM |
-| artifact attestations | tamper-verification |
-| falsifiable internal gates | |
-
-**Not yet claimed** — each of these is absent on purpose, and none is coming in this release:
-
-`GA / production readiness` · `all Linux distributions` · `ARM64 certification` ·
-`organizational compliance` · `CIS mapping` · `ISO 27001 mapping` · `NIS2 / DORA compliance` ·
-`PDF reports` · `privileged production Mode A`
-
-A technical preview is a thing you can install, inspect and verify. It is not a thing to run a
-compliance programme on.
-
-## Framework mappings
-
-**None exist, none are bundled, and none are licensed.** No third-party control text, identifier set
-or mapping dataset is present in this repository, in the packages or in the SBOM.
-
-The evidence model is designed to support optional, independently versioned framework mappings where
-licensing and scope permit. That is a statement about architecture, not about availability.
-
-ISEDRAF's collectors and criteria are framework-neutral: they describe the Linux host, they are
-authored by this project, and removing every framework would leave them exactly as useful. A mapping,
-when one exists, is a downstream overlay on evidence that was already collected — never a reason a
-collector was written.
-
-Licensing is decided before content arrives. `scripts/ci/framework_sources.json` is **deny by
-default**, `make check-licensing` enforces it, and five defect injections prove it can refuse. See
-[Framework mapping policy](docs/licensing/FRAMEWORK_MAPPING_POLICY.md).
-
-A mapping is not a certification, and host evidence is supporting technical evidence rather than
-organisational compliance.
-
-## Scope
-
-ISEDRAF's scope is its own host-state, evidence, baseline and delta model. It does not implement
-SCAP content, file-integrity monitoring, vulnerability scanning, telemetry query or log shipping,
-and it makes no assessment of tools that do.
-
-The previous wording here named eight other projects in order to say ISEDRAF was not competing with
-them. Naming them was itself the comparison: it placed ISEDRAF on the same axis and invited the
-reader to make it. `C-06` forbids that, and `make check-docs-truth` now enforces it.
-
-## Security & supply-chain assurance
-
-What is true today, and verifiable from this repository:
-
-| Control | Where it is proven |
-|---|---|
-| Governance, header identity, shell syntax and documentation gates run on every push and pull request | `.github/workflows/governance.yml`, `make check` |
-| Every gate is proven able to fail, by deliberate defect injection | `make check-falsifiable` |
-| Every third-party GitHub Action is pinned to a full commit SHA, enforced rather than asserted | `.github/workflows/`, `make check-docs-truth` |
-| Workflow tokens default to read-only; Actions cannot approve pull requests | repository Actions settings |
-| The runtime imports only the Python standard library | `lib/isedraf/` source; a mechanical import-allowlist gate is PLANNED |
-| No networking module is imported and no egress path exists in the collector | source inspection; a mechanical allowlist gate and any kernel-level restriction are PLANNED |
-| Canonical artifacts are hashed with a named algorithm, and an independent verifier re-derives every hash from the stored preimages | `scripts/vectors/verify.py`, `test-vectors/w1a/v1/` |
-| Security-sensitive failures are tested with deliberate negative cases | corpus acceptance tests |
-| No real operator identifier reaches the publication surface | `make check-privacy` |
-| Documentation references, action pins, competitive framing and quoted digests are checked mechanically | `make check-docs-truth` |
-| CodeQL analyses both the Python **and** the GitHub Actions workflows, with the security-extended query suite | [`codeql.yml`](.github/workflows/codeql.yml) |
-| OpenSSF Scorecard runs against this repository; results go to code scanning, and **no score is published or displayed** | [`scorecard.yml`](.github/workflows/scorecard.yml) |
-| Release artifacts carry build provenance and an SBOM attestation, and the attestation has been **observed to refuse a forgery** — each artifact verifies, a copy with one flipped byte does not | [`check_attestation_falsifiable.sh`](scripts/ci/check_attestation_falsifiable.sh) |
-| Packaging metadata is checked as text, on any machine, before a commit — a package that builds on the author's distribution is not a package | `make check-packaging` |
-| The source tarball and the `.deb` rebuild **bit-for-bit on a different distribution**, and the locally rebuilt files verify against the attestation GitHub produced. The `.rpm` is **not** claimed byte-identical across rpm toolchain versions — rpm 4 and rpm 6 choose different payload compression, which is toolchain variation and not a different ISEDRAF payload | `make check-reproducible`, `make check-deb-ordering`, [`KGG-016`](docs/development/GOVERNANCE_GAPS.md) |
-| A machine-readable SBOM describes each artifact, generated from the **final package** and checked against it — for the RPM, against `rpm`'s own recorded per-file digests | `scripts/ci/generate_sbom.py`, `make check-sbom` |
-| Every tracked file carries a licence statement, and third-party framework content is deny-by-default: unknown licensing state means not distributable | `make check-licensing`, [`FRAMEWORK_SOURCE_REGISTRY`](docs/licensing/FRAMEWORK_SOURCE_REGISTRY.md) |
-| Controls that are intended but **not** in force are written down, not glossed over | [`docs/development/GOVERNANCE_GAPS.md`](docs/development/GOVERNANCE_GAPS.md) |
-
-### Planned, not yet displayed
-
-These are deliberately absent until they are earned.
-
-Secret scanning remains unavailable on this plan — verified, not assumed — and a deterministic local
-secret-pattern gate stands in for it, which is **not** equivalent: no partner-token feed, no historical
-scan, no push-time enforcement. That substitution is written down in
-[`KGG-002`](docs/development/GOVERNANCE_GAPS.md) rather than glossed over.
-
-`SLSA Build L3` — **not claimed**, and deliberately not claimed even though provenance now
-exists: only once release artifacts genuinely meet the build-platform and provenance
-requirements; the SLSA generator's own documentation states that using its workflows alone does not
-satisfy every L3 obligation · `OpenSSF Best Practices` (earned by satisfying the criteria, not by inserting the image) ·
-`OSV-Scanner` · `Gitleaks` · `REUSE compliance` ·
-`SHA-256 release checksums` · `signed release artifacts` ·
-**`Baseline & delta invariants`** — the ISEDRAF-specific one: ten unchanged runs produce zero changes,
-`NOT_TESTED` never becomes `REMOVED`, an engine upgrade produces zero false security changes, snapshots
-stay immutable, and a new privileged user is detected.
-
-### Written, and never run
-
-A third state, between *in force* and *planned*, which this project needs a word for because
-collapsing it into either one would be a claim the evidence has not earned:
-
-Nothing currently sits in this state: CodeQL, Scorecard, build provenance, SBOM attestation and
-the control that proves an attestation refuses a forgery all ran for the first time on 2026-09-19
-and are listed in the table above instead. `KGG-011` records what they were before that, and is
-closed.
-
-The mechanism stays, because it is what made the distinction honest while it lasted: each of those
-jobs is conditional on the repository being public, a skipped job reports **green**, and so every
-one of them is paired with a `guard` job that **fails** if the analysis was due and did not run.
-`docs/CURRENT_STATE.md` still understands `WRITTEN_NEVER_RUN` as a status, and will use it again.
-
-### What may be said about reproducibility
-
-Three artifacts, three different strengths of claim, and they are not interchangeable:
-
-| Artifact | Claim |
-|---|---|
-| source tarball | **cross-builder byte reproducibility demonstrated** |
-| `.deb` | **cross-builder byte reproducibility demonstrated.** It also rebuilt byte-identically after a source-tree documentation-only change that did not alter its package payload |
-| `.rpm` | **payload and package semantics consistent.** Byte reproducibility across rpm 4 / rpm 6 is **not claimed** |
-
-Tested builders: Fedora 44 / btrfs / rpm 6.0.2 and `ubuntu-latest` / ext4 / rpm 4.18.2. `BUILDTIME`
-was identical on both, so `SOURCE_DATE_EPOCH` taken from the commit works across toolchains; the
-`.rpm` bytes differ because rpm 6 writes a **zstd** payload where rpm 4 writes **gzip**.
-
-**No `Reproducible Builds ✓` badge will be shown**, now or later, without a qualifier naming which
-formats actually have byte-identical proof. A green tick beside three artifacts when two of them
-qualify is the kind of claim this project exists not to make.
-
-### The rule
-
-Every green mark is clickable and leads to the evidence behind it — a workflow run, a release provenance
-record with verification instructions, a live scorecard, or the criteria page. A badge that cannot link to
-evidence is not added.
-
-Never used: *secure* · *audited* · *compliant* · *enterprise ready* · *100% tests* · *tamper proof*.
-Those are marketing claims, not evidence.
-
-## What exists today
-
-ISEDRAF is an **early-stage prototype**. What follows is measured, not projected:
-
-| | |
-|---|---|
-| `isedraf identity` | `/etc/machine-id` → normalized → `host_id` → immutable snapshot → hash-chained ledger → independent verification |
-| `isedraf inventory` | platform, machine, CPU, memory, storage, network with classified IPv6, DNS, time — every field classified as fact or observation |
-| `isedraf report` | one report model, rendered as JSON and Markdown, with an optional assessment profile |
-
-Measured across **ten Linux distributions** — Debian 11/12/13, Ubuntu 22.04/24.04/26.04, AlmaLinux 8/9,
-Rocky 9, CentOS Stream 9, openSUSE Leap 15.6 — producing **identical canonical bytes on CPython 3.6.8
-through 3.14.4**, with **no distribution-specific code**. All of it on `x86_64`; ARM64 is a first-class
-target that **has not been tested yet**, and [the compatibility record](docs/reference/PLATFORM_COMPATIBILITY.md)
-says so rather than implying otherwise.
-
-Nothing is released. See [the roadmap](docs/roadmap/ROADMAP.md).
-
-## Where ISEDRAF stores data
-
-```text
-/etc/isedraf/        administrator configuration            (PLANNED)
-/var/lib/isedraf/    persistent canonical state and evidence
-journal              operational records, via journald      (PLANNED)
-/run/isedraf/        ephemeral runtime state                (PLANNED)
+```sh
+isedraf audit          # collect once and commit one evidence run
+isedraf report --html --save   # render that run as a static HTML file
 ```
 
-**Logs explain the run. Evidence describes the host.** Back up `/var/lib/isedraf/`; log retention is a
-separate concern and is not a substitute for evidence.
+`isedraf audit` prints one status line per area and exits:
 
-Snapshots, the hash-chained ledger, reports, exports, permissions, identifiers and the development state
-root are all covered in **[Storage and Outputs](docs/operator/STORAGE_AND_OUTPUTS.md)**, which is the
-canonical reference and says which paths exist today.
+| Exit | Meaning |
+|---|---|
+| 0 | the run was committed and every area was COLLECTED |
+| 2 | the run was committed, but some areas are PARTIAL, NOT_TESTED or ERROR |
+| 64 | usage or engine error, or the evidence store was refused |
+| 70 | run as root or through sudo; refused, nothing was collected |
 
-For how an observed fact maps to its Linux source, its normalized field, its evidence artifact and — crucially — what it does **not** prove, see
-**[Control & Evidence Map](docs/reference/CONTROL_EVIDENCE_MAP.md)**.
+Exit 2 is the normal result of an unprivileged run on a real host.
 
-## Documentation
+## What output do I get?
 
-Canonical technical documentation lives under:
+- **Evidence** in `~/.local/state/isedraf` (or `$XDG_STATE_HOME/isedraf`): one directory
+  per run, a hash-chained ledger, mode 0700, owned by you.
+- **A report** rendered from the last committed run, as Markdown (default), JSON
+  (`--json`) or static HTML (`--html`). `--save` writes it into the evidence store.
+  A report never collects anything.
 
-```text
-docs/
-```
+The HTML report opens with the privilege level and the overall evidence status, then one
+section per area: its status, the reason when it is not COLLECTED, the facts observed,
+and a reference to the evidence file and its digest.
 
-Architecture and implementation are traceable through frozen requirement IDs and the project decisions register.
+Removing the package never deletes the evidence.
 
-The GitHub Wiki is not authoritative.
+## Where to read next
 
-## Development status
+| If you want to | Read |
+|---|---|
+| install, run, and fix a refused run | [Getting started](docs/GETTING_STARTED.md) |
+| understand statuses, runs and verification | [Evidence model](docs/EVIDENCE_MODEL.md) |
+| review a run as an auditor, and check a fact by hand | [Auditor guide](docs/AUDITOR_GUIDE.md) |
+| read the report section by section | [Report guide](docs/REPORT_GUIDE.md) |
+| know exactly what ISEDRAF cannot tell you | [Security and limitations](docs/SECURITY_AND_LIMITATIONS.md) |
 
-Implementation status is tracked in:
+The reader test for these pages: a new administrator or auditor should be able to say what
+ISEDRAF is, what it collected and did not collect, what a report tells them and does not
+prove, where a fact came from, and what to read next, without the internal engineering
+documents. If they cannot, that is a documentation defect; please report it.
 
-```text
-docs/CURRENT_STATE.md
-```
-
-Future capabilities described in architecture or roadmap material must not be interpreted as released functionality.
+Engineering and design documents live under [`docs/`](docs/README.md); implementation
+status is in [Current state](docs/CURRENT_STATE.md).
 
 ## Security
 
-Do not publish sensitive host evidence or suspected vulnerabilities in ordinary issues.
-
-See:
-
-```text
-SECURITY.md
-```
-
-Security contact:
-
-```text
-contact@itcms.gr
-```
+Do not put host evidence or suspected vulnerabilities in public issues. See
+[SECURITY.md](SECURITY.md). Contact: contact@itcms.gr.
 
 ## AI-assisted development
 
-AI systems may assist with design review, implementation, testing and documentation.
-
-They do not own the project or hold architectural authority.
-
-Final project decisions, acceptance, release authority and responsibility remain with Antonios Voulvoulis / ITCMS.
-
-See:
-
-```text
-AI_ASSISTED_DEVELOPMENT.md
-```
+ISEDRAF is developed with AI assistance. AI systems help with design review,
+implementation, testing and documentation; they hold no ownership or architectural
+authority. Decisions, acceptance, releases and responsibility remain with Antonios
+Voulvoulis / ITCMS. See [AI_ASSISTED_DEVELOPMENT.md](AI_ASSISTED_DEVELOPMENT.md).
 
 ## License
 
-ISEDRAF is licensed under the Mozilla Public License 2.0.
-
-Copyright © 2026 Antonios Voulvoulis / ITCMS.
-
-See `LICENSE`.
+Mozilla Public License 2.0. Copyright © 2026 Antonios Voulvoulis / ITCMS. See [LICENSE](LICENSE).
