@@ -23,10 +23,11 @@
   },
   "required_criterion_fields": [
     "criterion_id", "purpose", "facts_required", "dimensions", "evaluation_semantics",
-    "applicability", "limitations", "evidence_pointers", "version"
+    "applicability", "limitations", "evidence_pointers", "version", "default_severity"
   ],
   "optional_criterion_fields": ["remediation_guidance"],
-  "result_states": ["PASS", "FAIL", "PARTIAL", "NOT_EVALUATED"],
+  "result_states": ["PASS", "FAIL", "NOT_APPLICABLE", "MANUAL_REVIEW", "NOT_EVALUATED"],
+  "severity_levels": ["critical", "high", "medium", "low"],
   "criteria": [],
   "$criteria_comment": "Empty. No native criterion is authored yet; they arrive in W1-D. The gate proves the namespace is consistent and that nothing framework-derived has entered it - it does not treat an empty catalog as a pass by omission."
 }

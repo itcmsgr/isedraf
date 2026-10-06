@@ -363,6 +363,9 @@ checkpoint cumulative hash W1 does not compute needs no domain (U-03).
 **SCOPE-050 (owner directive, 2026-09-17) SHALL** After W0, implementation SHALL NOT proceed by building
 every prototype domain in parallel. The **first vertical slice** takes one fact through the complete
 lifecycle and proves silence on an unchanged host. Breadth follows only after that.
+**Release placement (D-120):** the baseline approval, comparability, derived evaluation and
+classified delta steps of W1, and the baseline-maturity items of W4, are delivered in v0.4, after
+the privileged evidence authority of v0.2; `BASE-003` is unchanged.
 
 | Milestone | Content | Exit criteria |
 |---|---|---|

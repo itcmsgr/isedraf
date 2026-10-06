@@ -10,9 +10,13 @@ Implements: D-65, D-66, D-82, D-88
 Everything on this page is `PLANNED`, `FUTURE` or `OUT_OF_SCOPE`. Nothing here is released.
 For what exists, see [`../CURRENT_STATE.md`](../CURRENT_STATE.md).
 
-## GA release track — current priority (owner directive, 2026-09-27)
+## GA release track — COMPLETE (owner directive, 2026-09-27)
 
-The goal is a usable, GA-quality operational release: installable, operational,
+0.1.0 was released on 2026-09-28. The next releases are under
+[Release sequence after GA](#release-sequence-after-ga-owner-decision-2026-10-05). The track
+and its triage rule are kept here because they describe how GA was judged.
+
+The goal was a usable, GA-quality operational release: installable, operational,
 predictable, honest, with safe failure modes, a useful report and clear limitations, and
 no known major blocker. A GA release will still have bugs; it must not have those.
 
@@ -94,6 +98,10 @@ Everything from Phase 1 onward is `PLANNED` or `FUTURE`. Nothing below Phase 0 i
 | 7 | Generic mapping engine | `FUTURE` | an overlay that never modifies facts, criteria, results, snapshots, ledger, baseline or delta |
 | 8 | Mode B — validated open mappings | `FUTURE` | an external authority whose exact reuse rights were verified first |
 | 9 | Mode C — provider-authorized BYOL | `FUTURE` | a written provider agreement; the core stays MPL-2.0 |
+
+The phases map onto the releases after GA like this: Phases 3 and 4 are v0.3, Phase 5 is v0.4, and
+Phases 7 to 9 begin in v0.5. v0.2 adds the evidence authority that Phases 3 to 5 depend on. Phase 6
+runs in parallel and is tied to no release.
 
 ### The alpha goal, stated plainly
 
@@ -383,19 +391,12 @@ and therefore the most valuable failure).
 Alpine is worth singling out: it is the candidate most likely to *fail*, which is exactly why it is
 worth running. A campaign that only ever confirms what was expected is not measuring anything.
 
-## v0.1 — PLANNED
-
-Adds kernel and platform facts · mandatory access control state · services · timers and cron ·
-single-file HTML report · packaging.
-
-Platforms: Debian 12 · Ubuntu 24.04 · Rocky Linux 9 · AlmaLinux 9.
-
-## v0.2 — FUTURE
+## Framework mapping views — FUTURE, v0.5
 
 Framework mapping **views over existing evidence**, all `PROPOSED`, with explicit coverage classes
 (`HOST_TECHNICAL`, `HOST_SUPPORTING_EVIDENCE`, `MANUAL_ORGANIZATIONAL`, `NOT_HOST_ASSESSABLE`). Mappings
 never change collection, and ISEDRAF never converts host technical evidence into a claim of organizational
-compliance.
+compliance. D-120 places these views in v0.5.
 
 ## Later — FUTURE
 
@@ -418,24 +419,58 @@ pinned host key. Never non-repudiation or trusted time.
 **Provider-neutral concepts** — canonical concepts describe outcomes, not Linux technologies, so future
 Unix-like providers could be added without redefining host concepts. **This is not BSD support.**
 
-## Release direction after GA (owner decision, 2026-09-27)
+## Release sequence after GA (owner decision, 2026-10-05)
 
-No calendar is attached to these releases; each is re-estimated after the one before it.
+This extends the release direction of 2026-09-27. v0.2 is still Full Audit; the releases
+after it are now named. No calendar is attached to them, and each is re-estimated after the
+one before it.
 
 ```text
-v0.1  GA - unprivileged evidence product
+v0.1  Evidence Foundation - RELEASED 2026-09-28
       Python standard-library engine; user-mode production store; `isedraf audit`;
       committed evidence; first report; DEB/RPM; upgrade, reboot and uninstall proven.
       No privileged component and no compiled code.
 
-v0.2  Full Audit - prove the privilege architecture
+v0.2  Evidence Authority - Full Audit (D-118)
       root supervisor, systemd sandbox, a dedicated non-login isedraf identity for the
       engine, authority classes, bounded one-run IPC, root-only acquisition, and the
-      system production store.
+      system production store. It also fixes the evidence contract v0.3 consumes:
+      observation and field classes, source and provenance, collection time, collector
+      identity and version, privilege level and authority class, integrity, completeness.
+      No control engine, no baseline approval, no framework mapping.
+
+v0.3  Assurance Semantics - native assurance core
+      the first native ISE-* criteria (D-111 namespace, unchanged), evaluated from
+      committed evidence only: applicability, required facts, expected state, evaluation
+      result, findings in evaluations/EVL-*. A criterion whose evidence was not collected
+      reports that, never a result the evidence cannot support. The first families
+      come from domains that are already collected (ISE-ACCOUNT, ISE-PRIV, ISE-SSH,
+      ISE-AUTH, ISE-STORAGE), so they exercise different evidence types: roughly 25
+      criteria, each with fixtures for every result it can produce.
+
+v0.4  Historical Assurance - approved baseline and classified delta
+      approval only of snapshots that meet the authority requirement (BASE-003 stays as it
+      is), run-to-run delta, change classification; the unchanged-runs and engine-upgrade
+      acceptance tests.
+
+v0.5  Framework Intelligence - mapping overlays
+      mappings, coverage, overlap and gaps over native results; Modes A, B and C (D-112)
+      govern licensing and redistribution. Mappings never change collection, criteria,
+      results, snapshots, ledger, baseline or delta.
 
 later compiled acquisition core, when measurement justifies it
       the same IPC contract and authority classes, no engine redesign.
 ```
+
+**Why this order.** Collection authority sits underneath the assurance model. A baseline can
+only be approved on privileged, complete evidence, so baseline and delta follow Full Audit.
+A native criterion needing root-only evidence would be untestable on an unprivileged engine,
+so criteria come after the authority that collects their evidence. v0.3 consumes evidence
+from v0.2 unchanged, and it does not depend on which language or privilege level produced
+it. The gap analysis behind this order is in
+[`../development/POST_GA_ARCHITECTURE_CHECKPOINT.md`](../development/POST_GA_ARCHITECTURE_CHECKPOINT.md).
+The v0.2 design and gap audit, with a per-collector table and the phase plan, is in
+[`../development/V0_2_FULL_AUDIT_DESIGN.md`](../development/V0_2_FULL_AUDIT_DESIGN.md).
 
 **The security property this protects** - and the language is secondary to it:
 

@@ -86,9 +86,15 @@ so the earlier draft resolves to this explanation rather than to silence.
 
 Required: `criterion_id` · `purpose` · `facts_required` · `dimensions` (declared / resolved / active,
 where applicable) · `evaluation_semantics` · `applicability` · `limitations` · `evidence_pointers` ·
-`version`. Optional: `remediation_guidance`.
+`version` · `default_severity`. Optional: `remediation_guidance`.
 
-Result states: `PASS` · `FAIL` · `PARTIAL` · `NOT_EVALUATED`.
+Result states (D-121): `PASS` · `FAIL` · `NOT_APPLICABLE` · `MANUAL_REVIEW` · `NOT_EVALUATED`.
+A criterion is atomic: it evaluates one normative condition. Only `COLLECTED` evidence yields a
+result other than `NOT_EVALUATED` (`CMP-003`).
+
+Severity (D-121): `critical` · `high` · `medium` · `low`. A `FAIL` produces a security finding
+that takes the criterion's `default_severity` unchanged; a `MANUAL_REVIEW` produces a review
+finding without a security severity.
 
 Every field is ISEDRAF-authored. No framework identifier, title, description or safeguard text
 appears in a criterion — a mapping is a separate object in a separate layer.
@@ -99,7 +105,8 @@ appears in a criterion — a mapping is a separate object in a separate layer.
 ISE-SSH-001
   purpose      Determine the effective SSH root-login posture.
   facts        effective PermitRootLogin value · configuration source · resolution status
-  states       PASS / FAIL / PARTIAL / NOT_EVALUATED
+  states       PASS / FAIL / NOT_APPLICABLE / MANUAL_REVIEW / NOT_EVALUATED
+  severity     high (default_severity)
   evidence     the exact normalized observed state
 ```
 

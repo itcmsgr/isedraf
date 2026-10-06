@@ -3,12 +3,12 @@
 **Linux Host Assurance with Approved Baselines, State Delta & Verifiable Evidence**
 
 [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0-lightgrey)](VERSION)
+[![Version](https://img.shields.io/badge/version-0.1.1-lightgrey)](VERSION)
 [![Status](https://img.shields.io/badge/status-general%20availability-green)](docs/CURRENT_STATE.md)
 [![Platforms](https://img.shields.io/badge/platforms-11%20Linux%20distributions%20measured-informational)](docs/reference/PLATFORM_COMPATIBILITY.md)
 [![Governance](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml/badge.svg)](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/itcmsgr/isedraf/badge)](https://scorecard.dev/viewer/?uri=github.com/itcmsgr/isedraf) [![OpenSSF Baseline](https://www.bestpractices.dev/projects/15010/baseline)](https://www.bestpractices.dev/en/projects/15010/baseline-1)
 
-> **Current release: 0.1.0 — General Availability.** ISEDRAF 0.1.0 provides production unprivileged
+> **Current release: 0.1.1 — General Availability.** ISEDRAF 0.1.1 provides production unprivileged
 > Linux host evidence collection. Privileged full-audit execution is not included in this release.
 
 ## What is ISEDRAF?

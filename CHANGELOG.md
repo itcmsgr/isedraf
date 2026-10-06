@@ -12,6 +12,21 @@ Semantic Versioning once a release exists. `VERSION` is the single source of the
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-06
+
+A correction release for 0.1.0. It changes one collector and nothing else.
+
+### Fixed
+- SSH authorized keys: a key file the collector could not examine - typically because
+  another user's home directory is not traversable - was reported as absent, which
+  allowed the section to be complete and to claim that no keys exist. It is now reported
+  as not observed: the section is `PARTIAL` and no absence is claimed. A file that really
+  does not exist is still reported as absent (IQ-044).
+
+### Upgrading
+- The package upgrades 0.1.0 in place and keeps the evidence in your store. Snapshots
+  committed by 0.1.0 are not rewritten; a new audit records the corrected observation.
+
 ## [0.1.0] - 2026-09-28
 
 The first release of ISEDRAF.

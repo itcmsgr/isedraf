@@ -368,7 +368,10 @@ class TestStorageAndCLI(ReportCase):
         m = self.build()
         path = report.write(self.root, m, render.to_markdown(m), "md")
         self.assertTrue(path.startswith(os.path.join(self.root, "reports")))
-        self.assertIn("/2026/09/", path)
+        # The directory comes from the report's own generated_at, never the wall clock,
+        # so a run that crosses a month boundary still matches.
+        generated = m["report"]["generated_at"]
+        self.assertIn("/%s/%s/" % (generated[0:4], generated[5:7]), path)
         self.assertEqual(os.stat(path).st_mode & 0o777, 0o600)
         self.assertNotIn("/var/log", path)
 

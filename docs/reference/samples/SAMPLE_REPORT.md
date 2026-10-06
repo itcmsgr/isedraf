@@ -24,7 +24,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 |---|---|
 | Report ID | `RPT-20260920T171548Z-71072fdd5e6cd97e` |
 | Generated (UTC) | 2026-09-20T17:15:48Z |
-| ISEDRAF version | 0.1.0 |
+| ISEDRAF version | 0.1.1 |
 | Report status | **COMPLETE** |
 
 > This report describes what was **observed**. It contains no secure/insecure verdict, because host inventory is evidence and a score would be a judgement the data does not support.
