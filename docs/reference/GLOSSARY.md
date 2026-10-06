@@ -60,7 +60,9 @@ Separate from evaluation result, with separate counters.
 
 ## Evaluation result
 
-`PASS` · `FAIL` · `PARTIAL` · `MISMATCH` · `NOT_APPLICABLE` · `MANUAL_REVIEW` · `NOT_EVALUATED`.
+`PASS` · `FAIL` · `NOT_APPLICABLE` · `MANUAL_REVIEW` · `NOT_EVALUATED` (D-121). Only `COLLECTED`
+evidence yields a result other than `NOT_EVALUATED`. `PARTIAL` is a collection status only, and
+`MISMATCH` is a dimension relationship and delta primitive.
 
 **`NOT_TESTED` is never `PASS`.** It never becomes `REMOVED` and never becomes an improvement.
 

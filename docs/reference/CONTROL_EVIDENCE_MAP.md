@@ -47,9 +47,13 @@ implements it** — see the engineering-debt table in [the roadmap](../roadmap/R
 
 | Evaluation result | Meaning |
 |---|---|
-| `PASS` · `FAIL` | the observed state was compared with an approved baseline or criterion |
-| `MISMATCH` | two dimensions of the same fact disagree |
-| `MANUAL_REVIEW` · `NOT_APPLICABLE` · `NOT_EVALUATED` | judgement is required, or none was made |
+| `PASS` · `FAIL` | the collected state satisfies or violates the criterion |
+| `NOT_APPLICABLE` | the criterion legitimately does not apply to this host |
+| `MANUAL_REVIEW` | the evidence was collected, but an automated determination would be unsafe |
+| `NOT_EVALUATED` | collection was `PARTIAL`, `NOT_TESTED` or `ERROR`, so no valid evaluation was possible |
+
+`MISMATCH` — two dimensions of the same fact disagree — is a relationship between dimensions and a
+delta primitive, not an evaluation result (D-121).
 
 **A collection failure never becomes `PASS` or `FAIL`.** "We could not look" and "we looked and it is
 wrong" are different statements, and a tool that merges them is lying in whichever direction is
@@ -232,7 +236,7 @@ purpose**: nothing collects them yet.
 | Recording · Audit · Journald · Time synchronization | PLANNED | W4 |
 | Kernel / platform · SELinux / AppArmor · Services · Timers / cron | FUTURE | v0.1 |
 | Software inventory | FUTURE | later; observation only |
-| Framework mapping column (ISO / NIS2 / NIST) | FUTURE — v0.2 | a **view over** this map, never a replacement for it, and never canonical |
+| Framework mapping column (ISO / NIS2 / NIST) | FUTURE — v0.5 | a **view over** this map, never a replacement for it, and never canonical |
 
 ## Auditor workflow
 

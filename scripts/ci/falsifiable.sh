@@ -515,7 +515,7 @@ inject "D-84 a tracked file carries no licence statement at all" \
 # checked them, so they aged while everything around them was gated.
 inject "D-88 the README version badge disagrees with VERSION" \
   'python3 scripts/ci/check_public_claims.py' \
-  'sed -i "s|badge/version-0.1.0-lightgrey|badge/version-9.9.9-lightgrey|" README.md' \
+  'sed -i "s|badge/version-0.1.1-lightgrey|badge/version-9.9.9-lightgrey|" README.md' \
   'version badge says|public claims gate FAILED'
 
 # OpenSSF Baseline Level 2 (2026-09-29): the repository's security configuration and policy
@@ -2069,6 +2069,17 @@ new = ("    read = [c for c in plan[\"candidates\"]\n"
        "    plan[\"source_universe\"] = (model.UNIVERSE_COMPLETE if read or not ordered\n"
        "                               else model.UNIVERSE_INCOMPLETE)\n")
 p.write_text(s.replace(old, new))
+PYX' \
+  'FAILED|Error'
+
+inject "AK IQ-044 a denied lstat is recorded as an absent file again" \
+  'python3 tests/test_authorizedkeys.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/authorizedkeys/acquire.py"); s = p.read_text()
+old = "        if (examined.reason or \"\").startswith(\"SOURCE_ABSENT:\"):\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if True:\n"))
 PYX' \
   'FAILED|Error'
 

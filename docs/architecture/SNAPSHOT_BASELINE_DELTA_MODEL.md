@@ -29,12 +29,18 @@ conflicts are context, not `MISMATCH`. Not every domain has all three; a domain 
 
 ## 3. Collection status vs evaluation result
 
-**CMP-001 (D-35) SHALL** Collection status (`COLLECTED`, `PARTIAL`, `NOT_TESTED`, `ERROR`) and evaluation
-result (`PASS`, `FAIL`, `PARTIAL`, `MISMATCH`, `NOT_APPLICABLE`, `MANUAL_REVIEW`, `NOT_EVALUATED`) are
-**separate fields with separate counters** in every report. They SHALL NEVER be merged into one column.
+**CMP-001 (D-35, D-121) SHALL** Collection status (`COLLECTED`, `PARTIAL`, `NOT_TESTED`, `ERROR`) and
+evaluation result (`PASS`, `FAIL`, `NOT_APPLICABLE`, `MANUAL_REVIEW`, `NOT_EVALUATED`) are **separate
+fields with separate counters** in every report. They SHALL NEVER be merged into one column. `PARTIAL`
+is a collection status only; `MISMATCH` is a dimension relationship and a delta primitive, not an
+evaluation result.
 
 **CMP-002 (D-35) SHALL NOT** `NOT_TESTED` or `ERROR` SHALL NEVER be rendered as `PASS`, `FAIL`, `REMOVED`
 or `SECURITY_IMPROVEMENT`.
+
+**CMP-003 (D-121) SHALL** Only `COLLECTED` evidence yields `PASS`, `FAIL`, `NOT_APPLICABLE` or
+`MANUAL_REVIEW`. `PARTIAL`, `NOT_TESTED` and `ERROR` yield `NOT_EVALUATED`, with a reason naming the
+collection status. Every evaluated criterion carries exactly one result; there is no absent result.
 
 ## 4. State vs observation — invariant I-1
 

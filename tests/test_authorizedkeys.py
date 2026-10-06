@@ -247,6 +247,87 @@ class ObservedIsNotComplete(Fixture):
         self.assertEqual(plan["source_universe"], model.UNIVERSE_COMPLETE)
 
 
+@unittest.skipIf(os.geteuid() == 0, "root bypasses the permission bits these cases need")
+class DeniedIsNotAbsent(Fixture):
+    """IQ-044: a path the collector cannot examine is unobserved, never absent.
+
+    ENOENT is absence; EACCES or EPERM on lstat is a statement about who is asking. GA
+    0.1.0 recorded the second as FILE_ABSENT, which left the universe COMPLETE, the
+    section COLLECTED and the coverage entry free to claim absence.
+    """
+
+    DECLARED = "AuthorizedKeysFile .ssh/authorized_keys\n"
+    SHADOW = "alice:!:19000:0:99999:7:::\n"
+
+    def deny(self, relative):
+        path = os.path.join(self.root, relative)
+        os.chmod(path, 0)
+        # LIFO: registered after the enclosure rmtree, so it runs BEFORE it.
+        self.addCleanup(os.chmod, path, 0o700)
+
+    def coverage_for(self, evidence, suffix):
+        entries = [c for c in evidence.provenance["coverage"]
+                   if c["source"].endswith(suffix)]
+        self.assertEqual(len(entries), 1, entries)
+        return entries[0]
+
+    def test_an_untraversable_home_is_not_absent(self):
+        self.host(sshd_config=self.DECLARED, shadow=self.SHADOW)
+        self.write("home/alice/.ssh/authorized_keys", KEY_A + "\n")
+        self.deny("home/alice")
+        evidence = self.collect()
+        plan = self.plan(evidence)
+        candidate = plan["candidates"][0]
+        self.assertNotEqual(candidate["observation"], model.FILE_ABSENT)
+        self.assertEqual(candidate["observation"], model.FILE_UNREADABLE)
+        self.assertEqual(candidate["observation_detail"], "PERMISSION_DENIED")
+        self.assertIn(model.CANDIDATE_NOT_OBSERVED, plan["universe_reasons"])
+        self.assertEqual(plan["source_universe"], model.UNIVERSE_INCOMPLETE)
+        self.assertEqual(evidence.status, result.PARTIAL)
+
+    def test_an_untraversable_home_never_permits_an_absence_claim(self):
+        self.host(sshd_config=self.DECLARED, shadow=self.SHADOW)
+        self.write("home/alice/.ssh/authorized_keys", KEY_A + "\n")
+        self.deny("home/alice")
+        entry = self.coverage_for(self.collect(), "authorized_keys")
+        self.assertEqual(entry["access_outcome"], "PERMISSION_DENIED")
+        self.assertTrue(entry["privilege_limited"])
+        self.assertFalse(entry["absence_claim_allowed"])
+
+    def test_an_untraversable_parent_of_a_declared_absolute_path(self):
+        self.host(sshd_config="AuthorizedKeysFile /etc/ssh/keys/%u\n",
+                  shadow=self.SHADOW)
+        self.write("etc/ssh/keys/alice", KEY_A + "\n")
+        self.deny("etc/ssh/keys")
+        evidence = self.collect()
+        plan = self.plan(evidence)
+        self.assertEqual(plan["candidates"][0]["observation"], model.FILE_UNREADABLE)
+        self.assertEqual(plan["source_universe"], model.UNIVERSE_INCOMPLETE)
+        self.assertEqual(evidence.status, result.PARTIAL)
+
+    def test_a_truly_absent_file_is_still_absent_and_complete(self):
+        # The fix must not turn real absence into doubt: ENOENT stays FILE_ABSENT, and
+        # with nothing else unobserved the universe stays COMPLETE.
+        self.host(sshd_config=self.DECLARED, shadow=self.SHADOW)
+        os.makedirs(os.path.join(self.root, "home", "alice"))
+        evidence = self.collect()
+        plan = self.plan(evidence)
+        self.assertEqual(plan["candidates"][0]["observation"], model.FILE_ABSENT)
+        self.assertEqual(plan["source_universe"], model.UNIVERSE_COMPLETE)
+        self.assertEqual(evidence.status, result.COLLECTED)
+        entry = self.coverage_for(evidence, "authorized_keys")
+        self.assertEqual(entry["access_outcome"], "NOT_FOUND")
+        self.assertTrue(entry["absence_claim_allowed"])
+
+    def test_a_present_readable_file_is_observed(self):
+        self.host(sshd_config=self.DECLARED, shadow=self.SHADOW)
+        self.write("home/alice/.ssh/authorized_keys", KEY_A + "\n")
+        evidence = self.collect()
+        self.assertEqual(self.plan(evidence)["candidates"][0]["observation"],
+                         model.FILE_READ)
+        self.assertEqual(evidence.status, result.COLLECTED)
+
+
 class Tokens(Fixture):
 
     def test_percent_h_expands_to_the_rooted_home(self):

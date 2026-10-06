@@ -413,12 +413,12 @@
       "storage": "/sys/block + /proc/self/mounts + statvfs(2)",
       "time": "timedatectl show"
     },
-    "engine_version": "0.1.0",
+    "engine_version": "0.1.1",
     "inventory_schema_version": 1,
     "report_schema_version": 1
   },
   "report": {
-    "engine_version": "0.1.0",
+    "engine_version": "0.1.1",
     "generated_at": "2026-09-20T17:15:48Z",
     "report_id": "RPT-20260920T171548Z-71072fdd5e6cd97e",
     "status": "COMPLETE"

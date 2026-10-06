@@ -422,12 +422,23 @@ def _observe_file(candidate, path, account_ref, records, files, option_policy,
         target_set(collect_into if collect_into is not None else candidate,
                    "observation", model.FILE_OUTSIDE_COLLECTION_ROOT, path)
         return
-    meta = filemeta.observe(path).records[0]
+    examined = filemeta.observe(path)
+    meta = examined.records[0]
     files.append(meta)
     target = collect_into if collect_into is not None else candidate
 
     if not meta.get("exists"):
-        target_set(target, "observation", model.FILE_ABSENT, path)
+        # IQ-044: filemeta sets exists=False for EVERY failed lstat. Only ENOENT is
+        # absence; a denial (usually an untraversable home) or another error means the
+        # path was not observed, so it must never become FILE_ABSENT. Fail closed: any
+        # reason other than SOURCE_ABSENT is unobserved.
+        if (examined.reason or "").startswith("SOURCE_ABSENT:"):
+            target_set(target, "observation", model.FILE_ABSENT, path)
+        else:
+            target_set(target, "observation", model.FILE_UNREADABLE, path)
+            target_set(target, "observation_detail",
+                       hostio.PERMISSION_DENIED if examined.status == result.NOT_TESTED
+                       else hostio.IO_ERROR, None)
         return
     if meta.get("file_type") == "SYMLINK":
         # filemeta lstat()s, so a symlink is reported as a symlink - correctly, since the

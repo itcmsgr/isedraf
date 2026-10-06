@@ -84,7 +84,15 @@ done
 %doc %{_docdir}/isedraf
 
 %changelog
-* Mon Sep 28 2026 Antonios Voulvoulis <contact@itcms.gr> - @VERSION@-@RELEASE@
+* Tue Oct 06 2026 Antonios Voulvoulis <contact@itcms.gr> - @VERSION@-@RELEASE@
+- 0.1.1, a correction release: an authorized_keys file that could not be examined is
+  reported as not observed instead of absent.
+
+* Tue Oct 06 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.1.1-0.rc1
+- 0.1.1 release candidate: an authorized_keys file that could not be examined is reported
+  as not observed instead of absent.
+
+* Mon Sep 28 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.1.0-1
 - 0.1.0, the first release: unprivileged evidence collection with isedraf audit, a
   user-mode evidence store, and Markdown, JSON and static HTML reports of a committed run.
 
