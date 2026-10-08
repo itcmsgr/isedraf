@@ -84,9 +84,19 @@ def collect(root="/"):
             sources_meta.append(entry)
 
     if not any_readable:
+        # IQ-046 (2): absent only when nothing exists. A source that exists and was
+        # refused, or failed, is unseen evidence and is named as such.
+        unseen = [s for s in sources_meta
+                  if not (s["status"] == result.NOT_TESTED
+                          and s.get("detail") == hostio.NOT_FOUND)]
+        reason = ("SOURCE_UNREADABLE: no login-policy source could be read under %s; %d "
+                  "existing source(s) were refused or failed: %s." % (
+                      root, len(unseen),
+                      ", ".join(s.get("path") or s.get("reason", "") for s in unseen))
+                  if unseen else
+                  "SOURCE_ABSENT: no login-policy source was readable under %s." % root)
         return result.Evidence(
-            result.NOT_TESTED, records=[], source=root,
-            reason="SOURCE_ABSENT: no login-policy source was readable under %s." % root,
+            result.NOT_TESTED, records=[], source=root, reason=reason,
             provenance=_provenance(sources_meta, files))
 
     status, reason = _status(sources_meta)
@@ -101,9 +111,22 @@ def _paths(root, main, fragment_dir, sources_meta, family):
         return
     directory = os.path.join(root, fragment_dir)
     listing = bounded.enumerate_paths(directory, Fragments())
-    if listing.status == result.NOT_TESTED:
+    events = set(a.get("event") for a in listing.anomalies)
+    if bounded.ROOT_MISSING in events:
         # An absent .d directory is an ordinary configuration, not missing evidence.
         return
+    if listing.status != result.COLLECTED:
+        # IQ-046 (2): a .d directory that exists and could not be listed, in whole or in
+        # part, holds fragments that were never seen. Only a listdir refusal is known to
+        # be a privilege limit; any other failure is recorded without claiming one.
+        outcome = (hostio.PERMISSION_DENIED if bounded.ENTRY_UNREADABLE in events
+                   else hostio.IO_ERROR)
+        sources_meta.append({"family": family, "path": directory,
+                             "status": result.NOT_TESTED, "detail": outcome,
+                             "access_outcome": outcome,
+                             "operation": coverage.OP_DIRECTORY_LIST,
+                             "reason": "SOURCE_UNREADABLE: %s could not be listed."
+                                       % directory})
     for entry in listing.records:
         name = entry["name"]
         if name is None:
@@ -220,7 +243,8 @@ def _coverage(sources_meta):
                           result.ERROR):
             status = result.NOT_TESTED
         out.append(coverage.source(
-            "loginpolicy", entry["path"], status, outcome, coverage.OP_FILE_READ,
+            "loginpolicy", entry["path"], status, outcome,
+            entry.get("operation", coverage.OP_FILE_READ),
             reason=entry.get("reason"),
             universe=(coverage.UNIVERSE_COMPLETE if status == result.COLLECTED
                       else coverage.UNIVERSE_INCOMPLETE)))

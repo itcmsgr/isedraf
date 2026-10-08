@@ -373,6 +373,41 @@ inject "D-90 a public artifact is assembled through a symlink leaving the reposi
   'ln -s /etc/hostname docs/reference/external-input.txt && git add -f -A' \
   'symlink pointing OUTSIDE|licensing gate FAILED'
 
+# The artifact scan reuses the 5c allowlist by normalizing a source-tarball path, and only
+# that. Each of these turns the normalization into a general relaxation.
+inject "D-90 the artifact scan allowlists a restricted file by its name alone" \
+  'python3 scripts/ci/check_licensing.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("scripts/ci/check_licensing.py"); s = p.read_text()
+old = "    if rel in allowed_bin:\n        return False\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if os.path.basename(rel) in set(os.path.basename(a) for a in allowed_bin):\n        return False\n", 1))
+PYX' \
+  'artifact self-test|licensing gate FAILED'
+
+inject "D-90 the artifact scan exempts every restricted file in a source tarball" \
+  'python3 scripts/ci/check_licensing.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("scripts/ci/check_licensing.py"); s = p.read_text()
+old = "    if rel in allowed_bin:\n        return False\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if rel in allowed_bin or artifact_name.endswith(\".tar.gz\"):\n        return False\n", 1))
+PYX' \
+  'artifact self-test|licensing gate FAILED'
+
+inject "D-90 the artifact scan strips any top-level directory, not the archive own" \
+  'python3 scripts/ci/check_licensing.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("scripts/ci/check_licensing.py"); s = p.read_text()
+old = "        if member.startswith(top):\n            return member[len(top):]\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if \"/\" in member:\n            return member.split(\"/\", 1)[1]\n", 1))
+PYX' \
+  'artifact self-test|licensing gate FAILED'
+
 # STORAGE-SEMANTICS-001 (D-114). The retired inference must be provably dead, not
 # merely absent. Each of these reintroduces it in a different disguise.
 inject "STORAGE-SEMANTICS-001 non-rotational is inferred to be solid state" \
@@ -472,6 +507,137 @@ p.write_text(json.dumps(d, indent=2))
 PYX' \
   'names CIS in the criterion itself|native control catalog gate FAILED'
 
+# D-122. The Evidence Limits Manifest schema is frozen; these prove its gate refuses a
+# vocabulary that drifted from the code, a fixture that manufactures evaluation semantics or
+# authors a derived field, and a rule that stopped firing.
+inject "D-122 a code vocabulary gains a value the frozen schema does not have" \
+  'python3 scripts/ci/check_evidence_limits_schema.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/coverage.py"); s = p.read_text()
+old = "OUTCOMES = (READ_OK, NOT_FOUND, PERMISSION_DENIED, IO_ERROR, NOT_SUPPORTED, TRUNCATED)\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, old.replace("TRUNCATED)", "TRUNCATED, \"ELEVATED_READ\")")))
+PYX' \
+  'evidence limits schema gate FAILED'
+
+inject "D-122 a valid manifest carries an evaluation result" \
+  'python3 scripts/ci/check_evidence_limits_schema.py' \
+  'python3 - <<PYX
+import json, pathlib, sys
+sys.path.insert(0, "lib")
+from isedraf import canonical
+p = pathlib.Path("tests/fixtures/evidence_limits/v2/valid/all-complete.json")
+m = json.loads(p.read_text())
+m["sources"][0]["note"] = "PASS"
+p.write_bytes(canonical.canonical_bytes(m))
+PYX' \
+  'should conform: ELIM-002|evidence limits schema gate FAILED'
+
+inject "D-122 a valid manifest authors a derived impact field" \
+  'python3 scripts/ci/check_evidence_limits_schema.py' \
+  'python3 - <<PYX
+import json, pathlib, sys
+sys.path.insert(0, "lib")
+from isedraf import canonical
+p = pathlib.Path("tests/fixtures/evidence_limits/v2/valid/unprivileged-run.json")
+m = json.loads(p.read_text())
+for s in m["sources"]:
+    if s["access_outcome"] == "PERMISSION_DENIED":
+        s["absence_claim_allowed"] = True
+p.write_bytes(canonical.canonical_bytes(m))
+PYX' \
+  'should conform: ELIM-010|evidence limits schema gate FAILED'
+
+inject "D-122 the silent-section rule stops firing" \
+  'python3 scripts/ci/check_evidence_limits_schema.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("scripts/ci/check_evidence_limits_schema.py"); s = p.read_text()
+old = "        if (name in reported) == (name in names):\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if False:\n"))
+PYX' \
+  'should violate ELIM-003|evidence limits schema gate FAILED'
+
+# D-123. The Full Audit authority model is frozen before any privileged code exists; these
+# prove its gate refuses a command string, a caller input, CAP_SYS_ADMIN and a premature
+# supervisor acquisition mode.
+inject "D-123 a command string is registered as a privileged operation" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import json, pathlib
+p = pathlib.Path("scripts/ci/privileged_operations.json"); d = json.loads(p.read_text())
+d["operations"][2]["operation_id"] = "cat /etc/shadow"
+d["operations"].sort(key=lambda o: o["operation_id"])
+p.write_text(json.dumps(d, indent=2))
+PYX' \
+  'is not a fixed operation identifier|privileged operations gate FAILED'
+
+inject "D-123 a privileged operation takes a caller input" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import json, pathlib
+p = pathlib.Path("scripts/ci/privileged_operations.json"); d = json.loads(p.read_text())
+d["operations"][2]["caller_inputs"] = ["path"]
+p.write_text(json.dumps(d, indent=2))
+PYX' \
+  'takes caller inputs|privileged operations gate FAILED'
+
+inject "D-123 a privileged operation is based on CAP_SYS_ADMIN" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import json, pathlib
+p = pathlib.Path("scripts/ci/privileged_operations.json"); d = json.loads(p.read_text())
+d["operations"][0]["privilege_basis"] = "needs CAP_SYS_ADMIN to enter namespaces"
+p.write_text(json.dumps(d, indent=2))
+PYX' \
+  'is empty or forbidden|privileged operations gate FAILED'
+
+inject "D-123 the supervisor acquisition mode is admitted before anything produces it" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/coverage.py"); s = p.read_text()
+old = "MODES = (MODE_CURRENT_IDENTITY,)\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "MODES = (MODE_CURRENT_IDENTITY, \"SUPERVISOR_FIXED_OPERATION\")\n"))
+PYX' \
+  'while no operation is IMPLEMENTED|privileged operations gate FAILED'
+
+inject "D-123 a fixed executable inherits the caller environment" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import json, pathlib
+p = pathlib.Path("scripts/ci/privileged_operations.json"); d = json.loads(p.read_text())
+for op in d["operations"]:
+    if op["fixed_executable"]:
+        op["env_policy"] = "INHERIT"
+p.write_text(json.dumps(d, indent=2))
+PYX' \
+  'AUTH-014 requires|privileged operations gate FAILED'
+
+inject "D-123 a privileged operation has no timeout" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import json, pathlib
+p = pathlib.Path("scripts/ci/privileged_operations.json"); d = json.loads(p.read_text())
+d["operations"][2]["timeout_seconds"] = 0
+p.write_text(json.dumps(d, indent=2))
+PYX' \
+  'is not 1..|privileged operations gate FAILED'
+
+inject "D-123 the supervisor returns parsed content" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("docs/architecture/FULL_AUDIT_AUTHORITY_MODEL.md"); s = p.read_text()
+old = "\"supervisor_output_fields\": [\"operation_id\", \"status\", \"bytes\", \"stderr_bytes\", \"status_metadata\"]"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, old.replace("\"status_metadata\"]", "\"status_metadata\", \"parsed\"]")))
+PYX' \
+  'not the AUTH-015 set|engine semantics|privileged operations gate FAILED'
+
 # D-84/D-90. Third-party framework content is not relicensed by sitting in this
 # repository. The registry is deny-by-default, and "deny by default" is a claim that has
 # to be shown to deny something.
@@ -515,7 +681,7 @@ inject "D-84 a tracked file carries no licence statement at all" \
 # checked them, so they aged while everything around them was gated.
 inject "D-88 the README version badge disagrees with VERSION" \
   'python3 scripts/ci/check_public_claims.py' \
-  'sed -i "s|badge/version-0.1.1-lightgrey|badge/version-9.9.9-lightgrey|" README.md' \
+  'sed -i "s|badge/version-0.1.2-lightgrey|badge/version-9.9.9-lightgrey|" README.md' \
   'version badge says|public claims gate FAILED'
 
 # OpenSSF Baseline Level 2 (2026-09-29): the repository's security configuration and policy
@@ -2002,9 +2168,9 @@ inject "R15P the coverage digest stops distinguishing two visibilities" \
   'python3 - <<PYX
 import pathlib
 p = pathlib.Path("lib/isedraf/coverage.py"); s = p.read_text()
-old = "              \"access_outcome\": s[\"access_outcome\"],\n"
+old = "\"access_outcome\", \"source_universe\", \"universe_reasons\"))"
 assert old in s, "mutation anchor miss"
-p.write_text(s.replace(old, ""))
+p.write_text(s.replace(old, "\"source_universe\", \"universe_reasons\"))"))
 PYX' \
   'FAILED|Error'
 
@@ -2069,6 +2235,160 @@ new = ("    read = [c for c in plan[\"candidates\"]\n"
        "    plan[\"source_universe\"] = (model.UNIVERSE_COMPLETE if read or not ordered\n"
        "                               else model.UNIVERSE_INCOMPLETE)\n")
 p.write_text(s.replace(old, new))
+PYX' \
+  'FAILED|Error'
+
+inject "IQ-042 the report hides a recorded evidence limitation" \
+  'python3 tests/test_evidence_limits.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/report/model.py"); s = p.read_text()
+old = "    for s in manifest.get(\"limitations\", []):\n        impact = []\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    for s in manifest.get(\"limitations\", []):\n        if s.get(\"privilege_limited\"):\n            continue\n        impact = []\n"))
+PYX' \
+  'FAILED|Error'
+
+inject "IQ-042 the evidence-limits writer silently omits a partial section" \
+  'python3 tests/test_evidence_limits.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/audit.py"); s = p.read_text()
+old = "        section = sections.get(name) or {}\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, old + "        if section.get(\"collection_status\") == \"PARTIAL\":\n            continue\n"))
+PYX' \
+  'FAILED|Error'
+
+inject "IQ-042 the evidence-limits writer emits an authority schema 2 does not admit" \
+  'python3 tests/test_evidence_limits.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/coverage.py"); s = p.read_text()
+old = "    out.update({\"collector\": dict(collector), \"acquisition_mode\": acquisition_mode,\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    out.update({\"collector\": dict(collector), \"acquisition_mode\": \"ROOT\",\n"))
+PYX' \
+  'FAILED|Error'
+
+inject "IQ-042 an audit section loses its CMP-020 method identity" \
+  'python3 tests/test_audit.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/audit.py"); s = p.read_text()
+old = "                          \"method\": dict(METHODS[name]),\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, ""))
+PYX' \
+  'FAILED|Error'
+
+inject "IQ-043 a collected audit section loses its registry entry" \
+  'python3 scripts/docs/current_state.py check' \
+  'python3 - <<PYX
+import json, pathlib
+p = pathlib.Path("scripts/ci/project_status.json"); d = json.loads(p.read_text())
+del d["capabilities"]["users_groups"]
+p.write_text(json.dumps(d, indent=2) + "\n")
+PYX' \
+  'audit section accounts has 0|generation REFUSED'
+
+inject "IQ-043 a reachable capability is marked PLANNED again" \
+  'python3 scripts/docs/current_state.py check' \
+  'python3 - <<PYX
+import json, pathlib
+p = pathlib.Path("scripts/ci/project_status.json"); d = json.loads(p.read_text())
+d["capabilities"]["sudo_privilege"]["status"] = "PLANNED"
+d["capabilities"]["sudo_privilege"]["evidence"] = None
+p.write_text(json.dumps(d, indent=2) + "\n")
+PYX' \
+  'a reachable capability is IMPLEMENTED|generation REFUSED'
+
+inject "IQ-043 a zombie registry entry names a surface that does not exist" \
+  'python3 scripts/docs/current_state.py check' \
+  'python3 - <<PYX
+import json, pathlib
+p = pathlib.Path("scripts/ci/project_status.json"); d = json.loads(p.read_text())
+d["capabilities"]["firewall_audit"] = {"status": "IMPLEMENTED", "evidence": "lib/isedraf/audit.py",
+    "reachable_from": ["firewall"], "audit_section": "firewall", "authority": "CURRENT_IDENTITY",
+    "full_audit_gain": "NONE"}
+p.write_text(json.dumps(d, indent=2) + "\n")
+PYX' \
+  'does not expose|does not exist|generation REFUSED'
+
+inject "AK IQ-046 an unread sshd_config is said to carry no declaration again" \
+  'python3 tests/test_authorizedkeys.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/authorizedkeys/acquire.py"); s = p.read_text()
+old = "        if unseen:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if False:\n"))
+PYX' \
+  'FAILED|Error'
+
+inject "PAM IQ-046 a failed pam.d listing leaves no coverage entry again" \
+  'python3 tests/test_pam.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/pam/acquire.py"); s = p.read_text()
+old = "    _coverage.extend(_listing_coverage(directory, listing))\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, ""))
+PYX' \
+  'FAILED|Error'
+
+inject "INVENTORY IQ-046 an unmeasurable mount is skipped silently again" \
+  'python3 tests/test_inventory.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/inventory/collectors.py"); s = p.read_text()
+old = "                reads.unmeasured(target, exc)\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "                pass\n"))
+PYX' \
+  'FAILED|Error'
+
+inject "INVENTORY IQ-046 a refusal is guessed as an I/O error again" \
+  'python3 tests/test_inventory.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/inventory/collectors.py"); s = p.read_text()
+old = "        if self.denied and kw.get(\"access_outcome\") is None:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if False:\n"))
+PYX' \
+  'FAILED|Error'
+
+inject "INVENTORY IQ-054 a failing chronyc leaves time silently collected again" \
+  'python3 tests/test_time_helper.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/inventory/collectors.py"); s = p.read_text()
+old = "        if not tracking.ok:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "LOGINPOLICY IQ-046 an unlistable fragment directory is dropped silently again" \
+  'python3 tests/test_loginpolicy.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/loginpolicy/acquire.py"); s = p.read_text()
+old = "    if listing.status != result.COLLECTED:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n"))
+PYX' \
+  'FAILED|Error'
+
+inject "SUDO IQ-046 an unlistable includedir reads as an empty one again" \
+  'python3 tests/test_sudo.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/sudo/acquire.py"); s = p.read_text()
+old = "        if listing.status != result.COLLECTED and bounded.ROOT_MISSING not in events:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if False:\n"))
 PYX' \
   'FAILED|Error'
 

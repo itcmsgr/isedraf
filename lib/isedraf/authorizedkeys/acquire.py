@@ -70,7 +70,7 @@ def collect(root, account_evidence, ssh_evidence, option_policy=None):
         _finish(plan)
         plans.append(plan)
 
-    status, reason = _status(plans, declarations, accounts)
+    status, reason = _status(plans, declarations, accounts, inherited)
     return result.Evidence(
         status, records=records, reason=reason, source=root,
         provenance={
@@ -544,10 +544,22 @@ def _finish(plan):
                                else model.UNIVERSE_INCOMPLETE)
 
 
-def _status(plans, declarations, accounts):
+def _status(plans, declarations, accounts, inherited=()):
     if not accounts:
         return model.NOT_TESTED, "NO_LOCAL_ACCOUNTS: the account evidence lists none."
     if not declarations:
+        # IQ-046 (5): "carries no AuthorizedKeysFile" may only be said of a configuration
+        # that was read. An absent sshd_config is nothing to observe and keeps
+        # NO_DECLARATION_OBSERVED; a refused or incomplete one is the real cause.
+        unseen = [limit for limit in inherited
+                  if limit["reason"] == model.SSH_EVIDENCE_INCOMPLETE
+                  and not (limit.get("upstream_reason") or "").startswith("SOURCE_ABSENT:")]
+        if unseen:
+            return (model.NOT_TESTED,
+                    "SSH_EVIDENCE_INCOMPLETE: no AuthorizedKeysFile declaration was "
+                    "observed because the declared sshd configuration was not fully "
+                    "observed (%s)." % (unseen[0].get("upstream_reason")
+                                        or unseen[0]["status"]))
         return (model.NOT_TESTED,
                 "NO_DECLARATION_OBSERVED: the declared sshd configuration carries no "
                 "AuthorizedKeysFile, and a compiled-in default is not evidence this "

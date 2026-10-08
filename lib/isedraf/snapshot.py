@@ -110,16 +110,12 @@ def build(ident, snapshot_id, run_id, created_at, state_root_class, engine_versi
           coverage_manifest=None, sections=None):
     """Everything a snapshot needs, computed before anything touches the store.
 
-    R1.5-P adds `coverage_manifest`, and adds it BESIDE manifest_core rather than inside
-    it. SNAP-020 freezes that field table and the golden vectors bind its hash; adding a
-    key would change every committed manifest hash to record something that is not host
-    state. The Evidence Limits Manifest is PROVENANCE - what the collection could observe -
-    so it travels with the bundle as its own object.
-
-    Consequence, stated rather than hidden: in R1.5-P the coverage file is NOT covered by
-    manifest_hash. It carries its own coverage_digest, which is what a later comparison
-    needs. Binding it into the manifest requires a SNAP amendment and is an open question
-    for the owner, not something to do quietly here.
+    The Evidence Limits Manifest (`coverage_manifest`, schema 2, D-122) is PROVENANCE -
+    what the collection could observe - and travels with the bundle as its own file,
+    coverage/evidence_limits.json. D-115 binds it through manifest_core's
+    auxiliary_artifacts, so it is covered by manifest_hash and never enters state_hash: a
+    change in what the collection could see is never a change in host state. It also
+    carries its own coverage_digest, which is what a later comparison needs.
     """
     method = canonical.canonical_bytes(identity.method_object())
     coverage_bytes = (None if coverage_manifest is None

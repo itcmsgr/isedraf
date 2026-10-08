@@ -33,6 +33,7 @@
       "isedraf.accounts.acquire",
       "isedraf.authorizedkeys",
       "isedraf.authorizedkeys.acquire",
+      "isedraf.coverage",
       "isedraf.hostname",
       "isedraf.hostname.acquire",
       "isedraf.inventory",

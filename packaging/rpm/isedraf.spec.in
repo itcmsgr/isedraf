@@ -84,7 +84,15 @@ done
 %doc %{_docdir}/isedraf
 
 %changelog
-* Tue Oct 06 2026 Antonios Voulvoulis <contact@itcms.gr> - @VERSION@-@RELEASE@
+* Thu Oct 08 2026 Antonios Voulvoulis <contact@itcms.gr> - @VERSION@-@RELEASE@
+- 0.1.2, a correction release: incomplete collection is reported as not observed instead
+  of absent or complete, and each audit records its evidence limits.
+
+* Thu Oct 08 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.1.2-0.rc1
+- 0.1.2 release candidate: incomplete collection is reported as not observed instead of
+  absent or complete, and each audit records its evidence limits.
+
+* Tue Oct 06 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.1.1-1
 - 0.1.1, a correction release: an authorized_keys file that could not be examined is
   reported as not observed instead of absent.
 

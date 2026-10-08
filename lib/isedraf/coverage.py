@@ -36,10 +36,12 @@
 
 """Evidence coverage: the boundary of what a collection was capable of proving."""
 
+import re
+
 from . import canonical
 from .status import COLLECTED, ERROR, NOT_TESTED, PARTIAL      # noqa: F401
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2          # docs/architecture/EVIDENCE_LIMITS_SCHEMA.md (D-122)
 
 # --- what the collection tried ----------------------------------------------------------
 # The OPERATION is a fact about what was attempted, not a judgement. It is what lets the
@@ -215,20 +217,99 @@ def source(domain, name, status, outcome, operation, reason=None,
     }
 
 
-def manifest(sources, acquisition_mode):
-    """The Evidence Limits Manifest: the boundary of what this run could prove.
+_TOKEN = re.compile(r"^[A-Z][A-Z0-9_]*$")
+_REASON = re.compile(r"^[A-Z][A-Z0-9_]*: .+")
+_RANK = (COLLECTED, PARTIAL, NOT_TESTED, ERROR)
+COLLECTOR_FIELDS = ("collector_id", "collector_version", "parser_version")
 
-    Counts are over the EXPLICIT REQUESTED UNIVERSE - the sources this collection set out
-    to acquire - and never over "Linux security". A percentage computed against anything
-    else has no defensible denominator, so none is produced here.
+
+def _reason(record):
+    """ELIM-009: null exactly when COLLECTED, otherwise `CODE: text`.
+
+    A domain that gave no reason, or one outside the grammar, gets one built from the
+    facts it did state - never from prose and never omitted."""
+    if record["status"] == COLLECTED:
+        return None
+    reason = record.get("reason")
+    if isinstance(reason, str) and _REASON.match(reason):
+        return reason
+    return "%s: %s was not observed completely (%s)." % (
+        record["access_outcome"], record["source"], record["status"])
+
+
+def _universe_reasons(record):
+    """ELIM-007: an INCOMPLETE universe always says why, as tokens."""
+    if record["source_universe"] != UNIVERSE_INCOMPLETE:
+        return []
+    given = record.get("universe_reasons")
+    if given:
+        return sorted(set(given))
+    code = (record.get("reason") or "").split(":", 1)[0]
+    if _TOKEN.match(code):
+        return [code]
+    if record["access_outcome"] != READ_OK:
+        return [record["access_outcome"]]
+    return ["INCOMPLETE_SOURCE_UNIVERSE"]
+
+
+def entry(record, collector, acquisition_mode):
+    """One schema 2 source entry (ELIM-005) from one source() record.
+
+    The domain's facts and the centrally derived fields are kept as they are; collector
+    identity (ELIM-006) and acquisition authority (ELIM-008) are added by the caller that
+    knows them, and operation_id stays null until an operation is implemented (D-123).
     """
     if acquisition_mode not in MODES:
         raise ValueError("unknown acquisition mode %r" % (acquisition_mode,))
-    ordered = sorted(sources, key=lambda s: (s["domain"], s["source"]))
+    if (not isinstance(collector, dict) or sorted(collector) != sorted(COLLECTOR_FIELDS)
+            or not all(isinstance(v, str) and v for v in collector.values())):
+        raise ValueError("collector identity must be %s" % (COLLECTOR_FIELDS,))
+    out = dict(record)
+    out.update({"collector": dict(collector), "acquisition_mode": acquisition_mode,
+                "operation_id": None, "reason": _reason(record),
+                "universe_reasons": _universe_reasons(record)})
+    return out
+
+
+def _deduplicate(entries):
+    """ELIM-011: one entry per (domain, source). Two collector observations of the same
+    source keep the least complete one, so a duplicate can never hide a limitation; ties
+    are broken by canonical bytes, so the choice is deterministic."""
+    chosen = {}
+    for item in entries:
+        key = (item["domain"], item["source"])
+        rank = (_RANK.index(item["status"]) if item["status"] in _RANK else len(_RANK),
+                canonical.canonical_bytes(item))
+        if key not in chosen or rank > chosen[key][0]:
+            chosen[key] = (rank, item)
+    return [chosen[k][1] for k in sorted(chosen)]
+
+
+def manifest(sources, acquisition_mode, collectors, requested_sections=None,
+             unreported_sections=()):
+    """The Evidence Limits Manifest, schema 2 (D-122): the boundary of what this run could
+    prove.
+
+    `sources` are source() records; `collectors` maps each domain to its CMP-020 method
+    identity. Counts are over the EXPLICIT REQUESTED UNIVERSE - the sources this collection
+    set out to acquire - and never over "Linux security". A percentage computed against
+    anything else has no defensible denominator, so none is produced here. A requested
+    section with no source entry must appear in `unreported_sections` (ELIM-003).
+    """
+    if acquisition_mode not in MODES:
+        raise ValueError("unknown acquisition mode %r" % (acquisition_mode,))
+    ordered = _deduplicate([entry(s, collectors[s["domain"]], acquisition_mode)
+                            for s in sources])
+    requested = sorted(set(requested_sections if requested_sections is not None
+                           else [s["domain"] for s in ordered]))
+    unreported = sorted(({"section": u["section"], "reason": u["reason"]}
+                         for u in unreported_sections), key=lambda u: u["section"])
     limitations = [s for s in ordered if s["affects_completeness"]]
     body = {
         "schema_version": SCHEMA_VERSION,
-        "acquisition_mode": acquisition_mode,
+        "requested_sections": requested,
+        "unreported_sections": unreported,
+        "acquisition_modes": sorted(set(s["acquisition_mode"] for s in ordered)),
         "requested_sources": len(ordered),
         "complete_sources": len([s for s in ordered
                                  if not s["affects_completeness"]]),
@@ -252,27 +333,27 @@ def manifest(sources, acquisition_mode):
 
 
 def coverage_digest(body):
-    """A deterministic identity for what this run could OBSERVE, not for what it found.
+    """A deterministic identity for what this run could OBSERVE, not for what it found
+    (ELIM-014).
 
-    Computed over the coverage facts alone - domain, source, operation, status, outcome,
-    universe - and deliberately not over any host fact. That is the whole point: two runs
-    of an unchanged host that differ only in what the collector was allowed to read must
-    produce different coverage digests and identical host state, so a later comparison can
-    say "visibility changed" instead of "the host changed".
+    Computed over the coverage facts alone and deliberately not over any host fact, the
+    collector identity or the reason text. Two runs of an unchanged host that differ only
+    in what the collector was allowed to read must produce different coverage digests and
+    identical host state, so a later comparison can say "visibility changed" instead of
+    "the host changed".
     """
-    facts = [{"domain": s["domain"], "source": s["source"],
-              "operation": s["operation"], "status": s["status"],
-              "access_outcome": s["access_outcome"],
-              "source_universe": s["source_universe"]}
-             for s in sorted(body["sources"],
-                             key=lambda s: (s["domain"], s["source"]))]
-    frame = {"schema_version": SCHEMA_VERSION,
-             "acquisition_mode": body["acquisition_mode"], "sources": facts}
+    frame = {"schema_version": body["schema_version"],
+             "requested_sections": body["requested_sections"],
+             "unreported_sections": body["unreported_sections"],
+             "sources": [dict((k, s[k]) for k in (
+                 "domain", "source", "operation", "acquisition_mode", "status",
+                 "access_outcome", "source_universe", "universe_reasons"))
+                 for s in body["sources"]]}
     return canonical.rendered(canonical.hash_frame(
         DOMAIN_COVERAGE, canonical.canonical_bytes(frame)))
 
 
-DOMAIN_COVERAGE = "ISEDRAF:EVIDENCE-COVERAGE:V1"
+DOMAIN_COVERAGE = "ISEDRAF:EVIDENCE-COVERAGE:V2"
 
 
 def compare(before, after):

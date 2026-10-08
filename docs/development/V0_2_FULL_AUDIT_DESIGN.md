@@ -259,10 +259,10 @@ No calendar. Each phase is re-estimated after the previous one.
 
 | Phase | Content | Needs |
 |---|---|---|
-| P0 | owner decisions: freezing §5.3 (direction given 2026-10-06), the manifest schema freeze, the auxiliary-binding amendment row, the §5.2 operation list (direction given), the faillock/opasswd scope ruling (deferred) | owner |
+| P0 | Done: the manifest schema (D-122, schema 2), the auxiliary-binding row (closed), and the authority model with the operation registry and blocker resolutions (D-123, `docs/architecture/FULL_AUDIT_AUTHORITY_MODEL.md`). Deferred: the faillock/opasswd scope ruling | owner |
 | P1 | IQ-044 as a 0.1.x correction release (owner direction 2026-10-06), then IQ-046; regression test first | none |
 | P2 | IQ-043 registry model and gate | none beyond approval |
-| P3 | IQ-042 contract, unprivileged: method identity, evidence limits written and rendered, authority field | manifest schema (P0) |
+| P3 | IQ-042 contract, unprivileged: method identity, evidence limits written to schema 2 (`docs/architecture/EVIDENCE_LIMITS_SCHEMA.md`) and rendered, authority field | D-122 |
 | P4 | Full Audit design freeze: one owner amendment covering D-60, D-27, EXEC-020, SCOPE-070 to SCOPE-072, exit codes 66/67, the operation list and the authority vocabulary, resolving IQ-024 to IQ-027 and U-04 | owner, kit |
 | P5 | launcher hardening, supervisor, the `isedraf` identity, fixed operations, staging and promotion | P4 |
 | P6 | corpus validation on lab VMs (Debian 12, Ubuntu 24.04, Rocky 9, AlmaLinux 9, SELinux enforcing where the distribution defaults to it): authority, failure semantics, 10 unchanged runs, upgrade, reboot, no host mutation | P5; OD-06 result |

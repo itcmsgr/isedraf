@@ -154,7 +154,10 @@
       "falsification": "D-89 the status registry claims a capability whose evidence is absent",
       "eligible": [
         "scripts/ci/project_status.json",
-        "docs/CURRENT_STATE.md"
+        "docs/CURRENT_STATE.md",
+        "lib/isedraf/cli.py",
+        "lib/isedraf/snapshot.py",
+        "scripts/ci/privileged_operations.json"
       ]
     },
     "check-packaging": {
@@ -228,6 +231,27 @@
       "eligible": [
         "scripts/ci/native_controls.json",
         "docs/architecture/NATIVE_CONTROL_CATALOG.md"
+      ]
+    },
+    "check-evidence-limits": {
+      "script": "scripts/ci/check_evidence_limits_schema.py",
+      "implements": "D-122, D-115, D-121",
+      "falsification": "D-122 a code vocabulary gains a value the frozen schema does not have",
+      "eligible": [
+        "docs/architecture/EVIDENCE_LIMITS_SCHEMA.md",
+        "lib/isedraf/coverage.py",
+        "lib/isedraf/status.py",
+        "tests/fixtures/evidence_limits/v2"
+      ]
+    },
+    "check-privileged-operations": {
+      "script": "scripts/ci/check_privileged_operations.py",
+      "implements": "D-123, D-118, D-122",
+      "falsification": "D-123 a command string is registered as a privileged operation",
+      "eligible": [
+        "docs/architecture/FULL_AUDIT_AUTHORITY_MODEL.md",
+        "scripts/ci/privileged_operations.json",
+        "lib/isedraf/coverage.py"
       ]
     },
     "check-public-ux": {

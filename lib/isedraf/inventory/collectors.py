@@ -6,7 +6,7 @@
 #
 # Purpose: The host inventory collectors — platform, machine, compute, storage,
 #          network, DNS and time.
-# Implements: SCOPE-022, SCOPE-045, REC-005, IDENT-041
+# Implements: SCOPE-022, SCOPE-045, REC-005, IDENT-041, PRIV-021
 #
 # Capability-driven throughout. There is no `if rhel / elif debian` here and there is not
 # meant to be: W1-C measured ten distributions and found the interpreter, not the
@@ -22,6 +22,7 @@
 # =============================================================================
 
 """Each collector returns a model.subdomain(); none of them raises."""
+import errno
 import json
 import os
 import re
@@ -53,12 +54,21 @@ class _Reads(object):
     def __init__(self, root):
         self.root = root
         self.incomplete = []
+        self.denied = False
 
     def _note(self, outcome, path):
         if not outcome.ok and outcome.detail in (TRUNCATED, IO_ERROR, PERMISSION_DENIED):
             rel = "/" + os.path.relpath(path, self.root) if self.root not in ("", "/") else path
             self.incomplete.append("%s (%s)" % (rel, outcome.detail))
+            self.denied = self.denied or outcome.detail == PERMISSION_DENIED
         return outcome
+
+    def unmeasured(self, target, exc):
+        """IQ-046 (3): a measurement that failed is noted, never skipped silently."""
+        denied = exc.errno in (errno.EACCES, errno.EPERM)
+        self.incomplete.append("statvfs %s (%s)" % (
+            target, PERMISSION_DENIED if denied else IO_ERROR))
+        self.denied = self.denied or denied
 
     def file(self, path):
         return self._note(read_file(path), path)
@@ -74,6 +84,10 @@ class _Reads(object):
             kw["reason"] = "%s; %s" % (reason, note) if reason else note
             if status == model.COLLECTED:
                 status = model.PARTIAL
+        if self.denied and kw.get("access_outcome") is None:
+            # IQ-046 (3): a refusal this subdomain observed is attributed to privilege, not
+            # guessed as an I/O error by the coverage builder.
+            kw["access_outcome"] = coverage.PERMISSION_DENIED
         return model.subdomain(status, data, **kw)
 
 def _live(root):
@@ -399,7 +413,8 @@ def collect_storage(root="/"):
             })
             try:
                 st = os.statvfs(target)
-            except OSError:
+            except OSError as exc:
+                reads.unmeasured(target, exc)
                 continue
             total = st.f_blocks * st.f_frsize
             free = st.f_bavail * st.f_frsize
@@ -593,8 +608,16 @@ def collect_time(root="/"):
         if os.path.exists(os.path.join(root, "run/systemd/timesync")):
             data["provider"] = "systemd-timesyncd"
 
+    helper_reason = None
     if data["provider"] == "chrony" and _live(root):
         tracking = run(["chronyc", "-n", "tracking"])
+        if not tracking.ok:
+            # IQ-054 fix 1: an optional helper that is present and fails is a recorded
+            # limitation, never a silently COLLECTED subdomain.
+            helper_reason = ("HELPER_FAILED: chronyc tracking did not complete, so the time "
+                             "source, stratum and offset were not observed; possible causes "
+                             "include the time daemon not running or a mandatory access "
+                             "control denial.")
         if tracking.ok:
             for line in tracking.value.splitlines():
                 key, _, value = line.partition(":")
@@ -614,9 +637,12 @@ def collect_time(root="/"):
                         # deterministically has no business in evidence.
                         data["offset_nanoseconds"] = int(round(float(m.group(1)) * 1e9))
             method += " + chronyc tracking"
+    reason = None if status == model.COLLECTED else partial_reason
+    if helper_reason:
+        status = model.PARTIAL
+        reason = helper_reason if reason is None else "%s %s" % (reason, helper_reason)
     return reads.subdomain(status, data, method=method, dimension=model.RESOLVED,
-                           reason=None if status == model.COLLECTED
-                           else partial_reason)
+                           reason=reason)
 
 
 def _acquisition(outcome, operation):

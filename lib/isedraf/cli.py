@@ -138,8 +138,11 @@ def _commit_run(identity_source, audit_root, err):
             sections, run_status = (audit_mod.collect(audit_root) if audit_root is not None
                                     else (None, None))
             created_at, snapshot_id, run_id, event_id = snapshot.new_ids()
+            limits = (audit_mod.evidence_limits(sections, audit_root)
+                      if audit_root is not None else None)
             built = snapshot.build(ident, snapshot_id, run_id, created_at,
-                                   state_root_class, ENGINE_VERSION, sections=sections)
+                                   state_root_class, ENGINE_VERSION,
+                                   coverage_manifest=limits, sections=sections)
             snapshot.commit(root, built, snapshot_id)
             core, _core_canonical, record_hash = ledger.build_record(
                 root, snapshot_id, built["manifest_hash"], event_id, created_at,
@@ -337,7 +340,8 @@ def cmd_report(args, out=None, err=None):
         model_obj = report.build(root, committed["sections"]["inventory"]["evidence"],
                                  assessment=assessment,
                                  audit_sections=committed["sections"],
-                                 audit_digests=committed["digests"])
+                                 audit_digests=committed["digests"],
+                                 coverage_manifest=committed.get("evidence_limits"))
         if getattr(args, "json", False):
             rendered, extension = report.render.to_json(model_obj), "json"
         elif getattr(args, "html", False):

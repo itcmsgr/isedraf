@@ -33,7 +33,7 @@ from . import artifact as artifact_module
 from . import sections as section_summaries
 from .profile import IDENTITY_DISCLAIMER
 
-REPORT_SCHEMA_VERSION = 1
+REPORT_SCHEMA_VERSION = 2          # 2: evidence_limitations (IQ-042 (3))
 
 # Plain words on the report itself (GA v0.1 public docs review): the two blocks stay
 # distinct, because host identity is part of host state and inventory is not.
@@ -104,7 +104,18 @@ def committed_run(root):
     except (OSError, ValueError, KeyError):
         bound = {}
     digests = {n: bound.get("sections/%s.json" % n) for n in sections}
-    return {"snapshot_id": name, "sections": sections, "digests": digests}
+    limits = None
+    if "coverage/evidence_limits.json" in bound:
+        # IQ-042 (3): the bound Evidence Limits Manifest of THIS run, read from the bundle.
+        # A run committed without one (GA 0.1.x) keeps None: coverage NOT ESTABLISHED.
+        try:
+            with open(os.path.join(root, "snapshots", name, "coverage",
+                                   "evidence_limits.json"), "rb") as fh:
+                limits = json.loads(fh.read().decode("utf-8"))
+        except (OSError, ValueError):
+            limits = None
+    return {"snapshot_id": name, "sections": sections, "digests": digests,
+            "evidence_limits": limits}
 
 
 def identity_evidence(root):
@@ -221,6 +232,48 @@ def _coverage_limitations(manifest):
     return out
 
 
+NOT_ESTABLISHED = ("This run carries no evidence-limits record, so its coverage is not "
+                   "established. The absence of a limitation is not evidence that the "
+                   "collection was complete.")
+
+
+def evidence_limitations(manifest):
+    """IQ-042 (3): each recorded limit as an ASSURANCE LIMITATION - section, source,
+    status, reason and impact. Never a finding, a severity or a verdict.
+
+    The impact is derived from the manifest's structured fields, never from the reason a
+    collector wrote; the reason is shown as recorded.
+    """
+    if manifest is None:
+        return {"recorded": False, "note": NOT_ESTABLISHED, "items": []}
+    items = []
+    for s in manifest.get("limitations", []):
+        impact = []
+        if s.get("privilege_limited"):
+            impact.append("Not observed with the access of the identity that ran the "
+                          "audit; additional access (%s) would be needed."
+                          % s.get("required_access"))
+        if not s.get("absence_claim_allowed"):
+            impact.append("The absence of a record in this source cannot be established.")
+        elif s.get("access_outcome") == "NOT_FOUND":
+            impact.append("The source does not exist; there was nothing in it to observe.")
+        if not impact:
+            impact.append("This source was not observed completely.")
+        items.append({"section": s.get("domain"), "source": s.get("source"),
+                      "status": s.get("status"), "reason": s.get("reason"),
+                      "impact": impact})
+    for u in manifest.get("unreported_sections", []):
+        items.append({"section": u.get("section"), "source": None,
+                      "status": "NOT_REPORTED", "reason": u.get("reason"),
+                      "impact": ["The section reported no acquisition coverage; nothing "
+                                 "about its sources is established."]})
+    items.sort(key=lambda i: (i["section"] or "", i["source"] or ""))
+    return {"recorded": True,
+            "note": ("Limits of what this run could observe. They describe the "
+                     "collection, not the state of the host."),
+            "items": items}
+
+
 def build(root, inventory, assessment=None, generated_at=None, report_id=None,
           inventory_artifact=None, coverage_manifest=None, audit_sections=None,
           audit_digests=None):
@@ -285,6 +338,7 @@ def build(root, inventory, assessment=None, generated_at=None, report_id=None,
         # renderer does not collect. Absent when the caller supplied none, so that
         # "no manifest" and "an empty manifest" stay distinguishable (NORM-034).
         "evidence_limits": coverage_manifest,
+        "evidence_limitations": evidence_limitations(coverage_manifest),
         "limitations": _limitations(inventory) + _coverage_limitations(coverage_manifest),
         "provenance": {
             "engine_version": ENGINE_VERSION,

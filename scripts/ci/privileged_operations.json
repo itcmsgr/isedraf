@@ -1,0 +1,126 @@
+{
+  "$comment": "The ISEDRAF FIXED PRIVILEGED OPERATION registry (D-123, docs/architecture/FULL_AUDIT_AUTHORITY_MODEL.md section 4). Consumed by scripts/ci/check_privileged_operations.py. Every privileged acquisition maps to exactly one entry here (AUTH-004); no entry takes a caller input (AUTH-003). Design only: no entry is IMPLEMENTED and no supervisor exists.",
+  "registry_version": 1,
+  "operations": [
+    {
+      "operation_id": "inspect_mount_namespaces_v1",
+      "purpose": "Read one mountinfo table for each distinct mount namespace on the host.",
+      "serves": "mounts",
+      "targets": [
+        "/proc/<pid>/ns/mnt for every pid, deduplicated by namespace",
+        "/proc/<pid>/mountinfo of one pid per namespace"
+      ],
+      "privilege_basis": "reading other processes' namespace links and mountinfo needs ptrace read access to them",
+      "fixed_executable": null,
+      "fixed_argv": [],
+      "caller_inputs": [],
+      "output_bound_bytes": 16777216,
+      "status": "PLANNED",
+      "env_policy": "NOT_APPLICABLE",
+      "cwd_policy": "NOT_APPLICABLE",
+      "stdin_policy": "NOT_APPLICABLE",
+      "exit_status_policy": "NOT_APPLICABLE",
+      "timeout_seconds": 10
+    },
+    {
+      "operation_id": "read_authorized_keys_v1",
+      "purpose": "Read the authorized_keys files of local accounts.",
+      "serves": "authorizedkeys",
+      "targets": [
+        "per-account key files; derivation not yet specified"
+      ],
+      "privilege_basis": "other users' home directories are not traversable by the engine identity",
+      "fixed_executable": null,
+      "fixed_argv": [],
+      "caller_inputs": [],
+      "output_bound_bytes": 4194304,
+      "status": "DESIGN_OPEN",
+      "env_policy": "NOT_APPLICABLE",
+      "cwd_policy": "NOT_APPLICABLE",
+      "stdin_policy": "NOT_APPLICABLE",
+      "exit_status_policy": "NOT_APPLICABLE",
+      "timeout_seconds": 10
+    },
+    {
+      "operation_id": "read_shadow_v1",
+      "purpose": "Read the local shadow password database.",
+      "serves": "accounts",
+      "targets": [
+        "/etc/shadow"
+      ],
+      "privilege_basis": "the file is readable by root (and on some distributions group shadow) only",
+      "fixed_executable": null,
+      "fixed_argv": [],
+      "caller_inputs": [],
+      "output_bound_bytes": 1048576,
+      "status": "PLANNED",
+      "env_policy": "NOT_APPLICABLE",
+      "cwd_policy": "NOT_APPLICABLE",
+      "stdin_policy": "NOT_APPLICABLE",
+      "exit_status_policy": "NOT_APPLICABLE",
+      "timeout_seconds": 10
+    },
+    {
+      "operation_id": "read_sshd_declared_config_v1",
+      "purpose": "Read the declared OpenSSH server configuration and its include graph.",
+      "serves": "ssh",
+      "targets": [
+        "/etc/ssh/sshd_config",
+        "files it includes, resolved by the engine's include rules after return"
+      ],
+      "privilege_basis": "sshd_config is 0600 and sshd_config.d 0700 on the EL family",
+      "fixed_executable": null,
+      "fixed_argv": [],
+      "caller_inputs": [],
+      "output_bound_bytes": 4194304,
+      "status": "PLANNED",
+      "env_policy": "NOT_APPLICABLE",
+      "cwd_policy": "NOT_APPLICABLE",
+      "stdin_policy": "NOT_APPLICABLE",
+      "exit_status_policy": "NOT_APPLICABLE",
+      "timeout_seconds": 10
+    },
+    {
+      "operation_id": "read_sudoers_graph_v1",
+      "purpose": "Read the sudoers policy, its include graph and the sudoers.d listing.",
+      "serves": "sudo",
+      "targets": [
+        "/etc/sudoers",
+        "/etc/sudoers.d listing",
+        "files it includes"
+      ],
+      "privilege_basis": "/etc/sudoers is 0440 root and /etc/sudoers.d 0750",
+      "fixed_executable": null,
+      "fixed_argv": [],
+      "caller_inputs": [],
+      "output_bound_bytes": 4194304,
+      "status": "PLANNED",
+      "env_policy": "NOT_APPLICABLE",
+      "cwd_policy": "NOT_APPLICABLE",
+      "stdin_policy": "NOT_APPLICABLE",
+      "exit_status_policy": "NOT_APPLICABLE",
+      "timeout_seconds": 10
+    },
+    {
+      "operation_id": "resolve_sshd_effective_config_v1",
+      "purpose": "Obtain the effective OpenSSH server configuration.",
+      "serves": "ssh",
+      "targets": [
+        "the output of the fixed executable below"
+      ],
+      "privilege_basis": "sshd -T loads the host keys, which are readable by root only",
+      "fixed_executable": "/usr/sbin/sshd",
+      "fixed_argv": [
+        "-T"
+      ],
+      "caller_inputs": [],
+      "output_bound_bytes": 1048576,
+      "status": "PLANNED",
+      "env_policy": "CLEAN_FIXED",
+      "cwd_policy": "ROOT_DIR",
+      "stdin_policy": "DEVNULL",
+      "exit_status_policy": "ZERO_ONLY_SUCCEEDS",
+      "timeout_seconds": 30
+    }
+  ]
+}

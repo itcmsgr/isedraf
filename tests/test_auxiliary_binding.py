@@ -40,7 +40,10 @@ def a_manifest(refused=False):
         coverage.NOT_TESTED if refused else coverage.COLLECTED,
         coverage.PERMISSION_DENIED if refused else coverage.READ_OK,
         coverage.OP_FILE_READ))
-    return coverage.manifest(entries, coverage.MODE_CURRENT_IDENTITY)
+    return coverage.manifest(entries, coverage.MODE_CURRENT_IDENTITY,
+                             {"accounts": {"collector_id": "isedraf.accounts",
+                                           "collector_version": "1",
+                                           "parser_version": "1"}})
 
 
 class Bundle(unittest.TestCase):

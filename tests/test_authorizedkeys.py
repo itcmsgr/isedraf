@@ -328,6 +328,30 @@ class DeniedIsNotAbsent(Fixture):
         self.assertEqual(evidence.status, result.COLLECTED)
 
 
+@unittest.skipIf(os.geteuid() == 0, "root bypasses the permission bits these cases need")
+class UnseenConfigIsNotAnEmptyOne(Fixture):
+    """IQ-046 (5): "no declaration observed" is not said of a configuration that was
+    never read. An absent sshd_config stays NO_DECLARATION_OBSERVED; a refused one
+    reports the incomplete SSH evidence that is the real cause."""
+
+    def test_a_readable_config_without_a_declaration(self):
+        self.host()
+        ev = self.collect()
+        self.assertEqual(ev.status, model.NOT_TESTED)
+        self.assertTrue(ev.reason.startswith("NO_DECLARATION_OBSERVED"), ev.reason)
+
+    def test_a_refused_config_reports_the_incomplete_ssh_evidence(self):
+        self.host()
+        path = os.path.join(self.root, "etc/ssh/sshd_config")
+        os.chmod(path, 0)
+        # LIFO: registered after the enclosure rmtree, so it runs BEFORE it.
+        self.addCleanup(os.chmod, path, 0o600)
+        ev = self.collect()
+        self.assertEqual(ev.status, model.NOT_TESTED)
+        self.assertTrue(ev.reason.startswith("SSH_EVIDENCE_INCOMPLETE"), ev.reason)
+        self.assertNotIn("carries no AuthorizedKeysFile", ev.reason)
+
+
 class Tokens(Fixture):
 
     def test_percent_h_expands_to_the_rooted_home(self):

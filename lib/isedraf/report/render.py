@@ -340,6 +340,21 @@ def to_markdown(report):
                    "(`isedraf report --html`) shows each area's facts and evidence "
                    "reference.*")
         out.append("")
+    limits = report.get("evidence_limitations") or {"recorded": False, "items": [],
+                                                    "note": None}
+    out.append("## Evidence limitations")
+    out.append("")
+    out.append("*%s*" % limits.get("note"))
+    out.append("")
+    if limits.get("items"):
+        out.append("| Section | Source | Status | Reason | Impact |")
+        out.append("|---|---|---|---|---|")
+        for item in limits["items"]:
+            out.append("| %s | %s | %s | %s | %s |" % tuple(
+                (str(v) if v is not None else "—").replace("|", "\\|") for v in (
+                    item["section"], item["source"], item["status"], item["reason"],
+                    " ".join(item["impact"]))))
+        out.append("")
     out.append("## Limitations")
     out.append("")
     for limitation in report["limitations"]:
@@ -455,6 +470,19 @@ def to_html(report):
         w('<p class="ref">evidence: %s &middot; %s</p>\n</section>\n'
           % (_esc(ref.get("path")), _esc(ref.get("digest") or "unbound")))
 
+    limits = report.get("evidence_limitations") or {"recorded": False, "items": [],
+                                                    "note": None}
+    w('<div class="panel"><h2>Evidence limitations</h2>\n<p>%s</p>\n'
+      % _esc(limits.get("note")))
+    if limits.get("items"):
+        w("<table>\n<tr><th>Section</th><th>Source</th><th>Status</th><th>Reason</th>"
+          "<th>Impact</th></tr>\n")
+        for item in limits["items"]:
+            w("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (
+                _esc(item["section"]), _esc(item["source"] or "—"), _esc(item["status"]),
+                _esc(item["reason"] or "—"), _esc(" ".join(item["impact"]))))
+        w("</table>\n")
+    w("</div>\n")
     w('<div class="panel"><h2>Limitations</h2><ul>\n')
     for item in report.get("limitations") or []:
         w("<li>%s</li>\n" % _esc(item))

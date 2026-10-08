@@ -235,6 +235,52 @@ else:
 # reads what a user actually receives, which is the only thing a licensing complaint would
 # ever be about.
 DIST = ROOT / "dist"
+
+
+def archive_relpath(artifact_name, member):
+    """The repository path of a source-tarball member, or the member unchanged.
+
+    A source tarball wraps the tree in exactly one top-level directory named after the
+    archive (isedraf-<version>/). Only that directory is stripped, so the result is the
+    same repository-relative path 5c judges. A member outside it, and every .deb or .rpm
+    member (an install path, never a repository path), is returned unchanged and so can
+    never match the allowlist.
+    """
+    if artifact_name.endswith(".tar.gz"):
+        top = artifact_name[:-len(".tar.gz")] + "/"
+        if member.startswith(top):
+            return member[len(top):]
+    return member
+
+
+def restricted_member(artifact_name, member):
+    """True when a member is a restricted document format the policy does not allowlist."""
+    rel = archive_relpath(artifact_name, member)
+    if rel in allowed_bin:
+        return False
+    return any(rel.lower().endswith(ext) for ext in POLICY["restricted_document_formats"])
+
+
+# The artifact scan reuses the 5c allowlist through path normalization and nothing else.
+# These cases run on every invocation, with or without built artifacts, so a scan that
+# matched by file name, exempted a format, or stripped any top-level directory fails here.
+_LISTED = "docs/development/architecture/generated/06_field_lineage.csv"
+for _name, _member, _expected in (
+        ("isedraf-9.9.9.tar.gz", "isedraf-9.9.9/" + _LISTED, False),
+        ("isedraf-9.9.9.tar.gz", "isedraf-9.9.9/docs/reference/06_field_lineage.csv", True),
+        ("isedraf-9.9.9.tar.gz", "isedraf-9.9.9/docs/reference/controls.csv", True),
+        ("isedraf-9.9.9.tar.gz", "other-9.9.9/" + _LISTED, True),
+        ("isedraf-9.9.9.tar.gz", _LISTED, False),
+        ("isedraf_9.9.9_all.deb", "./usr/share/doc/isedraf/controls.csv", True)):
+    if restricted_member(_name, _member) is not _expected:
+        bad("artifact self-test: %s member %s should be %s" % (
+            _name, _member, "refused" if _expected else "allowlisted"))
+if archive_relpath("isedraf-9.9.9.tar.gz", "isedraf-9.9.9/" + _LISTED) != _LISTED:
+    bad("artifact self-test: isedraf-9.9.9/%s does not normalize to %s" % (_LISTED, _LISTED))
+if not [f for f in FAIL if f.startswith("artifact self-test")]:
+    print("  OK    artifact self-test: a source-tarball member is judged by its repository path; "
+          "6 cases, 4 refused, 2 allowlisted")
+
 if (DIST / "packages").is_dir():
     import subprocess as sp
     import tarfile
@@ -272,8 +318,7 @@ if (DIST / "packages").is_dir():
             continue
         checked += 1
         for n in names:
-            low = n.lower()
-            if any(low.endswith(ext) for ext in POLICY["restricted_document_formats"]):
+            if restricted_member(artifact.name, n):
                 bad("%s contains %s — a document/archive format that may carry restricted "
                     "provider material" % (artifact.name, n))
             if "PROVIDERS_LICENSE" in n or "licensed-framework-research" in n:

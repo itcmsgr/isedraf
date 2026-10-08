@@ -39,6 +39,19 @@ from isedraf.report import model as report_model               # noqa: E402
 ALICE = "alice:x:1000:1000:Alice:/home/alice:/bin/bash\n"
 
 
+class _Collectors(dict):
+    """Schema 2 needs a collector identity per domain (ELIM-006)."""
+
+    def __missing__(self, domain):
+        return {"collector_id": "isedraf.test." + domain, "collector_version": "1",
+                "parser_version": "1"}
+
+
+def limits(sources, mode=None):
+    """coverage.manifest under schema 2, for tests that predate collector identity."""
+    return coverage.manifest(sources, mode, _Collectors())
+
+
 def entry(**kw):
     kw.setdefault("domain", "d")
     kw.setdefault("name", "s")
@@ -206,7 +219,7 @@ class RootIsNotCompleteness(unittest.TestCase):
     """
 
     def incomplete(self):
-        return coverage.manifest(
+        return limits(
             [entry(name="a"),
              entry(name="b", status=coverage.NOT_TESTED,
                    outcome=coverage.NOT_FOUND)], coverage.MODE_CURRENT_IDENTITY)
@@ -237,7 +250,7 @@ class RootIsNotCompleteness(unittest.TestCase):
                             for line in lines))
 
     def test_a_complete_run_carries_no_limitation(self):
-        got = coverage.manifest([entry(name="a")], coverage.MODE_CURRENT_IDENTITY)
+        got = limits([entry(name="a")], coverage.MODE_CURRENT_IDENTITY)
         self.assertEqual(got["limitations"], [])
         self.assertEqual(report_model._coverage_limitations(got), [])
 
@@ -269,20 +282,20 @@ class NoUnproducibleMode(unittest.TestCase):
     def test_an_invented_mode_is_refused(self):
         for bad in ("ELEVATED", "ROOT", "PRIVILEGED", "UNPRIVILEGED"):
             with self.assertRaises(ValueError):
-                coverage.manifest([], bad)
+                limits([], bad)
 
 
 class ObservationCapability(unittest.TestCase):
     """Same host facts, different visibility. THE R3 foundation."""
 
     def runs(self):
-        before = coverage.manifest(
+        before = limits(
             [entry(domain="accounts", name="etc/passwd"),
              entry(domain="accounts", name="etc/shadow",
                    status=coverage.NOT_TESTED,
                    outcome=coverage.PERMISSION_DENIED)],
             coverage.MODE_CURRENT_IDENTITY)
-        after = coverage.manifest(
+        after = limits(
             [entry(domain="accounts", name="etc/passwd"),
              entry(domain="accounts", name="etc/shadow")],
             coverage.MODE_CURRENT_IDENTITY)
@@ -316,10 +329,10 @@ class ObservationCapability(unittest.TestCase):
         falsification injection that deleted the outcome from the digest frame went
         undetected, which is how the gap was found rather than argued about.
         """
-        absent = coverage.manifest(
+        absent = limits(
             [entry(name="s", status=coverage.NOT_TESTED,
                    outcome=coverage.NOT_FOUND)], coverage.MODE_CURRENT_IDENTITY)
-        refused = coverage.manifest(
+        refused = limits(
             [entry(name="s", status=coverage.NOT_TESTED,
                    outcome=coverage.PERMISSION_DENIED)], coverage.MODE_CURRENT_IDENTITY)
         self.assertNotEqual(absent["coverage_digest"], refused["coverage_digest"],
@@ -328,14 +341,14 @@ class ObservationCapability(unittest.TestCase):
 
     def test_identical_visibility_yields_an_identical_digest(self):
         # Otherwise every run would look like a visibility change.
-        first = coverage.manifest([entry(name="a")], coverage.MODE_CURRENT_IDENTITY)
-        second = coverage.manifest([entry(name="a")], coverage.MODE_CURRENT_IDENTITY)
+        first = limits([entry(name="a")], coverage.MODE_CURRENT_IDENTITY)
+        second = limits([entry(name="a")], coverage.MODE_CURRENT_IDENTITY)
         self.assertEqual(first["coverage_digest"], second["coverage_digest"])
 
     def test_the_digest_ignores_host_facts_and_watches_only_coverage(self):
         # A reason string is for people and must not move the identity that R3 compares.
-        plain = coverage.manifest([entry(name="a")], coverage.MODE_CURRENT_IDENTITY)
-        annotated = coverage.manifest(
+        plain = limits([entry(name="a")], coverage.MODE_CURRENT_IDENTITY)
+        annotated = limits(
             [entry(name="a", reason="a sentence that changed")],
             coverage.MODE_CURRENT_IDENTITY)
         self.assertEqual(plain["coverage_digest"], annotated["coverage_digest"])
@@ -425,7 +438,7 @@ class RendererReadsFieldsNotProse(unittest.TestCase):
 
     def test_no_manifest_and_an_empty_manifest_are_distinguishable(self):
         self.assertEqual(report_model._coverage_limitations(None), [])
-        empty = coverage.manifest([], coverage.MODE_CURRENT_IDENTITY)
+        empty = limits([], coverage.MODE_CURRENT_IDENTITY)
         self.assertEqual(empty["requested_sources"], 0)
 
 
@@ -443,7 +456,7 @@ class Purity(unittest.TestCase):
 
     def test_the_acquisition_mode_cannot_be_invented(self):
         with self.assertRaises(ValueError):
-            coverage.manifest([], "ROOT")
+            limits([], "ROOT")
 
 
 class ThreeAxes(unittest.TestCase):
@@ -454,8 +467,10 @@ class ThreeAxes(unittest.TestCase):
                               coverage.PERMISSION_DENIED, coverage.OP_FILE_READ)
         self.assertEqual(got["access_outcome"], coverage.PERMISSION_DENIED)
         self.assertEqual(got["required_access"], coverage.ACCESS_FILE_READ)
-        manifest = coverage.manifest([got], coverage.MODE_CURRENT_IDENTITY)
-        self.assertEqual(manifest["acquisition_mode"],
+        manifest = limits([got], coverage.MODE_CURRENT_IDENTITY)
+        self.assertEqual(manifest["acquisition_modes"],
+                         [coverage.MODE_CURRENT_IDENTITY])
+        self.assertEqual(manifest["sources"][0]["acquisition_mode"],
                          coverage.MODE_CURRENT_IDENTITY)
 
     def test_one_outcome_can_carry_different_requirements(self):

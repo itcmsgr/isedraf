@@ -19,10 +19,10 @@ GENERATED from `scripts/ci/falsifiable.sh`. A large total is not coverage if mos
 | S4 file metadata | 4 |
 | S5 enumeration | 5 |
 | architecture | 7 |
-| privacy / disclosure | 27 |
+| privacy / disclosure | 30 |
 | licensing / framework | 21 |
 | packaging / release | 10 |
 | governance / gates | 8 |
 | docs truth | 7 |
-| other / cross-cutting | 210 |
-| **total** | **373** |
+| other / cross-cutting | 235 |
+| **total** | **401** |
