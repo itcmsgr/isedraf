@@ -43,6 +43,48 @@ FILES = {
 }
 
 
+class MethodIdentity(unittest.TestCase):
+    """IQ-042 (1), CMP-020: every section names the collector that produced it, as
+    structured method identity, so a collector change is never read as host drift."""
+
+    def setUp(self):
+        self.host = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.host)
+        for rel, text in FILES.items():
+            path = os.path.join(self.host, rel)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w") as fh:
+                fh.write(text)
+
+    def test_the_method_table_covers_exactly_the_sections(self):
+        self.assertEqual(sorted(audit.METHODS), sorted(audit.SECTIONS))
+
+    def test_every_section_carries_structured_method_identity(self):
+        sections, _status = audit.collect(self.host)
+        for name, section in sections.items():
+            self.assertEqual(section["schema_version"], 2)
+            method = section["method"]
+            self.assertEqual(sorted(method),
+                             ["collector_id", "collector_version", "parser_version"], name)
+            self.assertEqual(method["collector_id"], "isedraf." + name)
+            for value in method.values():
+                self.assertTrue(isinstance(value, str) and value, (name, method))
+
+    def test_method_identity_is_stable(self):
+        first, _ = audit.collect(self.host)
+        second, _ = audit.collect(self.host)
+        self.assertEqual({n: s["method"] for n, s in first.items()},
+                         {n: s["method"] for n, s in second.items()})
+
+    def test_a_crashed_collector_still_names_itself(self):
+        def boom(*a, **k):
+            raise RuntimeError("SECRET-DETAIL")
+        with mock.patch.dict(audit.COLLECTORS, {"sudo": boom}):
+            sections, _status = audit.collect(self.host)
+        self.assertEqual(sections["sudo"]["collection_status"], "ERROR")
+        self.assertEqual(sections["sudo"]["method"]["collector_id"], "isedraf.sudo")
+
+
 class Audit(unittest.TestCase):
 
     def setUp(self):

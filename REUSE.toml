@@ -44,7 +44,7 @@ SPDX-License-Identifier = "MPL-2.0"
 # The recorded glibc differential corpus: generated synthetic inputs and glibc's answers to
 # them. JSON cannot carry an inline licence header (L-07 forbids a synthetic licence key).
 [[annotations]]
-path = ["tests/fixtures/glibc_differential/**"]
+path = ["tests/fixtures/glibc_differential/**", "tests/fixtures/evidence_limits/**"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
 SPDX-License-Identifier = "MPL-2.0"

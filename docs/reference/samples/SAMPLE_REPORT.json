@@ -57,6 +57,11 @@
       "subdomain": "time"
     }
   ],
+  "evidence_limitations": {
+    "items": [],
+    "note": "This run carries no evidence-limits record, so its coverage is not established. The absence of a limitation is not evidence that the collection was complete.",
+    "recorded": false
+  },
   "evidence_limits": null,
   "identity_evidence": {
     "available": true,
@@ -413,17 +418,17 @@
       "storage": "/sys/block + /proc/self/mounts + statvfs(2)",
       "time": "timedatectl show"
     },
-    "engine_version": "0.1.1",
+    "engine_version": "0.1.2",
     "inventory_schema_version": 1,
-    "report_schema_version": 1
+    "report_schema_version": 2
   },
   "report": {
-    "engine_version": "0.1.1",
+    "engine_version": "0.1.2",
     "generated_at": "2026-09-20T17:15:48Z",
     "report_id": "RPT-20260920T171548Z-71072fdd5e6cd97e",
     "status": "COMPLETE"
   },
-  "report_schema_version": 1,
+  "report_schema_version": 2,
   "target": {
     "fqdn": null,
     "fqdn_source": "NOT_AVAILABLE_LOCALLY",

@@ -24,7 +24,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 |---|---|
 | Report ID | `RPT-20260920T171548Z-71072fdd5e6cd97e` |
 | Generated (UTC) | 2026-09-20T17:15:48Z |
-| ISEDRAF version | 0.1.1 |
+| ISEDRAF version | 0.1.2 |
 | Report status | **COMPLETE** |
 
 > This report describes what was **observed**. It contains no secure/insecure verdict, because host inventory is evidence and a score would be a judgement the data does not support.
@@ -173,6 +173,10 @@ Addresses and routes describe local configuration. They do not prove that anythi
 | time | COLLECTED | `timedatectl show` | — |
 
 An incomplete observation is reported as incomplete. A missing tool is `NOT_TESTED`, a present tool that failed is `ERROR`, and neither is rendered as an empty success.
+
+## Evidence limitations
+
+*This run carries no evidence-limits record, so its coverage is not established. The absence of a limitation is not evidence that the collection was complete.*
 
 ## Limitations
 

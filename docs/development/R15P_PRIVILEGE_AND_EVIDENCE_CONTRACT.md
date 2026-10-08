@@ -139,6 +139,10 @@ instead of a rule each criterion must remember.
 
 ## 5. Evidence Limits Manifest — CONTRACTED / PLANNED
 
+**Superseded 2026-10-06 by D-122.** The frozen schema is `docs/architecture/EVIDENCE_LIMITS_SCHEMA.md`.
+The indicative shape below predates `lib/isedraf/coverage.py` and is kept as history; where it
+differs (`acquisition_mode` values, `prohibits_absence_claim`), the schema governs.
+
 A machine-readable section carried by every report, consumed by renderers rather than
 written by them. Indicative shape; the schema is settled at freeze, not here:
 

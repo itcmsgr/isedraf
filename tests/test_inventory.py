@@ -512,6 +512,76 @@ class TestIncompleteAlwaysExplains(unittest.TestCase):
                                 % (name, block["collection_status"]))
 
 
+@unittest.skipIf(os.geteuid() == 0, "root bypasses the permission bits these cases need")
+class DenialIsAttributedAndNeverSilent(unittest.TestCase):
+    """IQ-046 (3): a refused read is attributed to privilege, and a mount whose
+    utilisation could not be measured is never dropped silently."""
+
+    def setUp(self):
+        self.base = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.base, True)
+        for d in ("etc", "proc/sys/kernel", "proc/self"):
+            os.makedirs(os.path.join(self.base, d))
+        with open(os.path.join(self.base, "proc/sys/kernel/hostname"), "w") as fh:
+            fh.write("myhost\n")
+
+    def write(self, rel, text):
+        path = os.path.join(self.base, rel)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as fh:
+            fh.write(text)
+        return path
+
+    def deny(self, path, restore):
+        os.chmod(path, 0)
+        # LIFO: registered after the enclosure rmtree, so it runs BEFORE it.
+        self.addCleanup(os.chmod, path, restore)
+
+    def entry(self, name, block):
+        return inventory._coverage({name: block})[0]
+
+    def test_a_readable_hosts_file_reads_ok(self):
+        self.write("etc/hosts", "192.0.2.5 myhost.corp.example myhost\n")
+        block = collectors.collect_host(self.base)
+        self.assertEqual(block["collection_status"], model.COLLECTED)
+        self.assertEqual(self.entry("host", block)["access_outcome"], "READ_OK")
+
+    def test_a_refused_hosts_file_is_attributed_to_privilege(self):
+        self.deny(self.write("etc/hosts", "192.0.2.5 myhost.corp.example myhost\n"), 0o600)
+        block = collectors.collect_host(self.base)
+        self.assertNotEqual(block["collection_status"], model.COLLECTED)
+        entry = self.entry("host", block)
+        self.assertEqual(entry["access_outcome"], "PERMISSION_DENIED")
+        self.assertTrue(entry["privilege_limited"])
+
+    def test_a_refused_resolv_conf_is_attributed_to_privilege(self):
+        self.deny(self.write("etc/resolv.conf", "nameserver 192.0.2.9\n"), 0o600)
+        block = collectors.collect_dns(self.base)
+        self.assertEqual(block["collection_status"], model.NOT_TESTED)
+        entry = self.entry("dns", block)
+        self.assertEqual(entry["access_outcome"], "PERMISSION_DENIED")
+        self.assertTrue(entry["privilege_limited"])
+
+    def test_a_measurable_mount_is_measured(self):
+        self.write("proc/self/mounts", "tmpfs %s tmpfs rw 0 0\n" % self.base)
+        block = collectors.collect_storage(self.base)
+        self.assertEqual(block["collection_status"], model.COLLECTED)
+        self.assertEqual([u["mount_point"] for u in block["data"]["utilisation"]],
+                         [self.base])
+
+    def test_an_unmeasurable_mount_is_never_dropped_silently(self):
+        locked = os.path.join(self.base, "locked")
+        target = os.path.join(locked, "mnt")
+        os.makedirs(target)
+        self.deny(locked, 0o755)
+        self.write("proc/self/mounts", "tmpfs %s tmpfs rw 0 0\n" % target)
+        block = collectors.collect_storage(self.base)
+        self.assertNotEqual(block["collection_status"], model.COLLECTED)
+        self.assertIn(target, block["reason"])
+        entry = self.entry("storage", block)
+        self.assertEqual(entry["access_outcome"], "PERMISSION_DENIED")
+
+
 class TruncationIsNeverAbsence(unittest.TestCase):
     """Owner invariant: truncated input is never complete evidence.
 

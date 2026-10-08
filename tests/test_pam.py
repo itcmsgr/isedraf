@@ -71,6 +71,54 @@ def _imported(module):
 
 
 
+
+@unittest.skipIf(os.geteuid() == 0, "root bypasses the permission bits these cases need")
+class ListingCoverage(unittest.TestCase):
+    """IQ-046 (4): a pam.d listing that failed, or found nothing, leaves a coverage entry
+    saying so; it never leaves the coverage empty."""
+
+    def setUp(self):
+        self.base = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.base, True)
+        os.makedirs(os.path.join(self.base, "etc"))
+        self.directory = os.path.join(self.base, "etc/pam.d")
+
+    def service(self, name="login", text="auth required pam_unix.so\n"):
+        os.makedirs(self.directory, exist_ok=True)
+        with open(os.path.join(self.directory, name), "w") as handle:
+            handle.write(text)
+
+    def listing(self, ev):
+        return [c for c in ev.provenance["coverage"] if c["source"] == self.directory]
+
+    def test_a_readable_pam_d_needs_no_listing_entry(self):
+        self.service()
+        ev = acquire.collect(self.base)
+        self.assertEqual(ev.status, result.COLLECTED)
+        self.assertEqual(self.listing(ev), [])
+
+    def test_an_absent_pam_d_is_recorded_as_absent(self):
+        ev = acquire.collect(self.base)
+        self.assertEqual(ev.status, result.NOT_TESTED)
+        entry = self.listing(ev)
+        self.assertEqual(len(entry), 1, ev.provenance["coverage"])
+        self.assertEqual(entry[0]["operation"], "DIRECTORY_LIST")
+        self.assertEqual(entry[0]["access_outcome"], "NOT_FOUND")
+        self.assertFalse(entry[0]["privilege_limited"])
+
+    def test_an_unlistable_pam_d_is_recorded_as_refused(self):
+        self.service()
+        os.chmod(self.directory, 0)
+        # LIFO: registered after the enclosure rmtree, so it runs BEFORE it.
+        self.addCleanup(os.chmod, self.directory, 0o755)
+        ev = acquire.collect(self.base)
+        self.assertNotEqual(ev.status, result.COLLECTED)
+        entry = self.listing(ev)
+        self.assertEqual(len(entry), 1, ev.provenance["coverage"])
+        self.assertEqual(entry[0]["access_outcome"], "PERMISSION_DENIED")
+        self.assertTrue(entry[0]["privilege_limited"])
+        self.assertFalse(entry[0]["absence_claim_allowed"])
+
 class Base(unittest.TestCase):
 
     def setUp(self):

@@ -32,213 +32,485 @@
     "w1a_evidence_contract": {
       "status": "CERTIFIED",
       "evidence": "docs/architecture/freeze/W1A_CORE_PUBLIC.sha256",
-      "note": "The published freeze manifest is the public subset; its digests are copied from the full set in the engineering repository, never recomputed, so both verify the same bytes"
+      "note": "The published freeze manifest is the public subset; its digests are copied from the full set in the engineering repository, never recomputed, so both verify the same bytes",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "identity": {
       "status": "IMPLEMENTED",
       "evidence": "lib/isedraf/identity.py",
-      "command": "isedraf identity"
+      "command": "isedraf identity",
+      "reachable_from": [
+        "audit",
+        "identity"
+      ],
+      "audit_section": "host_identity",
+      "authority": "CURRENT_IDENTITY",
+      "full_audit_gain": "NONE"
     },
     "inventory": {
       "status": "IMPLEMENTED",
       "evidence": "lib/isedraf/inventory/",
       "command": "isedraf inventory",
-      "note": ". Machine identity reports PARTIAL with an explicit reason whenever DMI is absent or incomplete; virtualization detection is separate and does not establish it"
+      "note": ". Machine identity reports PARTIAL with an explicit reason whenever DMI is absent or incomplete; virtualization detection is separate and does not establish it",
+      "reachable_from": [
+        "audit",
+        "inventory",
+        "inventory --json"
+      ],
+      "audit_section": "inventory",
+      "authority": "CURRENT_IDENTITY",
+      "full_audit_gain": "NONE"
     },
     "report_json": {
       "status": "IMPLEMENTED",
       "evidence": "lib/isedraf/report/render.py",
-      "command": "isedraf report --json"
+      "command": "isedraf report --json",
+      "reachable_from": [
+        "report --json"
+      ],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NONE"
     },
     "report_markdown": {
       "status": "IMPLEMENTED",
       "evidence": "lib/isedraf/report/render.py",
-      "command": "isedraf report"
+      "command": "isedraf report",
+      "reachable_from": [
+        "report"
+      ],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NONE"
     },
     "snapshot": {
       "status": "IMPLEMENTED",
-      "evidence": "lib/isedraf/snapshot.py"
+      "evidence": "lib/isedraf/snapshot.py",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "ledger": {
       "status": "IMPLEMENTED",
-      "evidence": "lib/isedraf/ledger.py"
+      "evidence": "lib/isedraf/ledger.py",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "independent_verifier": {
       "status": "IMPLEMENTED",
-      "evidence": "scripts/vectors/verify.py"
+      "evidence": "scripts/vectors/verify.py",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "package_deb": {
       "status": "IMPLEMENTED",
-      "evidence": "packaging/deb/control.in"
+      "evidence": "packaging/deb/control.in",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "package_rpm": {
       "status": "IMPLEMENTED",
-      "evidence": "packaging/rpm/isedraf.spec.in"
+      "evidence": "packaging/rpm/isedraf.spec.in",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "report_pdf": {
       "status": "PLANNED",
-      "evidence": null
+      "evidence": null,
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "users_groups": {
-      "status": "PLANNED",
-      "evidence": null
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/accounts/",
+      "command": "isedraf audit",
+      "reachable_from": [
+        "audit"
+      ],
+      "audit_section": "accounts",
+      "authority": "CURRENT_IDENTITY",
+      "full_audit_gain": "PLANNED_FIXED_OPERATION"
     },
     "sudo_privilege": {
-      "status": "PLANNED",
-      "evidence": null
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/sudo/",
+      "command": "isedraf audit",
+      "reachable_from": [
+        "audit"
+      ],
+      "audit_section": "sudo",
+      "authority": "CURRENT_IDENTITY",
+      "full_audit_gain": "PLANNED_FIXED_OPERATION"
     },
     "ssh_state": {
-      "status": "PLANNED",
-      "evidence": null
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/ssh/",
+      "command": "isedraf audit",
+      "reachable_from": [
+        "audit"
+      ],
+      "audit_section": "ssh",
+      "authority": "CURRENT_IDENTITY",
+      "full_audit_gain": "PLANNED_FIXED_OPERATION"
     },
     "pam": {
-      "status": "PLANNED",
-      "evidence": null
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/pam/",
+      "command": "isedraf audit",
+      "reachable_from": [
+        "audit"
+      ],
+      "audit_section": "pam",
+      "authority": "CURRENT_IDENTITY",
+      "full_audit_gain": "NONE"
     },
     "mounts": {
-      "status": "PLANNED",
-      "evidence": null
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/mounts/",
+      "command": "isedraf audit",
+      "reachable_from": [
+        "audit"
+      ],
+      "audit_section": "mounts",
+      "authority": "CURRENT_IDENTITY",
+      "full_audit_gain": "PLANNED_FIXED_OPERATION"
     },
     "audit_subsystem": {
       "status": "PLANNED",
-      "evidence": null
+      "evidence": null,
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "journald_recording": {
       "status": "PLANNED",
-      "evidence": null
+      "evidence": null,
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "services": {
       "status": "PLANNED",
-      "evidence": null
+      "evidence": null,
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "software_inventory": {
       "status": "FUTURE",
-      "evidence": null
+      "evidence": null,
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "baseline_approval": {
       "status": "PLANNED",
-      "evidence": null
+      "evidence": null,
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "delta_comparison": {
       "status": "PLANNED",
-      "evidence": null
+      "evidence": null,
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "export": {
       "status": "PLANNED",
-      "evidence": null
+      "evidence": null,
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "signing": {
       "status": "PLANNED",
-      "evidence": null
+      "evidence": null,
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "production_mode_a": {
       "status": "DEFERRED",
       "evidence": "SCOPE-072",
-      "note": "the privileged topology that owns /var/lib/isedraf is Freeze Set 2"
+      "note": "the privileged topology that owns /var/lib/isedraf is Freeze Set 2",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "arm64": {
       "status": "NOT_TESTED",
       "evidence": null,
-      "note": "zero campaigns have run; planned second architecture"
+      "note": "zero campaigns have run; planned second architecture",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "package_lifecycle_verified": {
       "status": "IMPLEMENTED",
       "evidence": "scripts/compat/package_lifecycle.sh",
-      "note": "install/run/remove/reinstall proven on Debian 12, AlmaLinux 8.10 (vendor Python 3.6.8) and AlmaLinux 9.7"
+      "note": "install/run/remove/reinstall proven on Debian 12, AlmaLinux 8.10 (vendor Python 3.6.8) and AlmaLinux 9.7",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "clean_public_export": {
       "status": "IMPLEMENTED",
       "evidence": "scripts/ci/release_export.sh",
-      "note": "packages are rebuilt from the exported tree, not the engineering tree"
+      "note": "packages are rebuilt from the exported tree, not the engineering tree",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "sbom": {
       "status": "IMPLEMENTED",
       "evidence": "scripts/ci/generate_sbom.py",
-      "note": "SPDX 2.3 JSON per artifact, generated from the FINAL package by the standard library alone; scripts/ci/check_sbom.py cross-checks the rpm SBOM against rpm's own recorded per-file digests"
+      "note": "SPDX 2.3 JSON per artifact, generated from the FINAL package by the standard library alone; scripts/ci/check_sbom.py cross-checks the rpm SBOM against rpm's own recorded per-file digests",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "artifact_attestation": {
       "status": "IMPLEMENTED",
       "evidence": ".github/workflows/release-candidate.yml",
-      "note": "build provenance over 6 subjects plus an SBOM attestation per versioned artifact; proven BINDING on 2026-09-19 - each artifact verified, then a copy with one flipped byte was refused (ATTESTATION_REJECTED_TAMPERED)"
+      "note": "build provenance over 6 subjects plus an SBOM attestation per versioned artifact; proven BINDING on 2026-09-19 - each artifact verified, then a copy with one flipped byte was refused (ATTESTATION_REJECTED_TAMPERED)",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "code_scanning": {
       "status": "IMPLEMENTED",
       "evidence": ".github/workflows/codeql.yml",
-      "note": "CodeQL security-extended over python AND actions; first run 2026-09-19, both language lanes analysed and passed"
+      "note": "CodeQL security-extended over python AND actions; first run 2026-09-19, both language lanes analysed and passed",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "scorecard": {
       "status": "IMPLEMENTED",
       "evidence": ".github/workflows/scorecard.yml",
-      "note": "first run 2026-09-19; results are uploaded to code scanning and NOT published to the public Scorecard API, so no score is displayed anywhere"
+      "note": "first run 2026-09-19; results are uploaded to code scanning and NOT published to the public Scorecard API, so no score is displayed anywhere",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "reproducible_build": {
       "status": "IMPLEMENTED",
       "evidence": "scripts/ci/check_reproducible.sh",
       "command": "make check-reproducible",
-      "note": "the source tarball and the .deb rebuild BIT-IDENTICALLY on a different distribution (Fedora 44/btrfs/rpm 6.0.2 vs ubuntu-latest/ext4/rpm 4.18.2) and the locally rebuilt files verify against the published attestation; the .rpm differs because rpm 6 writes a zstd payload and rpm 4 writes gzip - a property of rpm, recorded in KGG-016 rather than papered over"
+      "note": "the source tarball and the .deb rebuild BIT-IDENTICALLY on a different distribution (Fedora 44/btrfs/rpm 6.0.2 vs ubuntu-latest/ext4/rpm 4.18.2) and the locally rebuilt files verify against the published attestation; the .rpm differs because rpm 6 writes a zstd payload and rpm 4 writes gzip - a property of rpm, recorded in KGG-016 rather than papered over",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "framework_neutral_core": {
       "status": "IMPLEMENTED",
       "evidence": "docs/licensing/FRAMEWORK_MAPPING_POLICY.md",
-      "note": "collectors and criteria are authored by ISEDRAF and do not derive from any framework; there is no cis_collector, iso_collector or scf_collector, and removing every framework would leave the collectors unchanged"
+      "note": "collectors and criteria are authored by ISEDRAF and do not derive from any framework; there is no cis_collector, iso_collector or scf_collector, and removing every framework would leave the collectors unchanged",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "framework_source_registry": {
       "status": "IMPLEMENTED",
       "evidence": "scripts/ci/framework_sources.json",
       "command": "make check-licensing",
-      "note": "deny by default: 0 sources registered, and the gate separately proves no framework content exists anywhere in the tree, so 'nothing registered' and 'nothing present' must agree"
+      "note": "deny by default: 0 sources registered, and the gate separately proves no framework content exists anywhere in the tree, so 'nothing registered' and 'nothing present' must agree",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "framework_mapping_packs": {
       "status": "PLANNED",
       "design": "docs/licensing/FRAMEWORK_PACK_ARCHITECTURE.md",
-      "note": "design only - no pack loader, no manifest reader, no entitlement mechanism and no signing exists; no third-party mapping is licensed, reviewed or bundled"
+      "note": "design only - no pack loader, no manifest reader, no entitlement mechanism and no signing exists; no third-party mapping is licensed, reviewed or bundled",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "framework_entitlement": {
       "status": "PLANNED",
       "design": "docs/licensing/FRAMEWORK_PACK_ARCHITECTURE.md",
-      "note": "intended boundary recorded (signed pack plus signed local entitlement file, verified offline); no cryptography and no licensing server is implemented or designed, because a protocol written before its legal constraints are known is one that will be rewritten"
+      "note": "intended boundary recorded (signed pack plus signed local entitlement file, verified offline); no cryptography and no licensing server is implemented or designed, because a protocol written before its legal constraints are known is one that will be rewritten",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "framework_specific_reports": {
       "status": "NOT_TESTED",
-      "note": "not available: framework-specific output does not exist, and core reports are complete without it"
+      "note": "not available: framework-specific output does not exist, and core reports are complete without it",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "native_control_catalog": {
       "status": "PLANNED",
       "design": "docs/architecture/NATIVE_CONTROL_CATALOG.md",
-      "note": "D-111 freezes the invariant and the ISE-* namespace: 14 families, ISE-IDENT reserved and not in use. NO native criterion is authored yet - they arrive in W1-D. make check-native-catalog enforces that the registry and the catalog document agree, that criteria hold to the namespace, that no criterion is derived from a framework, and that no production module is named after a provider"
+      "note": "D-111 freezes the invariant and the ISE-* namespace: 14 families, ISE-IDENT reserved and not in use. NO native criterion is authored yet - they arrive in W1-D. make check-native-catalog enforces that the registry and the catalog document agree, that criteria hold to the namespace, that no criterion is derived from a framework, and that no production module is named after a provider",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "public_licensing_boundary": {
       "status": "IMPLEMENTED",
       "evidence": "scripts/ci/public_licensing_policy.json",
       "command": "make check-licensing",
-      "note": "one machine-readable authority for the public licensing boundary. The gate reads every text surface for provider claims in context, the built DEB/RPM/TGZ and the SBOMs - not only the templates that produced them - plus restricted document formats, symlinks leaving the repository, and MPL-2.0 application in LICENSE, rpm metadata and the DEP-5 deb copyright. Zero false positives on 16 legitimate uses of control/framework/support/ISO-substring text"
+      "note": "one machine-readable authority for the public licensing boundary. The gate reads every text surface for provider claims in context, the built DEB/RPM/TGZ and the SBOMs - not only the templates that produced them - plus restricted document formats, symlinks leaving the repository, and MPL-2.0 application in LICENSE, rpm metadata and the DEP-5 deb copyright. Zero false positives on 16 legitimate uses of control/framework/support/ISO-substring text",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "provider_alignment_check": {
       "status": "IMPLEMENTED",
       "evidence": "scripts/ci/check_provider_alignment.py",
       "command": "make check-provider-alignment",
-      "note": "PRIVATE-only: compares public claims against the provider licensing registry, located by ISEDRAF_PROVIDER_REGISTRY. Never required by public CI, skips with an explicit message when the registry is absent, and never quotes its contents - a failure reports provider, public file, line and authorization state only"
+      "note": "PRIVATE-only: compares public claims against the provider licensing registry, located by ISEDRAF_PROVIDER_REGISTRY. Never required by public CI, skips with an explicit message when the registry is absent, and never quotes its contents - a failure reports provider, public file, line and authorization state only",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "consolidated_product_model": {
       "status": "IMPLEMENTED",
       "evidence": "docs/architecture/ISEDRAF_PRODUCT_HLD.md",
       "command": "make check-public-claims",
-      "note": "D-112: 64-bit Linux across x86_64 and ARM64 as a validated matrix rather than a blanket claim, and three interpretation modes - A native, B open mapping, C licensed BYOL - with the invariant that neither B nor C may alter A. The gate refuses a platform claim the measured record does not support and refuses removal of the mode invariant from the HLD"
+      "note": "D-112: 64-bit Linux across x86_64 and ARM64 as a validated matrix rather than a blanket claim, and three interpretation modes - A native, B open mapping, C licensed BYOL - with the invariant that neither B nor C may alter A. The gate refuses a platform claim the measured record does not support and refuses removal of the mode invariant from the HLD",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "mode_b_open_mapping": {
       "status": "PLANNED",
       "design": "docs/architecture/ISEDRAF_PRODUCT_HLD.md",
-      "note": "optional mapping to an external authority whose exact reuse rights were validated first. NIST is the candidate and its rights are NOT yet verified - 'government' and 'open source' are where everyone assumes and nobody checks"
+      "note": "optional mapping to an external authority whose exact reuse rights were validated first. NIST is the candidate and its rights are NOT yet verified - 'government' and 'open source' are where everyone assumes and nobody checks",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "mode_c_licensed_byol": {
       "status": "PLANNED",
       "design": "docs/architecture/ISEDRAF_PRODUCT_HLD.md",
-      "note": "provider-authorized pack plus the customer's own provider entitlement, only after a written agreement. Zero providers approached, zero agreements, and the architecture being ready is not a provider having agreed"
+      "note": "provider-authorized pack plus the customer's own provider entitlement, only after a written agreement. Zero providers approached, zero agreements, and the architecture being ready is not a provider having agreed",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
     },
     "block_storage_observation_model": {
       "status": "IMPLEMENTED",
       "evidence": "lib/isedraf/inventory/collectors.py",
-      "note": "D-114: the overloaded storage `type` is retired, not deprecated. Replaced by kernel_subsystem (from device/subsystem, read lexically), queue_rotational, kernel_removable and scsi_peripheral_type (scoped to the SCSI family), with stable keys and null. No physical_medium, transport or is_aggregate: a block-layer object is not necessarily one physical device"
+      "note": "D-114: the overloaded storage `type` is retired, not deprecated. Replaced by kernel_subsystem (from device/subsystem, read lexically), queue_rotational, kernel_removable and scsi_peripheral_type (scoped to the SCSI family), with stable keys and null. No physical_medium, transport or is_aggregate: a block-layer object is not necessarily one physical device",
+      "reachable_from": [],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NOT_APPLICABLE"
+    },
+    "nss_configuration": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/nss/",
+      "command": "isedraf audit",
+      "reachable_from": [
+        "audit"
+      ],
+      "audit_section": "nss",
+      "authority": "CURRENT_IDENTITY",
+      "full_audit_gain": "NONE"
+    },
+    "hostname_state": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/hostname/",
+      "command": "isedraf audit",
+      "reachable_from": [
+        "audit"
+      ],
+      "audit_section": "hostname",
+      "authority": "CURRENT_IDENTITY",
+      "full_audit_gain": "NONE"
+    },
+    "login_policy": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/loginpolicy/",
+      "command": "isedraf audit",
+      "reachable_from": [
+        "audit"
+      ],
+      "audit_section": "loginpolicy",
+      "authority": "CURRENT_IDENTITY",
+      "full_audit_gain": "NONE"
+    },
+    "authorized_keys": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/authorizedkeys/",
+      "command": "isedraf audit",
+      "reachable_from": [
+        "audit"
+      ],
+      "audit_section": "authorizedkeys",
+      "authority": "CURRENT_IDENTITY",
+      "full_audit_gain": "DESIGN_OPEN_OPERATION"
+    },
+    "audit_command": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/audit.py",
+      "command": "isedraf audit",
+      "reachable_from": [
+        "audit"
+      ],
+      "audit_section": null,
+      "authority": "CURRENT_IDENTITY",
+      "full_audit_gain": "NONE"
+    },
+    "report_html": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/report/render.py",
+      "command": "isedraf report --html",
+      "reachable_from": [
+        "report --html"
+      ],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NONE"
     }
   },
   "runtime": {
@@ -270,8 +542,7 @@
     ],
     "none_certified_because": "reboot stability and version-upgrade stability were not exercised"
   },
-  "release_blockers": [
-    "no GitHub Release or tag is published; publication is a separate owner-authorized act (D-110)"
-  ],
-  "$release_blockers_comment": "PUBLIC-SAFE ONLY. This file is published and docs/CURRENT_STATE.md is generated from it, so anything written here reaches the public surface automatically. Earlier text here described an unresolved internal finding in operational detail. The detail belongs in the private governance record; a public project does not need to publish every internal reason a release has not happened. Use public_reason_class for the category and say no more. See PUBLIC-OPS-001."
+  "release_blockers": [],
+  "$release_blockers_comment": "PUBLIC-SAFE ONLY. This file is published and docs/CURRENT_STATE.md is generated from it, so anything written here reaches the public surface automatically. Earlier text here described an unresolved internal finding in operational detail. The detail belongs in the private governance record; a public project does not need to publish every internal reason a release has not happened. Use public_reason_class for the category and say no more. See PUBLIC-OPS-001.",
+  "$capabilities_truth_comment": "Every capability carries four closed fields, checked against the code in both directions by scripts/docs/current_state.py (IQ-043, IQ-035): reachable_from (public CLI surfaces, read from the argument parser), audit_section (snapshot.SECTION_NAMES or host_identity), authority (a source authority coverage.MODES admits today, or NOT_APPLICABLE; D-123) and full_audit_gain (derived from scripts/ci/privileged_operations.json). A reachable capability is IMPLEMENTED; every reachable surface and section has exactly one entry; an entry naming a surface or section names one that exists."
 }

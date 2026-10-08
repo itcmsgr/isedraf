@@ -122,10 +122,12 @@ per `run_id`. The whole-run `flock` is acquired by the **in-sandbox launcher as 
 before any privileged branch, so the lock covers the entire run including collection (`SNAP-014`,
 `STORE-015`).
 
-**PRIV-009 (Q-01, Q-05, NEW) SHALL** `EXEC-001`'s unit properties SHALL include `CapabilityBoundingSet=`
-and `AmbientCapabilities=` as the outer ceiling. Without them a root transient unit keeps the full
-bounding set by default, and "the engine cannot grant a collector its capability" would be unenforced.
-The concrete set is deferred to OD-06; its **presence** is not.
+**PRIV-009 (Q-01, Q-05, NEW, D-123) SHALL** `EXEC-001`'s unit properties SHALL include
+`CapabilityBoundingSet=`, the outer ceiling: without it a root transient unit keeps the full bounding
+set by default, and "the engine cannot grant a collector its capability" would be unenforced.
+`AmbientCapabilities=` is not a ceiling: it GRANTS, adding capabilities that a non-root program keeps
+across `execve`. It SHALL be set explicitly, and empty unless a recorded decision requires otherwise
+(`AUTH-011`). The concrete bounding set is deferred to OD-06; its **presence** is not.
 
 **PRIV-010 (Q-01, NEW) SHALL** Collector-to-engine transport freezes **security requirements only**, not
 an implementation: private to the run · bounded in size · never executable · not user-selectable ·
@@ -160,8 +162,9 @@ excluded from the `ORPHANED_UNLEDGERED` rule.
 
 **EXEC-001 (D-27, T-01) SHALL** In **Mode A** (`PRIV-005`) the run executes under `systemd-run` with
 `ProtectSystem=strict`, `ProtectHome=read-only`, `ReadWritePaths=/var/lib/isedraf`, `PrivateTmp`,
-`ProtectKernelTunables`, `ProtectKernelModules`, `ProtectControlGroups`, `ProtectClock`, **`CapabilityBoundingSet=`** and
-**`AmbientCapabilities=`** (the outer ceiling, `PRIV-009`), and a
+`ProtectKernelTunables`, `ProtectKernelModules`, `ProtectControlGroups`, `ProtectClock`, **`CapabilityBoundingSet=`**
+(the outer ceiling, `PRIV-009`), an explicit and empty **`AmbientCapabilities=`** (a grant, never a
+bound, `AUTH-011`), and a
 `SystemCallFilter` excluding `@mount @module @reboot @swap @raw-io @clock @cpu-emulation @obsolete`.
 `NoNewPrivileges` is enabled only after corpus validation.
 
@@ -175,7 +178,8 @@ MINIMIZED"*. *"Read-only guaranteed"* SHALL NEVER be used.
 **by the root supervisor** (`PRIV-011`), which outlives the engine for exactly this purpose. A difference
 is reported as `CHANGED_DURING_RUN` **without attributing a cause**. The report states only
 *"no persistent difference observed between pre/post snapshots"* — never that no transient mutation
-occurred.
+occurred. **Deferred by D-123:** the audit-rules fingerprint and its `CAP_AUDIT_CONTROL` branch
+(`D-26`) are built when audit evidence enters scope, not in the v0.2 Full Audit release.
 
 **EXEC-005 (D-29, OD-13) SHALL** Run start and end are logged to the journal with a run ID and the
 invoking user. OD-13 records how this interacts with `RestrictAddressFamilies`.

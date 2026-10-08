@@ -6,9 +6,9 @@
 # CI invokes these same targets rather than re-implementing them in YAML, which is
 # what prevents a gate silently degrading into a warning. There is no warning tier.
 
-.PHONY: check check-provider-alignment check-native-catalog check-licensing check-public-claims check-deb-ordering check-reproducible check-sbom check-tests check-python-floor check-architecture check-architecture-artifacts check-packaging check-storage-vocabulary check-native-catalog check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-sample-report check-headers check-docs check-scope check-shell check-refs check-paths check-index check-freeze check-precommit check-imports check-vectors check-vectors-negative check-vectors-crossversion check-gate-coverage check-falsifiable check-public-ux help
+.PHONY: check check-provider-alignment check-native-catalog check-evidence-limits check-privileged-operations check-licensing check-public-claims check-deb-ordering check-reproducible check-sbom check-tests check-python-floor check-architecture check-architecture-artifacts check-packaging check-storage-vocabulary check-native-catalog check-evidence-limits check-privileged-operations check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-sample-report check-headers check-docs check-scope check-shell check-refs check-paths check-index check-freeze check-precommit check-imports check-vectors check-vectors-negative check-vectors-crossversion check-gate-coverage check-falsifiable check-public-ux help
 
-check: check-scope check-headers check-python-floor check-architecture check-architecture-artifacts check-packaging check-storage-vocabulary check-native-catalog check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-sample-report check-shell check-refs check-paths check-index check-freeze check-precommit check-imports check-vectors check-vectors-negative check-vectors-crossversion check-tests check-docs check-public-ux check-repo-security check-dco check-export
+check: check-scope check-headers check-python-floor check-architecture check-architecture-artifacts check-packaging check-storage-vocabulary check-native-catalog check-evidence-limits check-privileged-operations check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-sample-report check-shell check-refs check-paths check-index check-freeze check-precommit check-imports check-vectors check-vectors-negative check-vectors-crossversion check-tests check-docs check-public-ux check-repo-security check-dco check-export
 	@echo "make check: all gates passed"
 
 ## check-scope   D-96: no product implementation before architecture freeze
@@ -122,6 +122,16 @@ check-storage-vocabulary:
 check-native-catalog:
 	@python3 scripts/ci/check_native_catalog.py
 
+## check-evidence-limits  D-122: the Evidence Limits Manifest schema agrees with the code and its fixtures
+check-evidence-limits:
+	@echo "--- evidence limits schema (D-122) ---"
+	@python3 scripts/ci/check_evidence_limits_schema.py
+
+## check-privileged-operations  D-123: fixed privileged operations hold the Full Audit authority model
+check-privileged-operations:
+	@echo "--- privileged operations (D-123) ---"
+	@python3 scripts/ci/check_privileged_operations.py
+
 ## check-provider-alignment  PRIVATE: the public tree vs the provider registry (not in CI)
 check-provider-alignment:
 	@python3 scripts/ci/check_provider_alignment.py
@@ -218,6 +228,12 @@ check-tests:
 	@out=$$(python3 tests/test_sudo_adversarial.py 2>&1); rc=$$?; \
 	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
 	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_status_registry.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_evidence_limits.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
 	@out=$$(python3 tests/test_shared_compare.py 2>&1); rc=$$?; \
 	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
 	 else echo "$$out"; exit $$rc; fi
@@ -282,6 +298,9 @@ check-tests:
 	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
 	 else echo "$$out"; exit $$rc; fi
 	@out=$$(python3 tests/test_inventory.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_time_helper.py 2>&1); rc=$$?; \
 	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
 	 else echo "$$out"; exit $$rc; fi
 	@out=$$(python3 tests/test_report.py 2>&1); rc=$$?; \

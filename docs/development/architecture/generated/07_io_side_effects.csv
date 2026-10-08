@@ -126,6 +126,7 @@ scripts.compat.probe,scripts/compat/probe.py,read_text,FS_READ,open read,no
 scripts.compat.reboot_pass,scripts/compat/reboot_pass.py,describe,FS_READ,listdir open read,no
 scripts.compat.reboot_pass,scripts/compat/reboot_pass.py,main,ENVIRONMENT,environ,no
 scripts.compat.reboot_pass,scripts/compat/reboot_pass.py,main,FS_WRITE,write,yes
+scripts.docs.current_state,scripts/docs/current_state.py,cli_surfaces,SUBPROCESS,call,yes
 scripts.docs.current_state,scripts/docs/current_state.py,count,SUBPROCESS,check_output,no
 scripts.docs.current_state,scripts/docs/current_state.py,counted,SUBPROCESS,check_output,no
 scripts.docs.public_ux,scripts/docs/public_ux.py,_write_tree,FS_WRITE,mkdir,no

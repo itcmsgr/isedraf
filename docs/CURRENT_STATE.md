@@ -32,27 +32,38 @@ What exists and runs today. Nothing else on this page does.
 |---|---|---|
 | `w1a_evidence_contract` | `docs/architecture/freeze/W1A_CORE_PUBLIC.sha256` | — |
 | `artifact_attestation` | `.github/workflows/release-candidate.yml` | — |
+| `audit_command` | `lib/isedraf/audit.py` | `isedraf audit` |
+| `authorized_keys` | `lib/isedraf/authorizedkeys/` | `isedraf audit` |
 | `block_storage_observation_model` | `lib/isedraf/inventory/collectors.py` | — |
 | `clean_public_export` | `scripts/ci/release_export.sh` | — |
 | `code_scanning` | `.github/workflows/codeql.yml` | — |
 | `consolidated_product_model` | `docs/architecture/ISEDRAF_PRODUCT_HLD.md` | `make check-public-claims` |
 | `framework_neutral_core` | `docs/licensing/FRAMEWORK_MAPPING_POLICY.md` | — |
 | `framework_source_registry` | `scripts/ci/framework_sources.json` | `make check-licensing` |
+| `hostname_state` | `lib/isedraf/hostname/` | `isedraf audit` |
 | `identity` | `lib/isedraf/identity.py` | `isedraf identity` |
 | `independent_verifier` | `scripts/vectors/verify.py` | — |
 | `inventory` | `lib/isedraf/inventory/` | `isedraf inventory` |
 | `ledger` | `lib/isedraf/ledger.py` | — |
+| `login_policy` | `lib/isedraf/loginpolicy/` | `isedraf audit` |
+| `mounts` | `lib/isedraf/mounts/` | `isedraf audit` |
+| `nss_configuration` | `lib/isedraf/nss/` | `isedraf audit` |
 | `package_deb` | `packaging/deb/control.in` | — |
 | `package_lifecycle_verified` | `scripts/compat/package_lifecycle.sh` | — |
 | `package_rpm` | `packaging/rpm/isedraf.spec.in` | — |
+| `pam` | `lib/isedraf/pam/` | `isedraf audit` |
 | `provider_alignment_check` | `scripts/ci/check_provider_alignment.py` | `make check-provider-alignment` |
 | `public_licensing_boundary` | `scripts/ci/public_licensing_policy.json` | `make check-licensing` |
+| `report_html` | `lib/isedraf/report/render.py` | `isedraf report --html` |
 | `report_json` | `lib/isedraf/report/render.py` | `isedraf report --json` |
 | `report_markdown` | `lib/isedraf/report/render.py` | `isedraf report` |
 | `reproducible_build` | `scripts/ci/check_reproducible.sh` | `make check-reproducible` |
 | `sbom` | `scripts/ci/generate_sbom.py` | — |
 | `scorecard` | `.github/workflows/scorecard.yml` | — |
 | `snapshot` | `lib/isedraf/snapshot.py` | — |
+| `ssh_state` | `lib/isedraf/ssh/` | `isedraf audit` |
+| `sudo_privilege` | `lib/isedraf/sudo/` | `isedraf audit` |
+| `users_groups` | `lib/isedraf/accounts/` | `isedraf audit` |
 
 ## Planned
 
@@ -67,15 +78,10 @@ Designed, not built. No part of this runs.
 - `journald_recording`
 - `mode_b_open_mapping` — optional mapping to an external authority whose exact reuse rights were validated first. NIST is the candidate and its rights are NOT yet verified - 'government' and 'open source' are where everyone assumes and nobody checks (design: `docs/architecture/ISEDRAF_PRODUCT_HLD.md`)
 - `mode_c_licensed_byol` — provider-authorized pack plus the customer's own provider entitlement, only after a written agreement. Zero providers approached, zero agreements, and the architecture being ready is not a provider having agreed (design: `docs/architecture/ISEDRAF_PRODUCT_HLD.md`)
-- `mounts`
 - `native_control_catalog` — D-111 freezes the invariant and the ISE-* namespace: 14 families, ISE-IDENT reserved and not in use. NO native criterion is authored yet - they arrive in W1-D. make check-native-catalog enforces that the registry and the catalog document agree, that criteria hold to the namespace, that no criterion is derived from a framework, and that no production module is named after a provider (design: `docs/architecture/NATIVE_CONTROL_CATALOG.md`)
-- `pam`
 - `report_pdf`
 - `services`
 - `signing`
-- `ssh_state`
-- `sudo_privilege`
-- `users_groups`
 
 ## Deferred
 
@@ -111,14 +117,12 @@ Not asserted. Each number is counted at generation time.
 
 | | |
 |---|---|
-| Gates | 28 |
-| Falsification injections | 374 |
+| Gates | 30 |
+| Falsification injections | 402 |
 | Golden vector cases | 15 |
 | Frozen artifacts | 7 |
-| Test files | 33 |
+| Test files | 36 |
 
 ## Release blockers
 
-The public repository is **not** authorized while any of these is open.
-
-- no GitHub Release or tag is published; publication is a separate owner-authorized act (D-110)
+None recorded.

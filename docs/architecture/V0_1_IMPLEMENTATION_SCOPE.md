@@ -322,8 +322,8 @@ exit `70` (`SCOPE-076`). This is temporary and explicit, not a silent degradatio
 ceiling, pre/post privileged collection, engine privilege reduction, SELinux enforcing — is
 **`DEFERRED_TO_FREEZE_SET_2`** and SHALL be proven against real Linux behaviour in the VM corpus rather
 than in another prose round. Round 4 finding U-04 (that `AmbientCapabilities=` grants rather than bounds)
-remains **BLOCKED** against Freeze Set 2; it cannot block W1, because W1 exercises none of that
-architecture.
+was correct and is **resolved by D-123** (`AUTH-011`): `CapabilityBoundingSet=` is the only bound, and
+`PRIV-009` and `EXEC-001` are reworded accordingly. The corpus-proof deferral above stands.
 
 **SCOPE-073 (owner directive, U-05, U-06) SHALL** W1 ships **exactly one internal profile**, not a profile
 system:

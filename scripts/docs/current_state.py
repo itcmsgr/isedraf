@@ -24,6 +24,7 @@
 # =============================================================================
 
 """`generate` writes the page; `check` fails when the committed page is stale."""
+import ast
 import json
 import pathlib
 import re
@@ -35,6 +36,128 @@ ROOT = pathlib.Path(
 REGISTRY = json.loads((ROOT / "scripts" / "ci" / "project_status.json").read_text())
 TARGET = ROOT / "docs" / "CURRENT_STATE.md"
 BANNER = "GENERATED FILE — DO NOT EDIT MANUALLY"
+
+# --- registry truth (IQ-043, IQ-035) -------------------------------------------------------
+# The registry is derived truth, not a status page someone remembers to update. Every
+# capability carries four closed fields, and the gate compares them with the code in both
+# directions: a surface or section the code exposes must have an IMPLEMENTED entry, and an
+# entry that names a surface or section must name one that exists.
+TRUTH_FIELDS = ("reachable_from", "audit_section", "authority", "full_audit_gain")
+IMPLEMENTED_STATES = ("IMPLEMENTED", "CERTIFIED")
+NOT_APPLICABLE = "NOT_APPLICABLE"
+#: full_audit_gain is derived from scripts/ci/privileged_operations.json (D-123): what the
+#: registered fixed operations serving the section would add. Never narrative.
+GAIN = ("NONE", "PLANNED_FIXED_OPERATION", "DESIGN_OPEN_OPERATION", NOT_APPLICABLE)
+#: Output flags that make a distinct public surface of a command.
+OUTPUT_FLAGS = ("--json", "--html")
+#: The snapshot core is a section too, though it is not one of the audit sections.
+CORE_SECTIONS = ("host_identity",)
+
+
+def audit_sections():
+    sys.path.insert(0, str(ROOT / "lib"))
+    from isedraf import snapshot
+    return tuple(snapshot.SECTION_NAMES) + CORE_SECTIONS
+
+
+def acquisition_modes():
+    """The source authorities the code admits today (coverage.MODES, D-122/D-123)."""
+    sys.path.insert(0, str(ROOT / "lib"))
+    from isedraf import coverage
+    return tuple(coverage.MODES)
+
+
+def privileged_operations():
+    path = ROOT / "scripts" / "ci" / "privileged_operations.json"
+    return json.loads(path.read_text())["operations"]
+
+
+def cli_surfaces(source=None):
+    """Public surfaces read from the argument parser in lib/isedraf/cli.py, not listed by
+    hand: every subcommand, and every output flag a subcommand declares."""
+    if source is None:
+        source = (ROOT / "lib" / "isedraf" / "cli.py").read_text()
+    commands, surfaces = {}, set()
+    for node in ast.walk(ast.parse(source)):
+        if not (isinstance(node, ast.Assign) and isinstance(node.value, ast.Call)):
+            continue
+        call = node.value
+        if (isinstance(call.func, ast.Attribute) and call.func.attr == "add_parser"
+                and call.args and isinstance(call.args[0], ast.Constant)):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    commands[target.id] = call.args[0].value
+            surfaces.add(call.args[0].value)
+    for node in ast.walk(ast.parse(source)):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "add_argument"
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id in commands and node.args
+                and isinstance(node.args[0], ast.Constant)
+                and node.args[0].value in OUTPUT_FLAGS):
+            surfaces.add("%s %s" % (commands[node.func.value.id], node.args[0].value))
+    return surfaces
+
+
+def _gain(section, operations):
+    serving = [o for o in operations if o["serves"] == section]
+    if any(o["status"] in ("PLANNED", "IMPLEMENTED") for o in serving):
+        return "PLANNED_FIXED_OPERATION"
+    if any(o["status"] == "DESIGN_OPEN" for o in serving):
+        return "DESIGN_OPEN_OPERATION"
+    return "NONE"
+
+
+def registry_truth(capabilities, sections, surfaces, operations, modes):
+    """Both directions, against the code. Returns problems; empty means true."""
+    problems = []
+    authorities = tuple(modes) + (NOT_APPLICABLE,)
+    covered_sections, covered_surfaces = {}, set()
+    for name, cap in sorted(capabilities.items()):
+        missing = [f for f in TRUTH_FIELDS if f not in cap]
+        if missing:
+            problems.append("%s lacks %s" % (name, ", ".join(missing)))
+            continue
+        reach, section = cap["reachable_from"], cap["audit_section"]
+        implemented = cap["status"] in IMPLEMENTED_STATES
+        if not isinstance(reach, list) or reach != sorted(set(reach)):
+            problems.append("%s reachable_from is not a sorted unique list" % name)
+            reach = []
+        for surface in reach:
+            if surface not in surfaces:
+                problems.append("%s names surface %r, which the CLI does not expose"
+                                % (name, surface))
+        if section is not None and section not in sections:
+            problems.append("%s names audit section %r, which does not exist"
+                            % (name, section))
+        if (reach or section) and not implemented:
+            problems.append("%s is %s but is reachable (%s); a reachable capability is "
+                            "IMPLEMENTED" % (name, cap["status"], reach or section))
+        if cap["authority"] not in authorities:
+            problems.append("%s authority %r is not one of %s"
+                            % (name, cap["authority"], authorities))
+        if section is not None and cap["authority"] not in modes:
+            problems.append("%s acquires section %s but its authority is %r"
+                            % (name, section, cap["authority"]))
+        expected_gain = (_gain(section, operations) if section is not None
+                         else "NONE" if reach else NOT_APPLICABLE)
+        if cap["full_audit_gain"] != expected_gain:
+            problems.append("%s full_audit_gain is %r; the operation registry gives %r"
+                            % (name, cap["full_audit_gain"], expected_gain))
+        if implemented:
+            covered_surfaces.update(reach)
+            if section is not None:
+                covered_sections.setdefault(section, []).append(name)
+    for section in sections:
+        owners = covered_sections.get(section, [])
+        if len(owners) != 1:
+            problems.append("audit section %s has %d IMPLEMENTED registry entries (%s); "
+                            "exactly one is required" % (section, len(owners),
+                                                         ", ".join(owners) or "none"))
+    for surface in sorted(surfaces - covered_surfaces):
+        problems.append("public surface %r is reachable but no IMPLEMENTED registry entry "
+                        "names it" % surface)
+    return problems
 
 
 def contradictions():
@@ -68,6 +191,8 @@ def contradictions():
             problems.append("%s is %s but carries a `design` path; an implemented "
                             "capability is recorded with `evidence`"
                             % (name, cap["status"]))
+    problems += registry_truth(REGISTRY["capabilities"], audit_sections(), cli_surfaces(),
+                               privileged_operations(), acquisition_modes())
     floor = REGISTRY["runtime"]["production_python_floor"]
     gate = (ROOT / "scripts" / "ci" / "check_python_floor.py").read_text()
     m = re.search(r"FLOOR = \((\d+), (\d+)\)", gate)

@@ -149,6 +149,80 @@ class ScopeBoundary(unittest.TestCase):
                 self.assertIn(key, model.CLASSIFICATION, key)
 
 
+@unittest.skipIf(os.geteuid() == 0, "root bypasses the permission bits these cases need")
+class IncludedirListingTruth(unittest.TestCase):
+    """IQ-046 (1): an unreadable includedir listing is not an empty includedir.
+
+    A refused listing used to return no targets, which the include graph treats as an
+    ordinary empty drop-in directory, so a readable /etc/sudoers with an unlistable
+    sudoers.d was reported COLLECTED: the root file presented as the complete policy.
+    """
+
+    def setUp(self):
+        self.base = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.base, True)
+        os.makedirs(os.path.join(self.base, "etc"))
+        with open(os.path.join(self.base, "etc/sudoers"), "w") as handle:
+            handle.write("root ALL=(ALL) ALL\n#includedir /etc/sudoers.d\n")
+
+    def dropin(self, name="50-admins", text="alice ALL=(ALL) ALL\n"):
+        directory = os.path.join(self.base, "etc/sudoers.d")
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
+        path = os.path.join(directory, name)
+        with open(path, "w") as handle:
+            handle.write(text)
+        return path
+
+    def deny(self, path, restore):
+        os.chmod(path, 0)
+        # LIFO: registered after the enclosure rmtree, so it runs BEFORE it.
+        self.addCleanup(os.chmod, path, restore)
+
+    def principals(self, ev):
+        return sorted(r["principals"][0]["value"] for r in ev.records
+                      if r["kind"] == model.SPEC)
+
+    def test_a_readable_includedir_is_collected_in_full(self):
+        self.dropin()
+        ev = acquire.collect(self.base)
+        self.assertEqual(ev.status, result.COLLECTED)
+        self.assertEqual(self.principals(ev), ["alice", "root"])
+
+    def test_an_absent_includedir_is_still_an_ordinary_empty_one(self):
+        ev = acquire.collect(self.base)
+        self.assertEqual(ev.status, result.COLLECTED)
+        self.assertEqual(self.principals(ev), ["root"])
+
+    def test_an_unlistable_includedir_is_not_an_empty_one(self):
+        self.dropin()
+        directory = os.path.join(self.base, "etc/sudoers.d")
+        self.deny(directory, 0o755)
+        ev = acquire.collect(self.base)
+        self.assertEqual(ev.status, result.PARTIAL)
+        self.assertIn("INCOMPLETE_INCLUDE_GRAPH", ev.reason)
+        self.assertIn(directory, ev.reason)
+        listing = [c for c in ev.provenance["coverage"] if c["source"] == directory]
+        self.assertEqual(len(listing), 1, ev.provenance["coverage"])
+        self.assertEqual(listing[0]["operation"], "DIRECTORY_LIST")
+        self.assertEqual(listing[0]["access_outcome"], "PERMISSION_DENIED")
+        self.assertTrue(listing[0]["privilege_limited"])
+        self.assertFalse(listing[0]["absence_claim_allowed"])
+
+    def test_the_root_file_is_kept_but_never_presented_as_the_whole_policy(self):
+        self.dropin()
+        self.deny(os.path.join(self.base, "etc/sudoers.d"), 0o755)
+        ev = acquire.collect(self.base)
+        self.assertEqual(self.principals(ev), ["root"])
+        self.assertNotEqual(ev.status, result.COLLECTED)
+
+    def test_a_listed_but_unreadable_dropin_keeps_the_graph_partial(self):
+        self.deny(self.dropin(), 0o644)
+        ev = acquire.collect(self.base)
+        self.assertEqual(ev.status, result.PARTIAL)
+        self.assertIn("INCOMPLETE_INCLUDE_GRAPH", ev.reason)
+
+
 class FixtureConfinement(unittest.TestCase):
     """An include path must resolve inside the root it was given."""
 

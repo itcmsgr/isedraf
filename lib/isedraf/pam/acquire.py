@@ -58,6 +58,7 @@ def collect(root="/"):
     directory = os.path.join(root, PAM_D)
     _coverage = []          # R1.5-P acquisition context, one entry per service file
     listing = bounded.enumerate_paths(directory, Services())
+    _coverage.extend(_listing_coverage(directory, listing))
     if listing.status == result.NOT_TESTED:
         return result.Evidence(result.NOT_TESTED, records=[], source=directory,
                                reason=listing.reason,
@@ -173,6 +174,27 @@ def _status(events, records, malformed, listing):
     if problems:
         return result.PARTIAL, " ".join(problems)
     return result.COLLECTED, None
+
+
+def _listing_coverage(directory, listing):
+    """IQ-046 (4): a pam.d listing that did not complete leaves a coverage entry.
+
+    An absent pam.d is NOT_FOUND over a complete universe; a refused listdir is
+    PERMISSION_DENIED; any other failure is IO_ERROR without a privilege claim. A
+    complete listing needs no entry of its own: the service files carry theirs.
+    """
+    if listing.status == result.COLLECTED:
+        return []
+    events = set(a.get("event") for a in listing.anomalies)
+    if bounded.ROOT_MISSING in events:
+        outcome, universe = coverage.NOT_FOUND, coverage.UNIVERSE_COMPLETE
+    else:
+        outcome = (coverage.PERMISSION_DENIED if bounded.ENTRY_UNREADABLE in events
+                   else coverage.IO_ERROR)
+        universe = coverage.UNIVERSE_INCOMPLETE
+    return [coverage.source("pam", directory, result.NOT_TESTED, outcome,
+                            coverage.OP_DIRECTORY_LIST, reason=listing.reason,
+                            universe=universe)]
 
 
 def _provenance(directory, files, events, malformed, coverage_entries=None):

@@ -59,6 +59,7 @@ class SudoersIncludes(include_graph.Adapter):
         self.root = root
         self.observed_entries = []
         self.excluded_entries = []
+        self.unlisted_directories = []
 
     def _rebase(self, target, parent):
         """Resolve an include target INSIDE the root this collection was given.
@@ -108,6 +109,20 @@ class SudoersIncludes(include_graph.Adapter):
             include_directories = False
 
         listing = bounded.enumerate_paths(directory, SudoersDirectory())
+        events = set(a.get("event") for a in listing.anomalies)
+        if listing.status != result.COLLECTED and bounded.ROOT_MISSING not in events:
+            # IQ-046 (1): an absent includedir is ordinary, but one that exists and could
+            # not be listed (or listed only in part) is policy that was never seen. It must
+            # not read as an empty directory, which the include graph treats as harmless.
+            # Only a listdir refusal is known to be a privilege limit; any other failure is
+            # recorded without claiming one.
+            self.unlisted_directories.append({
+                "path": directory,
+                "access_outcome": (coverage.PERMISSION_DENIED
+                                   if bounded.ENTRY_UNREADABLE in events
+                                   else coverage.IO_ERROR),
+                "reason": listing.reason or "SOURCE_UNREADABLE: %s could not be listed."
+                          % directory})
         eligible = []
         for entry in listing.records:
             name = entry["name"]
@@ -154,17 +169,22 @@ def collect(root="/"):
         malformed += bad
         ordinal += len(parsed)
 
-    status, reason = _status(graph, records, malformed)
+    status, reason = _status(graph, records, malformed, adapter.unlisted_directories)
     return result.Evidence(status, records=records, reason=reason,
                            source=os.path.join(root, SUDOERS),
                            provenance=_provenance(adapter, graph, files, malformed))
 
 
-def _status(graph, records, malformed):
-    """The include graph and the parse both constrain completeness."""
+def _status(graph, records, malformed, unlisted=()):
+    """The include graph, the includedir listings and the parse all constrain completeness."""
     problems = []
     if graph.status != result.COLLECTED:
         problems.append(graph.reason)
+    if unlisted:
+        problems.append(
+            "INCOMPLETE_INCLUDE_GRAPH: %d includedir(s) could not be listed (%s); sudo "
+            "policy they may contain was not observed." % (
+                len(unlisted), ", ".join(u["path"] for u in unlisted)))
     if malformed:
         if records and malformed == len(records):
             return result.ERROR, (
@@ -187,11 +207,20 @@ def _provenance(adapter, graph, files, malformed):
         "include_events": graph.anomalies,
         "include_status": graph.status,
         "files": files,
-        "coverage": _coverage("sudo", graph),
+        "coverage": _coverage("sudo", graph) + _listing_coverage(
+            "sudo", adapter.unlisted_directories),
         "includedir_entries_observed": adapter.observed_entries,
         "includedir_entries_excluded": adapter.excluded_entries,
         "malformed_count": malformed,
     }
+
+
+def _listing_coverage(domain, unlisted):
+    """One entry per includedir that could not be listed (IQ-046 (1))."""
+    return [coverage.source(domain, u["path"], result.NOT_TESTED, u["access_outcome"],
+                            coverage.OP_DIRECTORY_LIST, reason=u["reason"],
+                            universe=coverage.UNIVERSE_INCOMPLETE)
+            for u in unlisted]
 
 
 def _coverage(domain, graph):

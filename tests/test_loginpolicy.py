@@ -205,6 +205,68 @@ class AbsentIsNotRefused(unittest.TestCase):
         self.assertEqual(sources_meta[model.LOGIN_DEFS]["status"], result.NOT_TESTED)
 
 
+@unittest.skipIf(os.geteuid() == 0, "root bypasses the permission bits these cases need")
+class RefusalIsNotAbsence(unittest.TestCase):
+    """IQ-046 (2): a refused source is never reported as absent, and an unlistable
+    fragment directory is never silently dropped."""
+
+    def setUp(self):
+        self.base = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.base, True)
+        os.makedirs(os.path.join(self.base, "etc/security"))
+
+    def write(self, relative, text):
+        path = os.path.join(self.base, relative)
+        directory = os.path.dirname(path)
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
+        with open(path, "w") as handle:
+            handle.write(text)
+        return path
+
+    def deny(self, path, restore):
+        os.chmod(path, 0)
+        # LIFO: registered after the enclosure rmtree, so it runs BEFORE it.
+        self.addCleanup(os.chmod, path, restore)
+
+    def test_nothing_present_is_absent(self):
+        ev = acquire.collect(self.base)
+        self.assertEqual(ev.status, result.NOT_TESTED)
+        self.assertTrue(ev.reason.startswith("SOURCE_ABSENT"), ev.reason)
+
+    def test_every_source_refused_is_not_reported_absent(self):
+        self.deny(self.write("etc/login.defs", "UMASK 022\n"), 0o644)
+        ev = acquire.collect(self.base)
+        self.assertEqual(ev.status, result.NOT_TESTED)
+        self.assertNotIn("SOURCE_ABSENT", ev.reason)
+        self.assertIn("SOURCE_UNREADABLE", ev.reason)
+
+    def test_an_absent_fragment_directory_is_ordinary(self):
+        self.write("etc/security/pwquality.conf", "minlen = 12\n")
+        self.assertEqual(acquire.collect(self.base).status, result.COLLECTED)
+
+    def test_a_readable_fragment_directory_is_read(self):
+        self.write("etc/security/pwquality.conf", "minlen = 12\n")
+        self.write("etc/security/pwquality.conf.d/50-site.conf", "minclass = 3\n")
+        ev = acquire.collect(self.base)
+        self.assertEqual(ev.status, result.COLLECTED)
+        self.assertIn("minclass", [r.get("key") for r in ev.records])
+
+    def test_an_unlistable_fragment_directory_is_not_dropped(self):
+        self.write("etc/security/pwquality.conf", "minlen = 12\n")
+        self.write("etc/security/pwquality.conf.d/50-site.conf", "minclass = 3\n")
+        directory = os.path.join(self.base, "etc/security/pwquality.conf.d")
+        self.deny(directory, 0o755)
+        ev = acquire.collect(self.base)
+        self.assertEqual(ev.status, result.PARTIAL)
+        self.assertIn(directory, ev.reason)
+        listing = [c for c in ev.provenance["coverage"] if c["source"] == directory]
+        self.assertEqual(len(listing), 1, ev.provenance["coverage"])
+        self.assertEqual(listing[0]["operation"], "DIRECTORY_LIST")
+        self.assertEqual(listing[0]["access_outcome"], "PERMISSION_DENIED")
+        self.assertFalse(listing[0]["absence_claim_allowed"])
+
+
 class NoCrossSourceResolution(unittest.TestCase):
 
     def setUp(self):
