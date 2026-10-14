@@ -251,7 +251,8 @@
       "eligible": [
         "docs/architecture/FULL_AUDIT_AUTHORITY_MODEL.md",
         "scripts/ci/privileged_operations.json",
-        "lib/isedraf/coverage.py"
+        "lib/isedraf/coverage.py",
+        "lib/isedraf/supervisor/*.py"
       ]
     },
     "check-public-ux": {
@@ -290,6 +291,41 @@
       "eligible": [
         "docs/**/*.md",
         "*.md"
+      ]
+    },
+    "check-test-inclusion": {
+      "script": "scripts/ci/check_test_inclusion.py",
+      "implements": "GOV-002, NORM-039",
+      "falsification": "GOV-002 a test file is dropped from check-tests",
+      "eligible": [
+        "tests/test_*.py",
+        "Makefile",
+        "scripts/ci/test_exclusions.json"
+      ]
+    },
+    "check-exitcodes": {
+      "script": "scripts/ci/check_exitcodes.py",
+      "implements": "OUT-001, OUT-017, D-72",
+      "falsification": "OUT-001 a constant drifts from exitcodes.json",
+      "eligible": [
+        "lib/isedraf/exitcodes.json",
+        "lib/isedraf/exitcodes.py",
+        "bin/isedraf",
+        "README.md"
+      ]
+    },
+    "check-governance": {
+      "script": "scripts/ci/check_governance.py",
+      "implements": "D-83, GOV-001",
+      "falsification": "D-83 a governance file changes without the manifest",
+      "eligible": [
+        "docs/development/GOVERNANCE_MANIFEST.sha256",
+        "CLAUDE.md",
+        "git-hooks/*",
+        "scripts/ci/check_freeze.sh",
+        "lib/isedraf/exitcodes.json",
+        "lib/isedraf/runtime-imports.allow",
+        "scripts/docs/doclint.py"
       ]
     }
   },

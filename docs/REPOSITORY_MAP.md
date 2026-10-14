@@ -25,11 +25,13 @@ instead of reverse-engineering the project from whatever source file it happens 
 
 ## Governance — integrity-protected
 
-Covered by `docs/development/GOVERNANCE_MANIFEST.sha256` *(PLANNED — not yet created)* (D-83). Changing any of these without an owner
-manifest update fails `make check` and the pre-commit hook.
+Covered by `docs/development/GOVERNANCE_MANIFEST.sha256` (D-83; `make check-governance`). Changing any of these without an owner
+manifest update fails `make check` and the pre-commit hook. The public release export omits CLAUDE.md
+by design and carries an export marker instead, docs/development/PUBLIC_EXPORT.sha256, written by the export; the gate
+accepts the omission only there, and checks every other file in both trees (IQ-069).
 
 `CLAUDE.md` · `.claude/settings.json` · `git-hooks/pre-commit` · `git-hooks/pre-push` ·
-`git-hooks/commit-msg` · the frozen-manifest verifier · `lib/isedraf/exitcodes.json` *(PLANNED — not yet created)* ·
+`git-hooks/commit-msg` · the frozen-manifest verifier · `lib/isedraf/exitcodes.json` ·
 `lib/isedraf/runtime-imports.allow` *(PLANNED — not yet created)* · the doc-lint configuration.
 
 ## Generated — never hand-edit
@@ -61,7 +63,7 @@ manifest update fails `make check` and the pre-commit hook.
 | `lib/isedraf/interpret/` | classification rules, guidance |
 | `lib/isedraf/integrity/` | manifest, verify, trust levels |
 | `lib/isedraf/render/` | console, JSON/JSONL, HTML |
-| `lib/isedraf/exitcodes.json` *(PLANNED — not yet created)* | **single source** of exit codes (D-72) |
+| `lib/isedraf/exitcodes.json` | **single source** of exit codes (D-72) |
 | `lib/isedraf/runtime-imports.allow` *(PLANNED — not yet created)* | stdlib import allowlist (D-84) |
 | `collectors/` | Bash sequences, only where unavoidable |
 | `schemas/` | JSON Schemas, 0.x during prototype |

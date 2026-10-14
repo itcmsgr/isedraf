@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 -->
 # Security and limitations
 
-This page states what ISEDRAF 0.1 does to a host, how its evidence is protected, what it
+This page states what ISEDRAF 0.2 does to a host, how its evidence is protected, what it
 does not cover, and what it cannot conclude. It is meant to be read before relying on a
 report.
 
@@ -13,29 +13,41 @@ report.
 A run reads files under `/etc`, `/proc` and `/sys`, and may call a few standard read-only
 tools when they are present: `ip`, `systemd-detect-virt`, `timedatectl` and `chronyc`. Tools
 are run with fixed arguments and a clean environment, without a shell, with a time limit. A tool
-that is missing makes the affected fact NOT_TESTED.
+that is missing makes the affected fact NOT_TESTED. Full Audit also runs `sshd -T`, with exactly
+that one argument; it prints the configuration sshd would use and changes nothing.
 
 ISEDRAF writes only inside its own evidence store. It is built not to change the host it
 inspects: it does not edit configuration, restart services, create users, load kernel
 modules or change audit, SSH, PAM or firewall settings.
 
 It opens no network connection, sends no telemetry and checks for no updates. It runs no
-daemon and leaves nothing running after a run.
+daemon and leaves nothing running after a run. A Full Audit runs in a transient systemd unit
+that ends with the run.
 
 ## Privilege
 
-ISEDRAF 0.1 runs only as a normal user. Started as root, or through `sudo`, it refuses and
-exits 70 before collecting anything. It never asks for a password, never calls `sudo`
-itself and installs nothing with elevated rights.
+The standard audit runs as your own user. Facts it cannot read, such as `/etc/shadow` and
+the sudo policy, are NOT_TESTED or PARTIAL, with the reason.
 
-Running unprivileged means some facts cannot be seen, for example `/etc/shadow` and the
-sudo policy. Those are reported as NOT_TESTED or PARTIAL, with the reason. A privileged
-collection ("Full Audit") is not included in this release.
+Under `sudo`, ISEDRAF runs only `audit` and `report`; every other command is refused with
+exit 70. It never asks for a password and never calls `sudo` itself. In a Full Audit:
+
+- a root launcher starts a sandboxed systemd unit with a fixed property set: the file
+  system read-only except the evidence store, no network, four capabilities as its bound;
+- the engine that collects and interprets runs as the `isedraf` account, with no
+  capabilities and no way to gain any;
+- a supervisor performs exactly four fixed reads for the engine: `/etc/shadow`, the sudo
+  policy files, the SSH server configuration files and `sshd -T`. It accepts no path, no
+  argument and no command from the engine, and interprets nothing.
+
+`sudo isedraf report` reads the Full Audit store without changing it and renders through
+an unprivileged renderer that verifies the evidence first.
 
 ## How the evidence is protected
 
-The evidence store is a directory owned by the user who ran ISEDRAF, mode 0700, with files
-mode 0600. ISEDRAF refuses to use a store that is a symlink, belongs to someone else, or has
+The standard store is a directory owned by the user who ran ISEDRAF, mode 0700, with files
+mode 0600. The Full Audit store is `/var/lib/isedraf`, owned by root with mode 0700; ISEDRAF
+refuses it, and never repairs it, if it is anything else. ISEDRAF refuses to use a store that is a symlink, belongs to someone else, or has
 wider permissions, and refuses network and FUSE filesystems, where an atomic commit cannot
 be relied on.
 
@@ -56,7 +68,7 @@ evidence.
 
 Do not attach evidence or reports to public issues.
 
-## What ISEDRAF 0.1 does not include
+## What ISEDRAF 0.2 does not include
 
 These are not part of this release. Some are the direction of the project; none is
 promised here.
@@ -65,7 +77,13 @@ promised here.
 - findings, PASS/FAIL judgements or scores;
 - mappings to any security framework or standard: none exists in this repository, none is
   bundled and none is licensed;
-- privileged collection;
+- connection-specific SSH settings: `sshd -T` gives the global effective configuration,
+  and values that depend on `Match` blocks are reported as not resolved;
+- other users' authorized_keys files that the `isedraf` account cannot read: Full Audit
+  has no privileged read for them, and they stay NOT_TESTED;
+- the mount tables of other processes and containers (the host's own is read);
+- on SELinux-enforcing Rocky Linux and AlmaLinux, the time source details from `chronyc`
+  in Full Audit: the tool is not run there, and the time area says so;
 - signed evidence, exports and PDF reports;
 - kernel parameters, mandatory access control, services, scheduled jobs and software
   inventory.
@@ -119,8 +137,8 @@ fact shown as observed when it was not, is a security defect.
 
 ## References
 
-Normative sources, for readers who need them: unprivileged release (D-117, SCOPE-071,
-SCOPE-072); store ownership and storage checks (STORE-026, STORE-027); collector execution
-rules (EXEC-011, D-13); scope boundary (D-09). Known gaps in
+Normative sources, for readers who need them: the Full Audit authority model (AUTH-019 to
+AUTH-032); store ownership and storage checks (STORE-026, STORE-027, AUTH-022); collector
+execution rules (EXEC-011, D-13); scope boundary (D-09). Known gaps in
 project controls: [Governance gaps](development/GOVERNANCE_GAPS.md). The frozen design is
 under [docs/architecture](architecture/).

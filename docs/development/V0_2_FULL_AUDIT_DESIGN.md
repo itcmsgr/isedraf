@@ -237,6 +237,12 @@ Exit codes propagate unchanged through `systemd-run` (OUT-003).
 | launcher hardening | `bin/isedraf` honours `ISEDRAF_PYTHON` and an inherited `PYTHONPATH` and runs `-B` without `-I`; EXEC-010 requires `-IB` and a root-owned install before any root path |
 | terminology | "launcher" (D-26, PRIV-007) versus "supervisor" (PRIV-011, D-118); `sudo isedraf` versus `sudo isedraf audit` |
 
+**Status 2026-10-08 (REPOSITORY FACT).** OD-06 is closed (D-124 extended, `AUTH-028`). IQ-024
+to IQ-027 and U-04 were resolved by D-123 (`AUTH-012`); the account, store, route and capability
+questions by D-124 and its extensions. Exit codes 66 and 67 are implemented (`7549554`); the
+exit-code source file named in the table above exists since 2026-10-10 (`exitcodes.json`, D-124 extension 26). The launcher runs `/usr/bin/python3 -IB` on
+every root path and ignores `ISEDRAF_PYTHON` and `PYTHONPATH` there (`bin/isedraf`).
+
 ## 6. Evidence-truth defects found by this audit
 
 Found while measuring, and recorded rather than fixed (DISCOVER → CLASSIFY → REGISTER). Each needs a
@@ -257,15 +263,185 @@ candidate not observed), never an authoritative absence. It is a separate change
 
 No calendar. Each phase is re-estimated after the previous one.
 
-| Phase | Content | Needs |
-|---|---|---|
-| P0 | Done: the manifest schema (D-122, schema 2), the auxiliary-binding row (closed), and the authority model with the operation registry and blocker resolutions (D-123, `docs/architecture/FULL_AUDIT_AUTHORITY_MODEL.md`). Deferred: the faillock/opasswd scope ruling | owner |
-| P1 | IQ-044 as a 0.1.x correction release (owner direction 2026-10-06), then IQ-046; regression test first | none |
-| P2 | IQ-043 registry model and gate | none beyond approval |
-| P3 | IQ-042 contract, unprivileged: method identity, evidence limits written to schema 2 (`docs/architecture/EVIDENCE_LIMITS_SCHEMA.md`) and rendered, authority field | D-122 |
-| P4 | Full Audit design freeze: one owner amendment covering D-60, D-27, EXEC-020, SCOPE-070 to SCOPE-072, exit codes 66/67, the operation list and the authority vocabulary, resolving IQ-024 to IQ-027 and U-04 | owner, kit |
-| P5 | launcher hardening, supervisor, the `isedraf` identity, fixed operations, staging and promotion | P4 |
-| P6 | corpus validation on lab VMs (Debian 12, Ubuntu 24.04, Rocky 9, AlmaLinux 9, SELinux enforcing where the distribution defaults to it): authority, failure semantics, 10 unchanged runs, upgrade, reboot, no host mutation | P5; OD-06 result |
-| P7 | v0.2 release | P6 |
+| Phase | Content | Needs | Status 2026-10-08 |
+|---|---|---|---|
+| P0 | Done: the manifest schema (D-122, schema 2), the auxiliary-binding row (closed), and the authority model with the operation registry and blocker resolutions (D-123, `docs/architecture/FULL_AUDIT_AUTHORITY_MODEL.md`). Deferred: the faillock/opasswd scope ruling | owner | DONE |
+| P1 | IQ-044 as a 0.1.x correction release (owner direction 2026-10-06), then IQ-046; regression test first | none | DONE - IQ-044 released in 0.1.1, IQ-046 in 0.1.2 |
+| P2 | IQ-043 registry model and gate | none beyond approval | DONE - released in 0.1.2 |
+| P3 | IQ-042 contract, unprivileged: method identity, evidence limits written to schema 2 (`docs/architecture/EVIDENCE_LIMITS_SCHEMA.md`) and rendered, authority field | D-122 | DONE - released in 0.1.2 |
+| P4 | Full Audit design freeze: one owner amendment covering D-60, D-27, EXEC-020, SCOPE-070 to SCOPE-072, exit codes 66/67, the operation list and the authority vocabulary, resolving IQ-024 to IQ-027 and U-04 | owner, kit | DONE - D-124 and its extensions |
+| P5 | launcher hardening, supervisor, the `isedraf` identity, fixed operations, staging and promotion | P4 | DONE in engineering - P5a run mode, P5b launcher and packaging, P5c `read_shadow_v1`; not released |
+| P6 | corpus validation on lab VMs (Debian 12, Ubuntu 24.04, Rocky 9, AlmaLinux 9, SELinux enforcing where the distribution defaults to it): authority, failure semantics, 10 unchanged runs, upgrade, reboot, no host mutation | P5; OD-06 result | PASSED - full rerun on the four platforms after the IQ-053 and IQ-054 fixes; OD-06 closed |
+| P7 | v0.2 release | P6 | NOT YET |
 
 P1 to P3 need no privilege and can proceed while P4 is decided. P5 does not begin before P4 lands.
+
+**After P6, before P7 (owner decisions 2026-10-08 and 2026-10-09).** `AUTH-025`, as amended by
+D-124 on 2026-10-09, admits one new operation at a time: implementation state stays in the operation
+registry, validation is the owner's frozen admission block (`order`, `validated`, `next_candidate`),
+at most one `IMPLEMENTED` operation is unvalidated and it is the next candidate, and no release
+includes an unvalidated one. Admission grants no capability; capabilities stay with `AUTH-028`.
+`read_shadow_v1` is validated. The step C measurement (IQ-055) found that the reduced engine reads
+the host mount table through `/proc/1/mountinfo` with no capability, so the `SANDBOX_NAMESPACE`
+limitation of IQ-053 is closed in the engine, with no privileged operation: where `/proc/1` is not
+visible the source is `NOT_TESTED` with a reason, never the sandbox's own table, and the inventory
+measures space only where the sandbox path is shown to be the same filesystem. Inspecting other
+processes' mount namespaces leaves the admission order and returns later as a separate operation
+with its own threat model. `read_sudoers_graph_v1` is implemented and corpus-validated (section 8,
+IQ-056), `read_sshd_declared_config_v1` (section 9, IQ-060) and
+`resolve_sshd_effective_config_v1` (section 10, IQ-061; `AUTH-031`, the global effective
+configuration only). Every operation in the admission order is validated; none is a candidate.
+`inspect_mount_namespaces_v1` (`PLANNED`) and `read_authorized_keys_v1` (`DESIGN_OPEN`) are
+post-v0.2 candidates (owner decision 2026-10-10; `docs/development/V0_2_RELEASE_DISPOSITION.md`).
+Until v0.2 is
+released, public documentation states that the published 0.1.x packages do not include Full Audit
+(IQ-051).
+
+**Before P7 (owner direction 2026-10-09).** v0.2 is not released until all five hold: every
+intended v0.2 operation is validated; the `AUTH-025` admission chain is satisfied (release mode
+passes); the public documentation is updated for Full Audit (IQ-051); the trademark governance
+item OD-17 is resolved; and the launcher defect IQ-062 is fixed and proven on EL9.
+
+**IQ-062 (owner direction 2026-10-09): a v0.2 blocker, fixed before any further Full Audit lab
+validation.** On AlmaLinux 9 the launcher's `systemd-run --pipe`, handed a caller's regular-file
+stdout or stderr, disrupted systemd's D-Bus service. The fix makes the launcher own the transport
+boundary: `systemd-run` always receives pipes the launcher created, and the launcher relays the
+bytes to whatever the caller's stdout and stderr are, so `sudo isedraf audit`, a redirect to a
+file and a pipe into `tee` reach systemd the same way. Regression tests come first: stdout a
+terminal or pipe, stdout a regular file, stderr a regular file, both redirected separately, a
+downstream reader that closes early, a relay write failure, the operation's exit status still
+propagated, and output at the maximum size without buffering or deadlock. The fixed path is then
+proven on EL9 in the lab; the failing path is not run again to collect more evidence.
+**Fixed 2026-10-09 (D-124 extension 22):** the relay is in `lib/isedraf/launcher/outer.py` and was proven
+on the four platforms; the fifth release condition holds.
+
+**IQ-063 (owner decision 2026-10-09, before v0.2 is released):** an interrupted audit is never
+committed. SIGTERM or SIGHUP to the outer entry stops the audit unit, discards staging, promotes
+nothing and returns 128 + the signal. It is a launcher slice of its own, separate from the SSH
+operations. **Fixed 2026-10-10 (D-124 extension 24)**, proven on the four platforms; a snapshot
+committed before the stop is processed stays valid and the caller is told so.
+
+## 8. `read_sudoers_graph_v1` design (PROPOSAL, under `AUTH-029`)
+
+The operation is `PLANNED`. This section designs it within the frozen contract (`AUTH-029`, from the
+step C measurement IQ-056); it widens nothing. Nothing here is implemented.
+
+### 8.1 Supervisor: mechanical acquisition of the fixed surface
+
+1. **`/etc/sudoers`.** Opened with `O_NOFOLLOW`, `O_NONBLOCK` and `O_NOCTTY`, confirmed a regular file by
+   `fstat`, read up to the bound - the same mechanics as `read_shadow_v1`. Its item records the outcome:
+   read, an errno name, `NOT_REGULAR`, or `SYMLINK_NOT_FOLLOWED` when the final component is a link.
+2. **The listing of `/etc/sudoers.d`.** The directory is opened with `O_DIRECTORY` and `O_NOFOLLOW` and
+   listed through that descriptor. Its item records the outcome separately: listed, `ENOENT` (no
+   directory), or the refusal or error. A listing that could not be made is never an empty one
+   (IQ-046).
+3. **Each entry of that listing, directly.** `lstat` through the directory descriptor, without
+   following: a symlink is recorded `SYMLINK_NOT_FOLLOWED` with its `lstat` metadata and is neither
+   opened nor resolved; any other non-regular entry is recorded `NOT_REGULAR` and is not opened; a
+   regular entry is opened relative to the directory descriptor with `O_NOFOLLOW` and `O_NONBLOCK`,
+   confirmed regular by `fstat` (an entry replaced by a link in between fails `O_NOFOLLOW` and is
+   recorded as a link), and read up to the bound. No filename rule is applied: which entries sudo
+   considers is the engine's decision.
+4. **Bounds.** The whole result stays within the contract's `output_bound_bytes`, with a fixed cap on
+   the number of entries; passing either gives `TRUNCATED`, never a silently shorter set.
+
+The supervisor parses no byte it reads and follows no include.
+
+### 8.2 The result: one framed container in `bytes`
+
+`AUTH-015` allows one `bytes` field per operation, and this operation has several items, each with its
+own outcome. `bytes` therefore carries a fixed binary container, not JSON (`lib/isedraf/supervisor/frame.py`):
+for each item, its kind (`ROOT`, `LISTING`, `ENTRY`), its name as raw bytes, its `acquisition_outcome`,
+its `lstat` metadata (mode, owner, group, size) and its raw content (the file's bytes, or the listing's
+names separated by NUL, which no filename contains). The `acquisition_outcome` is one of the closed set
+`AUTH-029` freezes and is not a collection status (owner decision 2026-10-09, D-124 extension 17). The
+supervisor's own `status` is `COMPLETED` when the container was produced within its bounds, whatever
+the items' outcomes, because each item carries its own; `TRUNCATED` when a bound was passed; `FAILED`
+only when no container could be produced. The decoder refuses an unknown kind or outcome, a length
+past the end, trailing bytes, a count that does not match, an oversized member or frame, and any kind
+and outcome combination the contract cannot produce - a `SYMLINK` item carrying content among them.
+
+### 8.3 Engine: the graph, from returned bytes only
+
+- In `FULL_AUDIT` the sudo collector reads nothing under `/etc/sudoers*` itself. It decodes the
+  container strictly and serves the include-graph resolver from it; every file in the evidence carries
+  `acquisition_mode = SUPERVISOR_FIXED_OPERATION` and `operation_id = read_sudoers_graph_v1`, and the
+  file metadata (owner, mode) comes from the container's `lstat` record.
+- An include target outside the fixed surface is `NOT_TESTED` (`OUTSIDE_OPERATION_SURFACE`) and the
+  section is `PARTIAL`; it is never reported absent.
+- A symlinked entry is observed and `NOT_TESTED` (`SYMLINK_NOT_FOLLOWED`), and the section is `PARTIAL`.
+- A listing that could not be made is recorded as not observed, and the section is `PARTIAL` (IQ-046);
+  a missing `/etc/sudoers.d` keeps its ordinary meaning.
+- The standard route is unchanged: the engine reads as the user (`CURRENT_IDENTITY`). Fixture collection
+  applies the same symlink rule (IQ-057).
+
+### 8.4 Proof
+
+Unit tests for the performer (each item outcome, bounds, a link replacing an entry), the container
+codec (strict decoding, refused extras), and the collector (every rule in 8.3), regression tests first
+where a rule changes current behaviour; falsification injections for each rule; then the four-platform
+lab proof - the files read match the files `visudo -c` parses apart from symlinked entries, statuses
+are per item, two runs are identical, the store verifies, no AVC, the standard route is unchanged -
+including synthetic symlinked, non-regular and unlistable cases added and removed in one root shell.
+Only after that proof does the owner record the operation as validated.
+
+## 9. `read_sshd_declared_config_v1` (under `AUTH-030`)
+
+Implemented with the section 8 mechanics and no new performer or framing: the supervisor's fixed-tree
+reader over `/etc/ssh/sshd_config` and `/etc/ssh/sshd_config.d`. The engine serves the include graph
+from the frame for the fixed surface - a glob over the drop-in directory matches the frame's listing,
+a symlinked or non-regular match is recorded and not read, a listing that could not be made is never
+an empty directory - and expands and reads everything outside it itself, at every hop of a chain,
+recorded `CURRENT_IDENTITY` or `NOT_TESTED`. A file outside the surface that includes a path back
+inside it is served from the frame already acquired: the operation is requested once, and no
+discovered path ever reaches the supervisor. `Match` scope and order are kept as declared; no
+effective value is claimed, which is `resolve_sshd_effective_config_v1`'s, and sshd is never run.
+
+
+## 10. `resolve_sshd_effective_config_v1` (under `AUTH-031`)
+
+The supervisor's existing fixed-executable performer runs `/usr/sbin/sshd -T` - argv exactly `-T`,
+the clean fixed environment, working directory `/`, stdin `/dev/null`, 30 s, 1 MiB - and returns its
+stdout unparsed with the exit status. The ssh section gains its resolved dimension (SCOPE-021: SSH
+has declared and resolved dimensions only) in Full Audit; the standard route never runs sshd and is
+unchanged, byte for byte.
+
+- **What it is.** One `RESOLVED_SETTING` record per output line: `keyword`, `value` exactly as
+  printed after the first space, and `occurrence`, its position among the lines with the same
+  keyword, are state; its position in the whole output is provenance. The order of a repeated
+  directive is kept because it is meaning: for overlapping `listenaddress` entries the first one
+  binds and the other fails (IQ-064). Nothing is sorted or normalized.
+- **What it is not.** The global effective configuration only. The section provenance's
+  `resolved.connection_context` is `NOT_TESTED` with the reason that `-C` was not given, the
+  limitation says Match-dependent values are not resolved, and the report's ssh summary says so
+  next to the setting count (SCOPE-020). The Match blocks themselves stay in the declared records.
+- **Raw evidence.** The stdout is kept byte-for-byte in `resolved.raw_stdout` (base64, sha256, byte
+  count), with a bounded, printable stderr excerpt. Provenance, so it never enters the state hash.
+- **Fail closed (AUTH-031, SCOPE-022).** Settings come only from exit 0 with a non-empty stdout
+  whose every line is a lower-case keyword with an optional value. A non-zero exit (with its status
+  and stderr excerpt), a timeout, output beyond the bound, an empty output or an unparseable line is
+  `ERROR`; a refusal, an absent or untrusted `/usr/sbin/sshd` is `NOT_TESTED`; in every such case no
+  setting is derived. The section is `COLLECTED` only when both dimensions are, `PARTIAL` when one
+  of them observed something, and otherwise `ERROR` or `NOT_TESTED`.
+- **Coverage.** One source, `sshd -T`, operation `COMMAND`, acquired by
+  `SUPERVISOR_FIXED_OPERATION` naming `resolve_sshd_effective_config_v1`.
+
+## 11. The read-only Full Audit report (under `AUTH-032`, design only)
+
+`sudo isedraf report [--json | --html]` is the second and last root invocation. The outer entry runs a
+transient unit with the audit's constant properties minus `ReadWritePaths=` and relays its output. In
+the unit, under the whole-run lock, the report launcher validates the store read-only, takes the last
+ledger record's snapshot (`D-50`), and reads the ledger and that snapshot's declared files - no-follow,
+regular files, bounded - exactly as promotion reads a staged snapshot. It frames them and starts the
+renderer reduced as the engine is; the renderer verifies the ledger chain, the manifest and every file
+hash, and renders with the existing renderer, saying what it verified. No byte, path or identifier goes
+from the renderer to the root side; nothing is written to the store; there is no daemon. Before the
+implementation is fixed: measure the capability set the route needs (expected: the `AUTH-028` set, for
+the `isedraf`-owned 0600 files and the reduction) and the frame bounds against a store of realistic
+size. The report content - run mode, verification scope, the SSH declared / global effective / Match
+axes, the authorized-keys coverage limit - is the report-truth review that follows the implementation.
+
+**Report semantics frozen for v0.2 (owner direction 2026-10-10, IQ-068).** After the F1-F5 correction the Full Audit
+report states the run mode and its privilege line, the verification result and scope, how each source
+was acquired, the SSH declared, global effective and Match-dependent dimensions each with its own status,
+and the authorized-keys limit. No new layout, format, score, finding or native control in v0.2.

@@ -154,9 +154,39 @@ class EndToEnd(unittest.TestCase):
         code, _out, err = self.run_cli(
             ["audit", "--root", self.host], env,
             suitable=(False, "STORAGE_UNSUITABLE: nfs4"))
-        self.assertEqual(code, exitcodes.USAGE_OR_ENGINE)
+        # AUTH-023 (D-124): unsuitable storage is STATE_ROOT_UNUSABLE, 67, in every run mode.
+        self.assertEqual(code, exitcodes.STATE_ROOT_UNUSABLE)
         self.assertIn("STORAGE_UNSUITABLE", err)
         self.assertFalse(os.path.exists(os.path.join(self.home, ".local", "state", "isedraf")))
+
+    def test_a_user_root_with_the_wrong_mode_is_unusable(self):
+        root = os.path.join(self.home, ".local", "state", "isedraf")
+        os.makedirs(root)
+        os.chmod(root, 0o755)
+        env = {"HOME": self.home, "PATH": os.environ.get("PATH", "")}
+        code, _out, err = self.run_cli(["audit", "--root", self.host], env)
+        self.assertEqual(code, exitcodes.STATE_ROOT_UNUSABLE, err)
+        self.assertEqual(os.stat(root).st_mode & 0o777, 0o755)     # never repaired
+        self.assertFalse(os.path.exists(os.path.join(root, "snapshots")))
+
+    def test_a_held_lock_is_run_in_progress_and_writes_nothing(self):
+        import fcntl
+        env = {"HOME": self.home, "PATH": os.environ.get("PATH", "")}
+        code, _out, err = self.run_cli(["audit", "--root", self.host], env)
+        self.assertIn(code, (exitcodes.OK, exitcodes.INCOMPLETE), err)
+        root = os.path.join(self.home, ".local", "state", "isedraf")
+        before = sorted(os.listdir(os.path.join(root, "snapshots")))
+        fd = os.open(os.path.join(root, stateroot.LOCK_NAME), os.O_RDWR)
+        self.addCleanup(os.close, fd)
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        code, _out, err = self.run_cli(["audit", "--root", self.host], env)
+        self.assertEqual(code, exitcodes.RUN_IN_PROGRESS, err)
+        self.assertEqual(sorted(os.listdir(os.path.join(root, "snapshots"))), before)
+
+    def test_an_unlocatable_store_stays_a_usage_error(self):
+        code, _out, _err = self.run_cli(["audit", "--root", self.host],
+                                        {"PATH": os.environ.get("PATH", "")})
+        self.assertEqual(code, exitcodes.USAGE_OR_ENGINE)
 
     def test_the_verifier_refuses_an_unknown_state_root_literal(self):
         env = {"HOME": self.home, "PATH": os.environ.get("PATH", "")}
@@ -169,7 +199,11 @@ class EndToEnd(unittest.TestCase):
         os.chmod(path, 0o600)
         with open(path, "w") as fh:
             fh.write(text.replace('"USER_PRODUCTION"', '"PRODUCTION"'))
-        self.assertTrue(any("state_root" in p for p in verify.verify_store(root)))
+        # The STORE-026 rule itself, not any problem that mentions state_root: since D-124
+        # the AUTH-018 run-mode pairing also objects to a bogus class, and would otherwise
+        # mask a verifier that stopped checking the vocabulary.
+        self.assertTrue(any("state_root" in p and "STORE-026" in p
+                            for p in verify.verify_store(root)))
 
 
 if __name__ == "__main__":

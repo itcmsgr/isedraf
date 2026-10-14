@@ -119,3 +119,44 @@ Recorded now, to be tested when a loader exists rather than implemented opportun
    records. Mapping is strictly downstream of the hashed state.
 4. A public package contains no `LICENSE_REQUIRED` pack.
 5. Removing every pack leaves the collectors and criteria meaningful.
+
+## USER_SUPPLIED framework import — future design question
+
+**PROPOSAL / DESIGN OPEN (recorded 2026-10-09).** It does not alter D-112's modes, and it does not
+authorize any CIS content or mapping. D-112's modes keep their frozen meaning: A is the native report,
+always available; B is an open-authority mapping whose reuse rights were validated first; C is
+licensed BYOL - a provider-authorized pack plus the customer's provider entitlement, verified
+offline. A user-supplied import is a separate question, not a reading of Mode C.
+
+**Purpose.** Let an organization import framework material it is independently authorized to possess
+and use, without ISEDRAF redistributing that framework.
+
+Three acts are kept apart, because each raises a different legal and technical question:
+
+```text
+the user supplies framework content  !=  the user authors the mapping  !=  ISEDRAF may distribute the mapping
+```
+
+Holding a licensed copy does not settle the third: an ISEDRAF-authored mapping from `ISE-*` criteria
+to a provider's identifiers may fall under the provider's terms and OD-08 however the user obtained
+the source. Two distinctions are kept for the design, as concepts, not fields:
+`framework_source_origin` (`OPEN_AUTHORITY`, `PROVIDER_AUTHORIZED`, `USER_SUPPLIED`) and
+`mapping_author` (`ISEDRAF`, `PROVIDER`, `USER`, `THIRD_PARTY`).
+
+Open questions:
+
+1. What source formats are accepted?
+2. Does import occur on the audited host or off it?
+3. Who authors the `ISE-*` to external-control mapping?
+4. Is a user-authored mapping treated differently from an ISEDRAF-authored one?
+5. What framework-derived material may be persisted, exported or redistributed?
+6. How is provider entitlement or user authority represented?
+7. How does OD-08 apply to identifiers, titles, objectives and derived mappings?
+8. Can imported material be converted into the signed pack format above?
+9. What parser and security boundary does a hostile or malformed source file require?
+
+**Owner direction, not a decision.** No document parser (for example for `.xlsx`) runs in the audited
+host's runtime. The preferred direction is that source material goes to an off-host importer and
+converter, which produces a normalized signed pack that the mapping engine reads. That keeps document
+parsing and licensing-sensitive source material outside the assurance runtime. Questions 2 and 8 stay
+open until the v0.5 design.

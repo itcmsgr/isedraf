@@ -43,18 +43,25 @@ SECTIONS = snapshot.SECTION_NAMES           # the contract's list, in dependency
 
 # The collectors, named once so a run can prove each ran exactly once. Each takes the
 # collection root and the evidence gathered so far, and returns a JSON-ready object.
+# The supervisor channel, and whether the engine runs inside the Full Audit sandbox, travel
+# to the collectors in `done` under keys no section has.
+CHANNEL = "__supervisor_channel__"
+SANDBOXED = "__full_audit_sandbox__"
+
 COLLECTORS = {
-    "inventory": lambda root, done: inventory.collect(root=root),
+    "inventory": lambda root, done: inventory.collect(root=root,
+                                                      sandboxed=done.get(SANDBOXED, False)),
     "nss": lambda root, done: nss.collect(root),
     "hostname": lambda root, done: hostname.collect(root),
     "accounts": lambda root, done: accounts.collect(
         root, nss_context=accounts.compat_context(done.get("nss")),
-        effectiveness=accounts.file_effectiveness(done.get("nss"))),
-    "sudo": lambda root, done: sudo.collect(root),
-    "ssh": lambda root, done: ssh.collect(root),
+        effectiveness=accounts.file_effectiveness(done.get("nss")),
+        channel=done.get(CHANNEL)),
+    "sudo": lambda root, done: sudo.collect(root, channel=done.get(CHANNEL)),
+    "ssh": lambda root, done: ssh.collect(root, channel=done.get(CHANNEL)),
     "pam": lambda root, done: pam.collect(root),
     "loginpolicy": lambda root, done: loginpolicy.collect(root),
-    "mounts": lambda root, done: mounts.collect(root),
+    "mounts": lambda root, done: mounts.collect(root, sandboxed=done.get(SANDBOXED, False)),
     "authorizedkeys": lambda root, done: authorizedkeys.collect(
         root, done.get("accounts"), done.get("ssh_raw")),
 }
@@ -86,14 +93,19 @@ def _status(name, evidence):
     return status, evidence.get("reason")
 
 
-def collect(root="/"):
+def collect(root="/", channel=None, sandboxed=False):
     """Every section once. Returns (sections, run_status).
+
+    `channel` is the Full Audit supervisor channel, given only by the reduced engine; the
+    sections that a registered fixed operation serves use it, and no other (AUTH-024).
+    `sandboxed` is set only by that engine: sources it would read from the sandbox's own
+    namespace are not reported as the host's (IQ-053, IQ-054).
 
     A collector that raises becomes an ERROR section: the audit continues and exits
     incomplete, and the exception's text is not recorded - it can carry host-derived
     content, which diagnostics never echo.
     """
-    done, sections = {}, {}
+    done, sections = {CHANNEL: channel, SANDBOXED: sandboxed}, {}
     for name in SECTIONS:
         try:
             produced = COLLECTORS[name](root, done)

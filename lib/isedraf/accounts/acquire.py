@@ -5,7 +5,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
 #
 # Purpose: Read the three local account files, apply SCOPE-022, and join them honestly.
-# Implements: SCOPE-022, SCOPE-045, IDENT-013, IDENT-041, IDENT-060
+# Implements: SCOPE-022, SCOPE-045, IDENT-013, IDENT-041, IDENT-060, AUTH-017, AUTH-024
 #
 # The parsers in sources.py are pure and know nothing about permissions. This module is
 # where "we could not read /etc/shadow" becomes a status, and where the passwd-to-shadow
@@ -19,6 +19,14 @@
 # as a complete account collection would tell an operator their accounts have no
 # password ageing, when the truth is that nothing was looked at.
 #
+# Full Audit (v0.2 P5c, D-124). Given the supervisor channel, /etc/shadow is acquired by the
+# registered fixed operation read_shadow_v1 instead of by the engine's own read, and the
+# returned bytes go through exactly the same interpretation as a file the engine read
+# itself. The coverage record names the operation (AUTH-017). Without a channel - every
+# STANDARD_AUDIT run - nothing here changes (AUTH-024). The supervisor's status is mapped
+# onto the access outcome by fixedop, never here, and never onto the section's status: the
+# section derives that from all three sources as before (AUTH-016).
+#
 # meta:type="library"
 # meta:owner="Antonios Voulvoulis / ITCMS"
 # meta:stability="EXPERIMENTAL"
@@ -31,7 +39,8 @@
 import hashlib
 import os
 
-from .. import canonical, coverage, hostio as _exec, textbytes
+from .. import canonical, coverage, fixedop, hostio as _exec, textbytes
+from ..supervisor import protocol
 from ..nss import model as nss_model
 from . import model, sources
 
@@ -43,6 +52,9 @@ _PARSERS = {PASSWD: sources.parse_passwd,
             GROUP: sources.parse_group,
             SHADOW: sources.parse_shadow}
 
+# AUTH-008, AUTH-024: the exact versioned contract that acquires /etc/shadow in Full Audit.
+SHADOW_OPERATION = "read_shadow_v1"
+
 
 def acquire(root, relative):
     """Read one source under `root` and decide its SCOPE-022 status.
@@ -53,8 +65,42 @@ def acquire(root, relative):
     """
     path = os.path.join(root, relative)
     # Lossless: an identifier must survive acquisition as the bytes the host has.
-    outcome = _exec.read_file_lossless(path)
+    return _interpret(relative, _exec.read_file_lossless(path))
 
+
+def acquire_supervised(channel, relative=SHADOW, operation_id=SHADOW_OPERATION):
+    """The same source, acquired by the supervisor's fixed operation (AUTH-004).
+
+    The bytes are decoded exactly as read_file_lossless decodes a file, then interpreted by
+    the same rules. The result names the operation it came from.
+    """
+    try:
+        res = channel.request(operation_id)
+    except (protocol.ProtocolError, OSError) as exc:
+        result = {"source": relative, "status": model.ERROR,
+                  "reason": "SUPERVISOR_CHANNEL_FAILED: %s could not be requested from the "
+                            "supervisor (%s)." % (operation_id, type(exc).__name__),
+                  "detail": _exec.IO_ERROR, "parsed": None}
+    else:
+        outcome = fixedop.access_outcome(res)
+        if outcome == coverage.NOT_SUPPORTED:
+            result = {"source": relative, "status": model.NOT_TESTED,
+                      "reason": "SUPERVISOR_REFUSED: %s was refused by the supervisor; "
+                                "nothing about %s was observed." % (operation_id, relative),
+                      "detail": outcome, "parsed": None}
+        elif outcome == _exec.READ_OK:
+            result = _interpret(relative, _exec.Outcome(
+                value=res["bytes"].decode("utf-8", "surrogateescape"),
+                source="/" + relative, detail=_exec.READ_OK))
+        else:
+            result = _interpret(relative, _exec.Outcome(
+                ok=False, reason="SOURCE_UNREADABLE", source="/" + relative, detail=outcome))
+    result["operation_id"] = operation_id
+    return result
+
+
+def _interpret(relative, outcome):
+    """SCOPE-022 for one acquired source, however it was acquired."""
     if not outcome.ok:
         if outcome.detail == _exec.PERMISSION_DENIED:
             # SCOPE-022, frozen: privilege or MAC denial -> NOT_TESTED. NOT an error, and
@@ -420,7 +466,7 @@ def _directives(result):
     return result["parsed"].directives
 
 
-def collect(root="/", nss_context=None, effectiveness=None):
+def collect(root="/", nss_context=None, effectiveness=None, channel=None):
     """Collect the three local account files and join them.
 
     Returns local account records, local group records, per-source status, and the
@@ -433,8 +479,13 @@ def collect(root="/", nss_context=None, effectiveness=None):
 
     `effectiveness` (see file_effectiveness) says whether NSS consults each file. It is
     reported beside the evidence and never changes it (IQ-037).
+
+    `channel` is the Full Audit supervisor channel (fixedop.Channel), given only by the
+    reduced engine; /etc/shadow is then acquired by read_shadow_v1 (AUTH-024).
     """
-    results = {rel: acquire(root, rel) for rel in (PASSWD, GROUP, SHADOW)}
+    results = {rel: acquire(root, rel) for rel in (PASSWD, GROUP)}
+    results[SHADOW] = (acquire_supervised(channel) if channel is not None
+                       else acquire(root, SHADOW))
     context = dict({rel: model.NSS_MODE_NOT_ASSERTED for rel in _NSS_DATABASE},
                    **(nss_context or {}))
     uninterpreted = _interpret_compat_syntax(results, context)
@@ -605,7 +656,8 @@ def collect(root="/", nss_context=None, effectiveness=None):
                             coverage.OP_FILE_READ, reason=r["reason"],
                             universe=(coverage.UNIVERSE_COMPLETE
                                       if r["status"] == model.COLLECTED
-                                      else coverage.UNIVERSE_INCOMPLETE))
+                                      else coverage.UNIVERSE_INCOMPLETE),
+                            operation_id=r.get("operation_id"))
             for rel, r in sorted(results.items())],
         "collection_status": _combined(results),
         "reason": _combined_reason(results),

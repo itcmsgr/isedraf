@@ -18,8 +18,9 @@ It is not a general writing guide.
 The CLI and package identifier is lowercase `isedraf`.
 
 OD-01 is resolved (D-108): ISEDRAF is the project name. Formal trademark clearance is still
-outstanding, so public-release material stays gated on that. Public-facing pages say so once, near the top; they do not
-repeat the disclaimer in every paragraph. The command is lowercase: `isedraf`.
+outstanding. It is an open owner item, to be resolved before the v0.2 release; it does not
+retroactively invalidate the published 0.1.x releases. Public-facing pages say so once, near the top;
+they do not repeat the disclaimer in every paragraph. The command is lowercase: `isedraf`.
 
 ## Voice
 

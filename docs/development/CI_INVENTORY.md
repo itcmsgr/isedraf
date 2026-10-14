@@ -162,7 +162,7 @@ existing baseline** — a schema or collector-version change across an upgrade i
 | C-01 internal links | no broken internal links | D-89 | `make docs-check` | `ci-docs / lint` | PR | fail | **W0** | `lychee` (PORT, offline) |
 | C-02 requirement IDs | no unknown requirement IDs | D-89 | `make docs-check` | same | PR | fail | **W0** | new |
 | C-03 status values | no unknown status/enum names | D-89 | `make docs-check` | same | PR | fail | **W0** | new |
-| C-04 exit codes | documented codes match `lib/isedraf/exitcodes.json` *(PLANNED — not yet created)* | D-72, §40 | `make docs-check` | same | PR | fail | **W0** | new |
+| C-04 exit codes | constants, OUT-001, the launcher, `bin/isedraf` and README match `lib/isedraf/exitcodes.json` | D-72, §40 | `make check-exitcodes` | same | PR | fail | **W0** | new |
 | C-05 forbidden claims | `compliant`, `guaranteed`, `tamper-proof`, `non-repudiable`, `host unchanged`, `best`, `beats`, `replaces`, `revolutionary`, `military-grade`, `100% secure` — except files marked `doclint:exempt-forbidden-terms` or spans marked `<!-- doclint:quote -->` | D-87, §34 | `make docs-check` | same | PR | fail | **W0** | new |
 | C-06 coexistence framing | no `X vs Y`, rankings, or unverified claims about another project | D-87, §34 | `make docs-check` | same | PR | fail | **W0** | new |
 | C-07 STUB discipline | `Status: STUB` docs carry headings only, no behavioural prose | D-88 | `make docs-check` | same | PR | fail | **W0** | new |

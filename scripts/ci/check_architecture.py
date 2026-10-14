@@ -57,7 +57,10 @@ LAYERS = [
     ("core", ("isedraf.canonical", "isedraf.ids", "isedraf.status",
               "isedraf.stateroot", "isedraf.hostio", "isedraf.hostpath",
               "isedraf.coverage",
-              "isedraf.textbytes", "isedraf.exitcodes")),
+              "isedraf.textbytes", "isedraf.exitcodes",
+              # v0.2 P4: the supervisor imports nothing from the engine (AUTH-006), so it
+              # sits at the bottom; fixedop is the engine's side of the same boundary.
+              "isedraf.supervisor", "isedraf.fixedop")),
     ("shared", ("isedraf.shared",)),
     ("domain", ("isedraf.accounts", "isedraf.inventory", "isedraf.identity",
                 "isedraf.snapshot", "isedraf.ledger", "isedraf.verify",
@@ -68,7 +71,9 @@ LAYERS = [
                 # collects, never renders, so it sits below presentation.
                 "isedraf.audit")),
     ("presentation", ("isedraf.report",)),
-    ("entrypoint", ("isedraf.cli",)),
+    # v0.2 P5b: the Full Audit launcher orchestrates the store and the engine as the CLI
+    # does; it sits beside it, above every layer it composes.
+    ("entrypoint", ("isedraf.cli", "isedraf.launcher", "isedraf.fullaudit")),
 ]
 
 # Modules that must perform NO host I/O at all: they take data and return data.
@@ -81,7 +86,8 @@ PURE = ("isedraf.shared.keyvalue", "isedraf.shared.compare", "isedraf.shared.res
         "isedraf.authorizedkeys.model",
         "isedraf.mounts.sources", "isedraf.mounts.model",
         "isedraf.nss.sources", "isedraf.nss.model",
-        "isedraf.hostname.sources", "isedraf.hostname.model")
+        "isedraf.hostname.sources", "isedraf.hostname.model",
+        "isedraf.supervisor.protocol", "isedraf.supervisor.contracts")
 
 IO_MARKERS = ("open", "listdir", "lstat", "scandir", "readlink", "Popen",
               "check_output", "system", "execv", "socket", "urlopen")
@@ -95,7 +101,8 @@ ACQUISITION = ("isedraf.hostio", "isedraf.inventory.collectors",
                "isedraf.accounts.acquire", "isedraf.shared.bounded",
                "isedraf.shared.filemeta", "isedraf.shared.include_graph",
                "isedraf.authorizedkeys.acquire", "isedraf.mounts.acquire",
-               "isedraf.nss.acquire", "isedraf.hostname.acquire")
+               "isedraf.nss.acquire", "isedraf.hostname.acquire",
+               "isedraf.supervisor.perform", "isedraf.supervisor.serve", "isedraf.fixedop")
 
 FAIL = []
 

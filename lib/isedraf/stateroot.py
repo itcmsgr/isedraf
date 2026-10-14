@@ -29,6 +29,14 @@ USER_PRODUCTION = "USER_PRODUCTION"         # GA v0.1: the invoking user's own s
 SYSTEM_PRODUCTION = "SYSTEM_PRODUCTION"     # /var/lib/isedraf; Full Audit, SCOPE-072
 STATE_ROOT_CLASSES = (DEV, USER_PRODUCTION, SYSTEM_PRODUCTION)
 
+# AUTH-009, AUTH-018 (D-124): the run mode is fixed by the route, and the route fixes the
+# class. FULL_AUDIT exactly with SYSTEM_PRODUCTION; STANDARD_AUDIT with the other two.
+STANDARD_AUDIT = "STANDARD_AUDIT"
+FULL_AUDIT = "FULL_AUDIT"
+RUN_MODES = (STANDARD_AUDIT, FULL_AUDIT)
+RUN_MODE_OF_CLASS = {DEV: STANDARD_AUDIT, USER_PRODUCTION: STANDARD_AUDIT,
+                     SYSTEM_PRODUCTION: FULL_AUDIT}
+
 # STORE-027: filesystems known to lack the local rename/flock/fsync semantics a commit
 # relies on (remote, or FUSE, which is how most network filesystems reach the kernel),
 # and the local ones known to have them. Anything else is not established - and refused.
@@ -50,6 +58,10 @@ class PrivilegeRefused(Exception):
 
 class StateRootError(Exception):
     """The state root cannot be used. Never silently relocated."""
+
+
+class RunInProgress(StateRootError):
+    """AUTH-023: another run holds the whole-run lock (exit 66)."""
 
 
 def _under_sudo():
@@ -216,7 +228,7 @@ class RunLock(object):
         except OSError:
             os.close(self._fd)
             self._fd = None
-            raise StateRootError("another ISEDRAF run holds the lock")
+            raise RunInProgress("another ISEDRAF run holds the lock")
         return self
 
     def __exit__(self, *exc):

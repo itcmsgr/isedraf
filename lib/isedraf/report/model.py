@@ -158,6 +158,8 @@ def identity_evidence(root):
         "state_root_class": core.get("state_root"),
         "created_at": core.get("created_at"),
         "run_id": core.get("run_id"),
+        # D-124: absent from 0.1.x manifests, and then not rendered.
+        "run_mode": core.get("run_mode"),
         "ledger_sequence": record["record_core"]["sequence"] if record else None,
         "ledger_record_hash": record["record_hash"] if record else None,
         "verification": {"verified": not problems, "problems": problems},
@@ -192,6 +194,40 @@ def _limitations(inventory):
         out.append("Clock synchronization state could not be determined. That is not a "
                    "statement that the clock is correct.")
     return out
+
+
+FULL_AUDIT_KEYS_LIMITATION = (
+    "Full Audit has no privileged operation for other users' authorized_keys files: those the "
+    "reduced engine cannot read are NOT_TESTED, and their absence is not established.")
+
+
+def acquisition_authority(manifest):
+    """How the run's sources were acquired, from the bound Evidence Limits Manifest only:
+    each fixed privileged operation with its sections and source count, the sources read by
+    the run's own identity, and any other or unrecorded mode as recorded. None without one."""
+    if not manifest or not isinstance(manifest.get("sources"), list):
+        return None
+    operations, own, other = {}, 0, {}
+    for source in manifest["sources"]:
+        mode = source.get("acquisition_mode")
+        if mode == "SUPERVISOR_FIXED_OPERATION" and source.get("operation_id"):
+            entry = operations.setdefault(source["operation_id"], [set(), 0])
+            entry[0].add(source.get("domain"))
+            entry[1] += 1
+        elif mode == "CURRENT_IDENTITY":
+            own += 1
+        else:
+            other[mode or "not recorded"] = other.get(mode or "not recorded", 0) + 1
+    parts = []
+    if operations:
+        parts.append("%d source(s) through fixed privileged operations: %s" % (
+            sum(n for _d, n in operations.values()),
+            ", ".join("%s (%s, %d)" % (op, ", ".join(sorted(str(d) for d in doms)), n)
+                      for op, (doms, n) in sorted(operations.items()))))
+    parts.append("%d by the audit's own reduced identity (CURRENT_IDENTITY)" % own)
+    for mode, n in sorted(other.items()):
+        parts.append("%d with acquisition mode %s" % (n, mode))
+    return "; ".join(parts)
 
 
 def _coverage_limitations(manifest):
@@ -323,14 +359,17 @@ def build(root, inventory, assessment=None, generated_at=None, report_id=None,
         "collection_summary": summary,
         # GA track: one line per audited domain of the committed run. Status and reason
         # only; the evidence itself stays in the bundle's section files.
-        "audit_sections": ({name: {"collection_status": s.get("collection_status"),
+        "audit_sections": ({name: dict({"collection_status": s.get("collection_status"),
                                    "reason": s.get("reason"),
                                    "title": section_summaries.TITLES.get(name, name),
                                    "summary": [[label, value] for label, value in
                                                section_summaries.summarize(name, s)],
                                    "evidence_ref": {
                                        "path": "sections/%s.json" % name,
-                                       "digest": (audit_digests or {}).get(name)}}
+                                       "digest": (audit_digests or {}).get(name)}},
+                                  **({"dimensions": [list(d) for d in
+                                                     section_summaries.dimensions(name, s)]}
+                                     if section_summaries.dimensions(name, s) else {}))
                             for name, s in sorted(audit_sections.items())}
                            if audit_sections is not None else None),
         # R1.5-P. The Evidence Limits Manifest is carried, not re-derived: the report
@@ -339,7 +378,12 @@ def build(root, inventory, assessment=None, generated_at=None, report_id=None,
         # "no manifest" and "an empty manifest" stay distinguishable (NORM-034).
         "evidence_limits": coverage_manifest,
         "evidence_limitations": evidence_limitations(coverage_manifest),
-        "limitations": _limitations(inventory) + _coverage_limitations(coverage_manifest),
+        "limitations": (_limitations(inventory) + _coverage_limitations(coverage_manifest)
+                        + ([FULL_AUDIT_KEYS_LIMITATION]
+                           if identity.get("run_mode") == "FULL_AUDIT" else [])),
+        # F4: only for a Full Audit run, so a standard report keeps its shape.
+        **({"acquisition_authority": acquisition_authority(coverage_manifest)}
+           if identity.get("run_mode") == "FULL_AUDIT" else {}),
         "provenance": {
             "engine_version": ENGINE_VERSION,
             "inventory_schema_version": inventory.get("schema_version"),

@@ -20,9 +20,11 @@ The engineering repository was at `8f368da` when this was written. Labels follow
 ## 1. Release sequence (owner decision, 2026-10-05)
 
 ```text
-v0.1  Evidence Foundation     GA, published 2026-09-28; unprivileged; USER_PRODUCTION
+v0.1  Evidence Foundation     GA, published 2026-09-28; unprivileged; USER_PRODUCTION;
+                              corrections 0.1.1 (2026-10-06) and 0.1.2 (2026-10-08, latest)
 v0.2  Evidence Authority      Full Audit (D-118): privileged collection authority, plus the
-                              observation/evidence/capability contract that v0.3 consumes
+                              observation/evidence/capability contract that v0.3 consumes;
+                              in engineering, not released (status: docs/CURRENT_STATE.md)
 v0.3  Assurance Semantics     native ISE-* controls, evaluation, results, findings
 v0.4  Historical Assurance    approved baseline, classified run-to-run delta
 v0.5  Framework Intelligence  mapping overlays, coverage, overlap, gaps; Modes A/B/C (D-112)
@@ -67,6 +69,13 @@ is a FROZEN REQUIREMENT unless it is marked otherwise.
 | Baseline / delta | fully specified (BASE-001…030, CMP-020…031, DELTA-001…021) | none; `lib/isedraf/stateroot.py` deliberately does not create `baselines/` or `evaluations/` | MISSING | v0.4 |
 | Framework mapping | overlay that never changes A (D-112); clean room (D-63); strength and lifecycle enums (HLD-063) | none; `scripts/ci/framework_sources.json` has no sources | MISSING by design | v0.5 |
 | Severity | not defined; HLD-020 forbids a compliance percentage | none | NOT DEFINED | owner decision (IQ-041) |
+
+**Since GA (REPOSITORY FACT, 2026-10-08).** The table above describes the code at GA and is kept as
+the checkpoint. Three rows have moved since. Collector method identity: every audit section records
+its collector, collector version and parser version (IQ-042, released in 0.1.2). Coverage / evidence
+limits: `isedraf audit` writes `coverage/evidence_limits.json`, schema 2 (D-122, released in 0.1.2).
+Run: the run mode is recorded in `manifest_core` (v0.2 P5a, engineering, not released). The other
+rows are unchanged.
 
 INFERENCE: the foundation is real. Collection, normalization, provenance, digests, the ledger and
 verification can carry the model above without a rewrite. What is missing is the assurance layer:

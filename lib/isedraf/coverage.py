@@ -135,7 +135,14 @@ MODE_CURRENT_IDENTITY = "CURRENT_IDENTITY"
 # Future modes - a privileged helper, an operator-approved elevated operation - are
 # CONTRACTED DIRECTION and are admitted when a mechanism exists to produce them. Reserving
 # the semantics now would mean tests could produce a value production cannot.
-MODES = (MODE_CURRENT_IDENTITY,)
+#
+# v0.2 P5c (D-123, D-124, AUTH-007): the mechanism exists. read_shadow_v1 is IMPLEMENTED,
+# so the supervisor value is admitted. A record carries it only together with the exact
+# versioned identifier of the operation that acquired it (AUTH-017); every other record is
+# CURRENT_IDENTITY with a null operation_id.
+MODE_SUPERVISOR_FIXED_OPERATION = "SUPERVISOR_FIXED_OPERATION"
+MODES = (MODE_CURRENT_IDENTITY, MODE_SUPERVISOR_FIXED_OPERATION)
+OPERATION_ID = re.compile(r"^[a-z][a-z0-9_]*_v[1-9][0-9]*$")
 
 # Passed in, never sensed here: a pure module that read the process's euid would produce a
 # different answer depending on where it ran.
@@ -186,7 +193,7 @@ def absence_claim_allowed(universe):
 
 
 def source(domain, name, status, outcome, operation, reason=None,
-           universe=UNIVERSE_COMPLETE, note=None):
+           universe=UNIVERSE_COMPLETE, note=None, operation_id=None):
     """One acquisition attempt, with every derivable field derived here.
 
     A caller supplies facts: which source, what it tried, what came back, whether its own
@@ -200,7 +207,10 @@ def source(domain, name, status, outcome, operation, reason=None,
     if universe not in (UNIVERSE_COMPLETE, UNIVERSE_INCOMPLETE,
                         UNIVERSE_NOT_APPLICABLE):
         raise ValueError("unknown universe state %r" % (universe,))
-    return {
+    if operation_id is not None and not (isinstance(operation_id, str)
+                                         and OPERATION_ID.match(operation_id)):
+        raise ValueError("not an exact versioned operation identifier: %r" % (operation_id,))
+    record = {
         "domain": domain,
         "source": name,
         "operation": operation,
@@ -215,6 +225,12 @@ def source(domain, name, status, outcome, operation, reason=None,
         "absence_claim_allowed": absence_claim_allowed(universe),
         "note": note,
     }
+    if operation_id is not None:
+        # AUTH-017: acquired by the supervisor performing exactly this operation. Present
+        # only then, so every record of the unprivileged route keeps its frozen shape.
+        record["acquisition_mode"] = MODE_SUPERVISOR_FIXED_OPERATION
+        record["operation_id"] = operation_id
+    return record
 
 
 _TOKEN = re.compile(r"^[A-Z][A-Z0-9_]*$")
@@ -264,9 +280,16 @@ def entry(record, collector, acquisition_mode):
     if (not isinstance(collector, dict) or sorted(collector) != sorted(COLLECTOR_FIELDS)
             or not all(isinstance(v, str) and v for v in collector.values())):
         raise ValueError("collector identity must be %s" % (COLLECTOR_FIELDS,))
+    mode = record.get("acquisition_mode", acquisition_mode)
+    operation_id = record.get("operation_id")
+    if mode not in MODES:
+        raise ValueError("unknown acquisition mode %r" % (mode,))
+    if (mode == MODE_SUPERVISOR_FIXED_OPERATION) != (operation_id is not None):
+        # AUTH-017, ELIM-008: the supervisor mode exactly with an operation identifier.
+        raise ValueError("acquisition mode %s with operation_id %r" % (mode, operation_id))
     out = dict(record)
-    out.update({"collector": dict(collector), "acquisition_mode": acquisition_mode,
-                "operation_id": None, "reason": _reason(record),
+    out.update({"collector": dict(collector), "acquisition_mode": mode,
+                "operation_id": operation_id, "reason": _reason(record),
                 "universe_reasons": _universe_reasons(record)})
     return out
 

@@ -138,6 +138,35 @@ def observe(path, digest=False, limit=64 * 1024 * 1024):
                            provenance=_provenance(digest))
 
 
+def from_lstat(path, fields):
+    """The record `observe` makes, from lstat fields another party acquired (AUTH-029).
+
+    Full Audit's engine cannot lstat inside a directory it may not search; the supervisor's
+    frame carries mode, owner, group and size, and only those. Everything the frame does not
+    carry - device, inode, link count, a link's target text - stays null rather than guessed.
+    `fields` None means nothing was observed at `path`.
+    """
+    record = {"requested_path": path, "exists": None, "file_type": None,
+              "uid": None, "gid": None, "mode": None, "mode_octal": None,
+              "permission_bits": None, "setuid": None, "setgid": None, "sticky": None,
+              "size": None, "is_symlink": None, "symlink_target_text": None,
+              "device": None, "inode": None, "nlink": None,
+              "digest_status": DIGEST_NOT_REQUESTED, "digest": None,
+              "digest_reason": None}
+    if fields is None:
+        return record
+    mode = fields["mode"]
+    record.update({
+        "exists": True, "file_type": _file_type(mode),
+        "uid": fields["uid"], "gid": fields["gid"],
+        "mode": stat.S_IMODE(mode), "mode_octal": "%04o" % stat.S_IMODE(mode),
+        "permission_bits": stat.S_IMODE(mode) & 0o777,
+        "setuid": bool(mode & stat.S_ISUID), "setgid": bool(mode & stat.S_ISGID),
+        "sticky": bool(mode & stat.S_ISVTX), "size": fields["size"],
+        "is_symlink": stat.S_ISLNK(mode)})
+    return record
+
+
 def _add_digest(record, path, before, limit):
     """Digest the content, and refuse to claim it belongs to the metadata unless it does.
 

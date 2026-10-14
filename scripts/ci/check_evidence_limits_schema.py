@@ -6,7 +6,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
 #
 # Purpose: Hold the frozen Evidence Limits Manifest schema to its fixtures and to the code.
-# Implements: D-122, D-115, D-121
+# Implements: D-122, D-124, D-115, D-121
 #
 # Two things can drift, and this gate refuses both:
 #   1. the schema's vocabulary block and lib/isedraf/coverage.py / status.py - two lists
@@ -39,6 +39,9 @@ from isedraf import canonical, coverage, status   # noqa: E402
 
 SPEC = ROOT / "docs" / "architecture" / "EVIDENCE_LIMITS_SCHEMA.md"
 FIXTURES = ROOT / "tests" / "fixtures" / "evidence_limits" / "v2"
+REGISTRY = ROOT / "scripts" / "ci" / "privileged_operations.json"
+SUPERVISOR = "SUPERVISOR_FIXED_OPERATION"
+OPERATION_ID = re.compile(r"^[a-z][a-z0-9_]*_v[1-9][0-9]*$")
 TOKEN = re.compile(r"^[A-Z][A-Z0-9_]*$")
 REASON = re.compile(r"^[A-Z][A-Z0-9_]*: .+")
 
@@ -62,8 +65,22 @@ def vocabulary():
     return json.loads(match.group(1))
 
 
-def agreement(vocab):
+def implemented_operations():
+    """The registry's IMPLEMENTED identifiers (D-124, AUTH-024)."""
+    registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
+    return sorted(o["operation_id"] for o in registry.get("operations", [])
+                  if o.get("status") == "IMPLEMENTED")
+
+
+def admitted_modes(vocab, implemented):
+    """AUTH-007: the supervisor value is admitted only while an operation is IMPLEMENTED."""
+    return [m for m in vocab["acquisition_mode"] if m != SUPERVISOR or implemented]
+
+
+def agreement(vocab, implemented=None):
     """The schema's vocabularies ARE the code's: compared, never maintained twice."""
+    if implemented is None:
+        implemented = implemented_operations()
     code = {
         "status": list(status.STATUSES),
         "operation": list(coverage.OPERATIONS),
@@ -75,8 +92,12 @@ def agreement(vocab):
     }
     problems = []
     for key, values in sorted(code.items()):
-        if vocab.get(key) != values:
-            problems.append("vocabulary %r: schema %s, code %s" % (key, vocab.get(key), values))
+        expected = (admitted_modes(vocab, implemented) if key == "acquisition_mode"
+                    else vocab.get(key))
+        if expected != values:
+            problems.append("vocabulary %r: schema admits %s, code %s" % (key, expected, values))
+    if SUPERVISOR not in vocab.get("acquisition_mode", []):
+        problems.append("vocabulary 'acquisition_mode' does not define %s (ELIM-008)" % SUPERVISOR)
     if vocab.get("schema_version") != 2:
         problems.append("vocabulary block is not schema 2")
     return problems
@@ -107,9 +128,12 @@ def digest(manifest):
         "ISEDRAF:EVIDENCE-COVERAGE:V2", canonical.canonical_bytes(frame)))
 
 
-def validate(raw, vocab):
+def validate(raw, vocab, implemented=None):
     """Return [(rule, message)]; empty means the manifest conforms to schema 2."""
     errors = []
+    if implemented is None:
+        implemented = implemented_operations()
+    modes = admitted_modes(vocab, implemented)
 
     def bad(rule, message):
         errors.append((rule, message))
@@ -148,11 +172,23 @@ def validate(raw, vocab):
                                ("access_outcome", "access_outcome"),
                                ("source_universe", "source_universe"),
                                ("required_access", "required_access")):
-            if s[key] not in vocab[vocab_key]:
+            allowed = modes if key == "acquisition_mode" else vocab[vocab_key]
+            if s[key] not in allowed:
                 rule = "ELIM-008" if key == "acquisition_mode" else "ELIM-005"
-                bad(rule, "%s %s %r is not in the schema vocabulary" % (where, key, s[key]))
-        if s["operation_id"] is not None:
-            bad("ELIM-008", "%s operation_id must be null in schema 2" % where)
+                bad(rule, "%s %s %r is not admitted by the schema vocabulary"
+                    % (where, key, s[key]))
+        oid = s["operation_id"]
+        if s["acquisition_mode"] == SUPERVISOR:
+            # ELIM-008, AUTH-017: the exact versioned identifier of an IMPLEMENTED operation.
+            if not (isinstance(oid, str) and OPERATION_ID.match(oid)):
+                bad("ELIM-008", "%s %s needs an exact versioned operation_id, not %r"
+                    % (where, SUPERVISOR, oid))
+            elif oid not in implemented:
+                bad("ELIM-008", "%s operation_id %s is not an IMPLEMENTED registry operation"
+                    % (where, oid))
+        elif oid is not None:
+            bad("ELIM-008", "%s operation_id must be null for %s"
+                % (where, s["acquisition_mode"]))
         reasons = s["universe_reasons"]
         if (not isinstance(reasons, list) or reasons != sorted(set(reasons))
                 or not all(isinstance(r, str) and TOKEN.match(r) for r in reasons)):
@@ -262,9 +298,10 @@ def main():
     if problems:
         print("=== evidence limits schema gate FAILED ===")
         return 1
-    print("  OK    evidence limits schema 2: vocabularies agree with coverage.py and status.py; "
-          "%d valid fixtures conform, %d invalid fixtures each fail their named rule"
-          % (len(valid), len(invalid)))
+    print("  OK    evidence limits schema 2: vocabularies agree with coverage.py and status.py "
+          "under the AUTH-007 admission rule (%d operation(s) IMPLEMENTED); %d valid fixtures "
+          "conform, %d invalid fixtures each fail their named rule"
+          % (len(implemented_operations()), len(valid), len(invalid)))
     return 0
 
 

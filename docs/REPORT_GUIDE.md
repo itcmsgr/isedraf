@@ -22,8 +22,15 @@ isedraf report --html --save         # write it into the store under reports/
 `--save` writes `reports/<year>/<month>/RPT-<time>-<random>.<ext>` inside the evidence
 store, readable only by you, and prints the path.
 
+For a Full Audit, `sudo isedraf report` (or `--json`, `--html`) renders the last run in
+`/var/lib/isedraf`. It never writes to that store, so `--save` and `--profile` are refused
+under sudo; redirect the output instead, for example
+`sudo isedraf report --html > report.html`.
+
 The command exits 0 when every part of the run was COLLECTED and 2 when anything was not.
-It exits 64 when there is no audit run to report on.
+It exits 64 when there is no audit run to report on, or when the evidence does not verify,
+in which case nothing is rendered. Under sudo it also exits 66 while a Full Audit is
+running and 67 when the store cannot be used.
 
 ## The three formats
 
@@ -81,9 +88,10 @@ SSH authorized keys                                NOT_TESTED
 
 ## The banner
 
-The first line you see states the privilege level and the overall evidence status, and
-the sentence under it says what NOT_TESTED means. Read it before anything else: it tells
-you how much of the host this report could see.
+The first line you see states the privilege level and the overall evidence status:
+`PRIVILEGE LEVEL: UNPRIVILEGED` for a standard audit, `PRIVILEGE LEVEL: FULL_AUDIT` for a
+Full Audit. For a standard audit, the sentence under it says what NOT_TESTED means. Read
+it before anything else: it tells you how much of the host this report could see.
 
 ## The run panel
 
@@ -94,9 +102,15 @@ The run panel identifies exactly which evidence the report describes.
 - **Snapshot** is the run directory in the evidence store; **Run** is the run identifier.
 - **Collected at** is when the run was made; **Report generated** is when it was rendered.
 - **Engine version** is the ISEDRAF version that collected it.
-- **Evidence class** is USER_PRODUCTION for a normal run, DEV for a development run.
+- **Evidence class** is USER_PRODUCTION for a standard audit, SYSTEM_PRODUCTION for a
+  Full Audit, DEV for a development run.
+- **Run mode** is STANDARD_AUDIT or FULL_AUDIT; runs committed by 0.1.x carry none.
 - **Evidence verification** is the result of re-checking the run's digests and the ledger
-  chain at render time.
+  chain at render time. A Full Audit report adds **Verification scope**: the ledger chain
+  and the reported run.
+- **Acquisition authority**, in a Full Audit report, counts the sources each fixed
+  privileged operation read and those the `isedraf` account read itself, from the run's
+  own record.
 
 ## One section per area
 
@@ -115,11 +129,18 @@ hostname, mounts, SSH server, PAM, sudo, SSH authorized keys, login policy. Each
 A count of zero under a NOT_TESTED or PARTIAL status means nothing was observed. It does
 not mean nothing exists.
 
+In a Full Audit report the SSH server area has three rows, each with its own status: the
+declared configuration (the files), the global effective configuration (`sshd -T`, global
+only) and the Match-dependent values, which are NOT_TESTED because `sshd -T` ran without a
+connection context. COLLECTED for the area never means every connection's settings are
+known.
+
 ## Limitations
 
 The report ends with the limitations that apply to this run, for example that host
-identity is not remote attestation, and that clock synchronization could not be
-determined when that was the case. They belong to the report; do not detach them.
+identity is not remote attestation, that clock synchronization could not be determined
+when that was the case, and, for a Full Audit, that other users' authorized_keys files are
+not read by a privileged operation. They belong to the report; do not detach them.
 
 ## Adding assessor details
 
@@ -130,5 +151,6 @@ Keeping them in a file keeps personal details out of shell history.
 ## References
 
 Normative sources, for readers who need them: reports render committed evidence only
-(OUT-013, D-115); unprivileged release and its report (D-117). How the statuses are
+(OUT-013, D-115); run modes and the report line (AUTH-009); the read-only Full Audit report
+(AUTH-032). How the statuses are
 defined: [Evidence model](EVIDENCE_MODEL.md).

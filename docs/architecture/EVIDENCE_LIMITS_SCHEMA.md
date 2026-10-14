@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 -->
 # Evidence Limits Manifest — Schema 2
 
-Implements: D-122, D-115, D-121, CMP-001, SCOPE-022
+Implements: D-122, D-124, D-115, D-121, CMP-001, SCOPE-022
 
 **Frozen by owner decision 2026-10-06 (`D-122`).**
 
@@ -92,13 +92,24 @@ is a method change, which CMP-020 tracks, and not by itself a change in what the
 incompleteness is never silent. The tokens are the requesting section's own vocabulary, for example
 `CANDIDATE_NOT_OBSERVED`.
 
-**ELIM-008 (D-122) SHALL** `acquisition_mode` records the authority under which this one source was
-acquired. Schema 2 admits exactly the values in the "acquisition_mode" vocabulary below, which today
-is `CURRENT_IDENTITY`: the engine attempted the acquisition as the identity it was already running
-as, and elevated nothing. `operation_id` is reserved for the identifier of a fixed privileged
-operation, and is `null` for every schema 2 entry. The Full Audit amendment adds the supervisor
-value and defines `operation_id`. That extension changes no existing manifest, and a verifier that
-predates it rejects an unknown value rather than trusting it.
+**ELIM-008 (D-122, D-124) SHALL** `acquisition_mode` records the authority under which this one source
+was acquired. Schema 2 defines the two values of the "acquisition_mode" vocabulary below
+(`AUTH-007`): `CURRENT_IDENTITY`, the engine attempted the acquisition as the identity it was already
+running as and elevated nothing; and `SUPERVISOR_FIXED_OPERATION`, the supervisor performed one
+registered fixed operation on the engine's behalf.
+
+- `operation_id` is `null` exactly when `acquisition_mode` is `CURRENT_IDENTITY`.
+- When `acquisition_mode` is `SUPERVISOR_FIXED_OPERATION`, `operation_id` is the exact versioned
+  identifier of the contract performed (for example `read_shadow_v1`, never `read_shadow`), and that
+  identifier is `IMPLEMENTED` in the operation registry of the version that produced the manifest.
+- `SUPERVISOR_FIXED_OPERATION` appears only in a `FULL_AUDIT` run; a `STANDARD_AUDIT` run never
+  records it or a non-null `operation_id` (`AUTH-017`). The manifest does not carry the run mode;
+  the snapshot does (`AUTH-018`), and the verifier checks the two together.
+- `lib/isedraf/coverage.py` admits `SUPERVISOR_FIXED_OPERATION` only while at least one operation is
+  `IMPLEMENTED` (`AUTH-007`).
+
+Admitting the value changes no existing manifest and no schema version. A verifier that predates it
+rejects the value rather than trusting it.
 
 **ELIM-009 (D-122, SCOPE-022) SHALL** `reason` is `null` exactly when `status` is `COLLECTED`.
 Otherwise it is a string of the form `CODE: text`, where `CODE` matches `[A-Z][A-Z0-9_]*`. The
@@ -172,7 +183,9 @@ and identical host state.
 
 The gate requires this block to equal the code: `operation`, `access_outcome`, `required_access`,
 `acquisition_mode` and `source_universe` must equal `lib/isedraf/coverage.py`, and `status` must
-equal `lib/isedraf/status.py`.
+equal `lib/isedraf/status.py`. For `acquisition_mode` the code must hold every value except
+`SUPERVISOR_FIXED_OPERATION` while no operation is `IMPLEMENTED`, and every value once one is
+(`AUTH-007`, `D-124`).
 
 ```json evidence-limits-vocabulary
 {
@@ -186,7 +199,7 @@ equal `lib/isedraf/status.py`.
   "required_access": ["ACCESS_NONE", "ACCESS_FILE_READ", "ACCESS_DIRECTORY_TRAVERSE",
                       "ACCESS_COMMAND_QUERY", "ACCESS_KERNEL_INTERFACE", "ACCESS_SERVICE_QUERY",
                       "ACCESS_ADDITIONAL_AUTHORITY_UNSPECIFIED"],
-  "acquisition_mode": ["CURRENT_IDENTITY"],
+  "acquisition_mode": ["CURRENT_IDENTITY", "SUPERVISOR_FIXED_OPERATION"],
   "source_universe": ["COMPLETE", "INCOMPLETE", "NOT_APPLICABLE"],
   "forbidden_values": ["PASS", "FAIL", "NOT_APPLICABLE", "MANUAL_REVIEW", "NOT_EVALUATED",
                        "critical", "high", "medium", "low"]

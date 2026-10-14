@@ -26,6 +26,8 @@ from . import collectors, model
 from .model import (CLASSIFICATION, COLLECTED, ERROR, INVENTORY_SCHEMA_VERSION,
                     NOT_TESTED, PARTIAL, SUBDOMAINS, VOLATILE_FIELDS)
 
+_SANDBOX_AWARE = ("storage", "time")
+
 _COLLECTORS = (
     ("host", collectors.collect_host),
     ("platform", collectors.collect_platform),
@@ -58,7 +60,7 @@ _OPERATIONS = {
 }
 
 
-def collect(root="/"):
+def collect(root="/", sandboxed=False):
     """Every subdomain, each carrying its own collection status and provenance.
 
     A collector that raises becomes an ERROR subdomain rather than an aborted run: the
@@ -68,7 +70,10 @@ def collect(root="/"):
     out = {"schema_version": INVENTORY_SCHEMA_VERSION, "subdomains": {}}
     for name, function in _COLLECTORS:
         try:
-            out["subdomains"][name] = function(root)
+            # IQ-053, IQ-054: only the subdomains whose sources depend on the Full Audit
+            # sandbox are told about it.
+            out["subdomains"][name] = (function(root, sandboxed=sandboxed)
+                                       if name in _SANDBOX_AWARE else function(root))
         except Exception as exc:                    # noqa: BLE001 - reported, not raised
             out["subdomains"][name] = model.subdomain(
                 model.ERROR, {}, method=getattr(function, "__name__", name),

@@ -443,6 +443,21 @@ class ImplementationDirected(Fixture):
                           **{"etc__extra": "Defaults env_reset\n"})
         self.assertEqual(len(self.kinds(ev, "DEFAULTS")), 1)
 
+    def test_at_includedir_is_a_directive_not_a_malformed_record(self):
+        # IQ-058: Debian and Ubuntu ship `@includedir /etc/sudoers.d`. The parser skipped only
+        # `#` lines, so the directive itself became an UNSUPPORTED record and every such host
+        # reported a malformed line that is not there.
+        ev = self.collect("@includedir /etc/sudoers.d\n",
+                          **{"etc__sudoers.d__10": "Defaults env_reset\n"})
+        self.assertEqual(ev.provenance["malformed_count"], 0, ev.reason)
+        self.assertEqual(self.kinds(ev, "UNSUPPORTED"), [])
+        self.assertEqual(ev.status, "COLLECTED", ev.reason)
+
+    def test_at_include_is_a_directive_not_a_malformed_record(self):
+        ev = self.collect("@include /etc/extra\nDefaults a\n",
+                          **{"etc__extra": "Defaults env_reset\n"})
+        self.assertEqual(ev.provenance["malformed_count"], 0, ev.reason)
+
     def test_include_with_no_target_is_not_treated_as_a_valid_directive(self):
         ev = self.collect("#include\nDefaults env_reset\n")
         self.assertEqual(len(self.kinds(ev, "DEFAULTS")), 1)

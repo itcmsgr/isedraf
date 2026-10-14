@@ -62,6 +62,11 @@ say "staging payload for $VERSION"
 install -d -m 0755 "$STAGE/usr/bin" "$STAGE/usr/lib/isedraf" \
                    "$STAGE/usr/share/doc/isedraf"
 install -m 0755 bin/isedraf "$STAGE/usr/bin/isedraf"
+# AUTH-027 (D-124, refined 2026-10-08): the Full Audit state root is NOT payload - dpkg
+# replaces an existing file or dangling symlink with a payload directory. The postinst
+# creates it only when nothing exists at the path; the runtime validates it.
+# D-60 as amended by AUTH-012: the isedraf account is declared by a sysusers file.
+install -D -m 0644 packaging/sysusers/isedraf.conf "$STAGE/usr/lib/sysusers.d/isedraf.conf"
 # git ls-files, so an untracked scratch file can never be shipped by accident.
 for f in $(git ls-files 'lib/isedraf/*.py' 'lib/isedraf/**/*.py'); do
     # $STAGE/usr/lib/isedraf/... - an earlier version stripped "lib/" and installed to
@@ -97,6 +102,7 @@ stray_bytecode="$(find "$STAGE" -name '*.pyc' -o -name '__pycache__')"
 # not exactly there, the package installs cleanly and the command does nothing.
 [ -f "$STAGE/usr/lib/isedraf/cli.py" ] || die "payload layout wrong: expected usr/lib/isedraf/cli.py"
 [ -x "$STAGE/usr/bin/isedraf" ] || die "launcher missing or not executable"
+[ ! -e "$STAGE/var/lib/isedraf" ] || die "state root staged as payload (AUTH-027)"
 say "payload: $(find "$STAGE" -type f | wc -l) files, layout verified"
 
 # ---- 2. source tarball -----------------------------------------------------------------
@@ -120,6 +126,7 @@ INSTALLED_KB=$(find "$DEBROOT/usr" -type f -printf '%s\n' \
 sed -e "s|@VERSION@|$DEB_VERSION|g" -e "s|@MAINTAINER@|$MAINTAINER|g" \
     -e "s|@INSTALLED_SIZE@|$INSTALLED_KB|g" -e "s|@DESCRIPTION@|$DESCRIPTION|g" \
     packaging/deb/control.in > "$DEBROOT/DEBIAN/control" || die "deb control"
+install -m 0755 packaging/deb/postinst "$DEBROOT/DEBIAN/postinst" || die "deb postinst"
 
 # Sorted, in the C locale. `find` returns directory order, which is a property of the
 # FILESYSTEM: the same payload produced the same 24 lines in a different sequence on

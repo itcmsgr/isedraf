@@ -98,6 +98,11 @@ isedraf  →  unprivileged engine  →  no privileged collectors
           →  PARTIAL / NOT_TESTED where privilege was required
 ```
 
+**Amended for v0.2 by D-124.** The Mode A entry is `sudo isedraf audit`, and the launcher,
+supervisor and engine roles are those of `AUTH-019` to `AUTH-021`
+(`docs/architecture/FULL_AUDIT_AUTHORITY_MODEL.md`). The engine runs as the `isedraf` account with no
+capability; the root supervisor performs only registered fixed operations.
+
 **PRIV-006 (T-01) SHALL NOT** Mode B SHALL NOT be described as having Mode A's root transient-unit
 protections. A non-systemd environment does **not** receive an improvised privileged fallback: full audit
 is **unsupported** there, reported as such, and never silently degraded.

@@ -1,5 +1,5 @@
 {
-  "$comment": "The ISEDRAF FIXED PRIVILEGED OPERATION registry (D-123, docs/architecture/FULL_AUDIT_AUTHORITY_MODEL.md section 4). Consumed by scripts/ci/check_privileged_operations.py. Every privileged acquisition maps to exactly one entry here (AUTH-004); no entry takes a caller input (AUTH-003). Design only: no entry is IMPLEMENTED and no supervisor exists.",
+  "$comment": "The ISEDRAF FIXED PRIVILEGED OPERATION registry (D-123, docs/architecture/FULL_AUDIT_AUTHORITY_MODEL.md section 4). Consumed by scripts/ci/check_privileged_operations.py. Every privileged acquisition maps to exactly one entry here (AUTH-004); no entry takes a caller input (AUTH-003). read_shadow_v1 is IMPLEMENTED (v0.2 P5c): reachable through the Full Audit route and requested by the accounts section (AUTH-024). lib/isedraf/supervisor/contracts.py mirrors the entries it has a performer for, field for field (check_privileged_operations.py), and the supervisor refuses every entry that is not IMPLEMENTED. No second operation before the first slice is validated on the lab corpus (AUTH-025).",
   "registry_version": 1,
   "operations": [
     {
@@ -10,7 +10,7 @@
         "/proc/<pid>/ns/mnt for every pid, deduplicated by namespace",
         "/proc/<pid>/mountinfo of one pid per namespace"
       ],
-      "privilege_basis": "reading other processes' namespace links and mountinfo needs ptrace read access to them",
+      "privilege_basis": "reading other processes' mount namespace links (/proc/<pid>/ns/mnt), to tell the namespaces apart, needs ptrace read access to them: measured EACCES without it (IQ-055). Reading the host mount table through /proc/1/mountinfo needs no privilege on the measured platforms and is not this operation",
       "fixed_executable": null,
       "fixed_argv": [],
       "caller_inputs": [],
@@ -53,7 +53,7 @@
       "fixed_argv": [],
       "caller_inputs": [],
       "output_bound_bytes": 1048576,
-      "status": "PLANNED",
+      "status": "IMPLEMENTED",
       "env_policy": "NOT_APPLICABLE",
       "cwd_policy": "NOT_APPLICABLE",
       "stdin_policy": "NOT_APPLICABLE",
@@ -62,18 +62,19 @@
     },
     {
       "operation_id": "read_sshd_declared_config_v1",
-      "purpose": "Read the declared OpenSSH server configuration and its include graph.",
+      "purpose": "Read /etc/ssh/sshd_config, the listing of /etc/ssh/sshd_config.d and its directly enumerated entries, without parsing or following a symlink; declared configuration only, never sshd (AUTH-030).",
       "serves": "ssh",
       "targets": [
         "/etc/ssh/sshd_config",
-        "files it includes, resolved by the engine's include rules after return"
+        "the listing of /etc/ssh/sshd_config.d",
+        "each non-symlink regular directory entry directly enumerated in /etc/ssh/sshd_config.d"
       ],
-      "privilege_basis": "sshd_config is 0600 and sshd_config.d 0700 on the EL family",
+      "privilege_basis": "on the measured platforms (Debian 12, Ubuntu 24.04, Rocky 9, AlmaLinux 9) /etc/ssh/sshd_config is 0644 and /etc/ssh/sshd_config.d 0755, readable and listable by the reduced engine; privileged acquisition is required for root-only drop-ins such as the measured 0600 entries; uid 0 is sufficient, no capability is added (IQ-060)",
       "fixed_executable": null,
       "fixed_argv": [],
       "caller_inputs": [],
       "output_bound_bytes": 4194304,
-      "status": "PLANNED",
+      "status": "IMPLEMENTED",
       "env_policy": "NOT_APPLICABLE",
       "cwd_policy": "NOT_APPLICABLE",
       "stdin_policy": "NOT_APPLICABLE",
@@ -82,19 +83,19 @@
     },
     {
       "operation_id": "read_sudoers_graph_v1",
-      "purpose": "Read the sudoers policy, its include graph and the sudoers.d listing.",
+      "purpose": "Read /etc/sudoers, the listing of /etc/sudoers.d and its directly enumerated entries, without parsing or following a symlink (AUTH-029).",
       "serves": "sudo",
       "targets": [
         "/etc/sudoers",
-        "/etc/sudoers.d listing",
-        "files it includes"
+        "the listing of /etc/sudoers.d",
+        "each non-symlink regular directory entry directly enumerated in /etc/sudoers.d"
       ],
-      "privilege_basis": "/etc/sudoers is 0440 root and /etc/sudoers.d 0750",
+      "privilege_basis": "/etc/sudoers is 0440 root:root and /etc/sudoers.d 0750 root:root: the reduced engine is refused on the file, the listing and every entry (measured, IQ-056); uid 0 alone reads them, so no capability is added",
       "fixed_executable": null,
       "fixed_argv": [],
       "caller_inputs": [],
       "output_bound_bytes": 4194304,
-      "status": "PLANNED",
+      "status": "IMPLEMENTED",
       "env_policy": "NOT_APPLICABLE",
       "cwd_policy": "NOT_APPLICABLE",
       "stdin_policy": "NOT_APPLICABLE",
@@ -103,19 +104,19 @@
     },
     {
       "operation_id": "resolve_sshd_effective_config_v1",
-      "purpose": "Obtain the effective OpenSSH server configuration.",
+      "purpose": "Run the fixed /usr/sbin/sshd -T once and return its stdout unparsed: the global effective OpenSSH server configuration only, without connection context; Match-dependent values are not resolved (AUTH-031).",
       "serves": "ssh",
       "targets": [
-        "the output of the fixed executable below"
+        "the stdout of the fixed executable below: the global effective configuration, no -C connection context"
       ],
-      "privilege_basis": "sshd -T loads the host keys, which are readable by root only",
+      "privilege_basis": "on the measured platforms (Debian 12, Ubuntu 24.04, Rocky 9, AlmaLinux 9) sshd -T as the reduced engine is refused on root-only drop-ins such as the measured 0600 entries and, without them, on the host keys; uid 0 is sufficient and no capability is added - the output was identical with an empty bounding set (IQ-061)",
       "fixed_executable": "/usr/sbin/sshd",
       "fixed_argv": [
         "-T"
       ],
       "caller_inputs": [],
       "output_bound_bytes": 1048576,
-      "status": "PLANNED",
+      "status": "IMPLEMENTED",
       "env_policy": "CLEAN_FIXED",
       "cwd_policy": "ROOT_DIR",
       "stdin_policy": "DEVNULL",

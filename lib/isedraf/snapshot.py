@@ -56,7 +56,7 @@ def auxiliary_digest(data):
 
 
 def manifest_core(ident, snapshot_id, run_id, created_at, state_root_class,
-                  engine_version, auxiliary=None):
+                  engine_version, auxiliary=None, run_mode=None):
     """SNAP-020's field table, with SNAP-023 deciding host_id.
 
     SNAP-023: host_id is the canonical identifier iff COLLECTED and IDENT-005 derived it;
@@ -70,7 +70,10 @@ def manifest_core(ident, snapshot_id, run_id, created_at, state_root_class,
     if not ident.collected and ident.host_id:
         raise ValueError(
             "SNAP-023: host_id derived for a %s section" % ident.status)
-    return {
+    if run_mode is not None and run_mode != stateroot.RUN_MODE_OF_CLASS.get(state_root_class):
+        raise ValueError("AUTH-018: run mode %r cannot be recorded for the %r class"
+                         % (run_mode, state_root_class))
+    core = {
         "schema_version": SCHEMA_VERSION,
         "host_id": ident.host_id if ident.collected else None,
         "snapshot_id": snapshot_id,
@@ -104,10 +107,17 @@ def manifest_core(ident, snapshot_id, run_id, created_at, state_root_class,
             "source_id": identity.SOURCE_ID,     # CMP-020, IDENT-006
         }},
     }
+    # AUTH-018 (D-124). Set by the route that ran, never by an operator. In manifest_hash
+    # through this object, never in state_hash: the run mode is not host state. Absent
+    # only on the W1-A builder path the golden vectors freeze and on GA 0.1.x snapshots,
+    # which read as "run mode not recorded" and never as FULL_AUDIT.
+    if run_mode is not None:
+        core["run_mode"] = run_mode
+    return core
 
 
 def build(ident, snapshot_id, run_id, created_at, state_root_class, engine_version,
-          coverage_manifest=None, sections=None):
+          coverage_manifest=None, sections=None, run_mode=None):
     """Everything a snapshot needs, computed before anything touches the store.
 
     The Evidence Limits Manifest (`coverage_manifest`, schema 2, D-122) is PROVENANCE -
@@ -130,7 +140,7 @@ def build(ident, snapshot_id, run_id, created_at, state_root_class, engine_versi
         section_bytes[name] = canonical.canonical_bytes(obj)
         auxiliary["sections/%s.json" % name] = auxiliary_digest(section_bytes[name])
     core = manifest_core(ident, snapshot_id, run_id, created_at, state_root_class,
-                         engine_version, auxiliary)
+                         engine_version, auxiliary, run_mode)
     core_canonical = canonical.canonical_bytes(core)
     manifest_hash = canonical.rendered(
         canonical.hash_frame(canonical.DOMAIN_SNAPSHOT_MANIFEST, core_canonical))
@@ -149,14 +159,46 @@ def build(ident, snapshot_id, run_id, created_at, state_root_class, engine_versi
     }
 
 
-def commit(root, built, snapshot_id):
-    """SNAP-014's ordering: private temp dir -> write -> fsync -> atomic rename.
+def write_bundle(staging, built):
+    """Write one snapshot bundle into the existing directory `staging`, and fsync it.
 
     SNAP-021: the directory holds manifest.json, method/host_identity.json and, when the
     section is COLLECTED, state/host_identity.json. Each is canonical_bytes of its object.
-    SNAP-022: a non-COLLECTED snapshot is still committed — an honest record of what could
+    SNAP-022: a non-COLLECTED snapshot is still committed - an honest record of what could
     not be collected is evidence.
+
+    Shared by the unprivileged commit below and by the reduced Full Audit engine, which
+    writes into the staging directory the launcher gave it and never renames anything
+    (AUTH-021): one bundle layout, whoever writes it.
     """
+    os.makedirs(os.path.join(staging, "method"), mode=0o700)
+    stateroot.write_file(os.path.join(staging, "manifest.json"), built["manifest"])
+    stateroot.write_file(os.path.join(staging, "method", "host_identity.json"),
+                         built["method"])
+    if built["state"] is not None:
+        os.makedirs(os.path.join(staging, "state"), mode=0o700)
+        stateroot.write_file(os.path.join(staging, "state", "host_identity.json"),
+                             built["state"])
+        stateroot.fsync_dir(os.path.join(staging, "state"))
+    if built.get("coverage") is not None:
+        os.makedirs(os.path.join(staging, "coverage"), mode=0o700)
+        stateroot.write_file(
+            os.path.join(staging, "coverage", "evidence_limits.json"),
+            built["coverage"])
+        stateroot.fsync_dir(os.path.join(staging, "coverage"))
+    if built.get("sections"):
+        # Inside the same private staging directory, so the one atomic rename commits the
+        # identity snapshot and every section together, or neither.
+        os.makedirs(os.path.join(staging, "sections"), mode=0o700)
+        for name, data in sorted(built["sections"].items()):
+            stateroot.write_file(os.path.join(staging, "sections", name + ".json"), data)
+        stateroot.fsync_dir(os.path.join(staging, "sections"))
+    stateroot.fsync_dir(os.path.join(staging, "method"))
+    stateroot.fsync_dir(staging)
+
+
+def commit(root, built, snapshot_id):
+    """SNAP-014's ordering: private temp dir -> write -> fsync -> atomic rename."""
     tmp_parent = os.path.join(root, "tmp")
     staging = os.path.join(tmp_parent, snapshot_id)
     final = os.path.join(root, "snapshots", snapshot_id)
@@ -165,31 +207,7 @@ def commit(root, built, snapshot_id):
     previous = os.umask(0o077)
     try:
         os.makedirs(staging, mode=0o700)
-        os.makedirs(os.path.join(staging, "method"), mode=0o700)
-        stateroot.write_file(os.path.join(staging, "manifest.json"), built["manifest"])
-        stateroot.write_file(os.path.join(staging, "method", "host_identity.json"),
-                             built["method"])
-        if built["state"] is not None:
-            os.makedirs(os.path.join(staging, "state"), mode=0o700)
-            stateroot.write_file(os.path.join(staging, "state", "host_identity.json"),
-                                 built["state"])
-            stateroot.fsync_dir(os.path.join(staging, "state"))
-        if built.get("coverage") is not None:
-            os.makedirs(os.path.join(staging, "coverage"), mode=0o700)
-            stateroot.write_file(
-                os.path.join(staging, "coverage", "evidence_limits.json"),
-                built["coverage"])
-            stateroot.fsync_dir(os.path.join(staging, "coverage"))
-        if built.get("sections"):
-            # Inside the same private staging directory, so the one atomic rename below
-            # commits the identity snapshot and every section together, or neither.
-            os.makedirs(os.path.join(staging, "sections"), mode=0o700)
-            for name, data in sorted(built["sections"].items()):
-                stateroot.write_file(os.path.join(staging, "sections", name + ".json"),
-                                     data)
-            stateroot.fsync_dir(os.path.join(staging, "sections"))
-        stateroot.fsync_dir(os.path.join(staging, "method"))
-        stateroot.fsync_dir(staging)
+        write_bundle(staging, built)
         os.rename(staging, final)                       # atomic within the state root
         stateroot.fsync_dir(os.path.join(root, "snapshots"))
     except BaseException:

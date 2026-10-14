@@ -108,10 +108,17 @@ def to_markdown(report):
         out.append("| Collection status | %s |" % ident["collection_status"])
         out.append("| Evidence root | `%s` (%s) |"
                    % (ident["evidence_root"], ident.get("state_root_class")))
+        if ident.get("run_mode"):
+            out.append("| Run mode | %s |" % ident["run_mode"])
+        if "acquisition_authority" in report:
+            out.append("| Acquisition authority | %s |"
+                       % (report["acquisition_authority"] or "not recorded (no evidence-limits record)"))
         verified = ident["verification"]["verified"]
         out.append("| Independent verification | %s |"
                    % ("**PASS** — every hash recomputed from the stored preimages"
                       if verified else "**FAIL**"))
+        if ident["verification"].get("scope"):
+            out.append("| Verification scope | %s |" % ident["verification"]["scope"])
         for problem in ident["verification"]["problems"]:
             out.append("| Verification problem | %s |" % problem)
     out.append("")
@@ -335,6 +342,9 @@ def to_markdown(report):
             out.append("| %s | %s | %s |" % (
                 s.get("title") or name, s.get("collection_status"),
                 (s.get("reason") or "").replace("|", "\\|") or "—"))
+            for label, status, detail in s.get("dimensions") or []:
+                out.append("| %s · %s | %s | %s |" % (s.get("title") or name, label, status,
+                                                      (detail or "").replace("|", "\\|")))
         out.append("")
         out.append("*NOT_TESTED means not observed - never passed. The HTML report "
                    "(`isedraf report --html`) shows each area's facts and evidence "
@@ -411,6 +421,9 @@ def to_html(report):
     sections = report.get("audit_sections") or {}
     overall = report["report"]["status"]
     unprivileged = ident.get("state_root_class") in ("DEV", "USER_PRODUCTION")
+    # AUTH-009: the report line is the run mode's - UNPRIVILEGED or FULL_AUDIT.
+    level = ("FULL_AUDIT" if ident.get("run_mode") == "FULL_AUDIT"
+             else "UNPRIVILEGED" if unprivileged else ident.get("state_root_class"))
     out = []
     w = out.append
     w('<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
@@ -419,8 +432,7 @@ def to_html(report):
       % _STYLE)
     w('<header class="banner"><main>\n<h1>ISEDRAF Host Evidence Report</h1>\n')
     w('<div class="facts">PRIVILEGE LEVEL: %s &middot; OVERALL EVIDENCE: %s</div>\n'
-      % ("UNPRIVILEGED" if unprivileged else _esc(ident.get("state_root_class")),
-         _esc(overall)))
+      % (_esc(level), _esc(overall)))
     if unprivileged:
         w("<p>This run had no elevated privilege. Facts that need it were NOT_TESTED. "
           "NOT_TESTED does not mean those controls passed; it means they were not "
@@ -439,11 +451,18 @@ def to_html(report):
                          ("Engine version", report["report"].get("engine_version")),
                          ("Evidence class", ident.get("state_root_class"))):
         w("<tr><th>%s</th><td>%s</td></tr>\n" % (_esc(label), _esc(value)))
+    if ident.get("run_mode"):
+        w("<tr><th>Run mode</th><td>%s</td></tr>\n" % _esc(ident["run_mode"]))
+    if "acquisition_authority" in report:
+        w("<tr><th>Acquisition authority</th><td>%s</td></tr>\n"
+          % _esc(report["acquisition_authority"] or "not recorded (no evidence-limits record)"))
     verification = ident.get("verification") or {}
     verified = verification.get("verified")
     w("<tr><th>Evidence verification</th><td>%s</td></tr>\n"
       % ("verified: hashes, bindings and ledger chain hold" if verified
          else "NOT VERIFIED" if verified is False else "not performed"))
+    if verification.get("scope"):
+        w("<tr><th>Verification scope</th><td>%s</td></tr>\n" % _esc(verification["scope"]))
     w("</table>\n")
     for problem in verification.get("problems") or []:
         w('<p class="reason">%s</p>\n' % _esc(problem))

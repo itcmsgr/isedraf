@@ -8,7 +8,7 @@
 
 .PHONY: check check-provider-alignment check-native-catalog check-evidence-limits check-privileged-operations check-licensing check-public-claims check-deb-ordering check-reproducible check-sbom check-tests check-python-floor check-architecture check-architecture-artifacts check-packaging check-storage-vocabulary check-native-catalog check-evidence-limits check-privileged-operations check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-sample-report check-headers check-docs check-scope check-shell check-refs check-paths check-index check-freeze check-precommit check-imports check-vectors check-vectors-negative check-vectors-crossversion check-gate-coverage check-falsifiable check-public-ux help
 
-check: check-scope check-headers check-python-floor check-architecture check-architecture-artifacts check-packaging check-storage-vocabulary check-native-catalog check-evidence-limits check-privileged-operations check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-sample-report check-shell check-refs check-paths check-index check-freeze check-precommit check-imports check-vectors check-vectors-negative check-vectors-crossversion check-tests check-docs check-public-ux check-repo-security check-dco check-export
+check: check-scope check-headers check-python-floor check-architecture check-architecture-artifacts check-packaging check-storage-vocabulary check-native-catalog check-evidence-limits check-privileged-operations check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-sample-report check-shell check-refs check-paths check-index check-freeze check-governance check-precommit check-imports check-exitcodes check-vectors check-vectors-negative check-vectors-crossversion check-tests check-test-inclusion check-docs check-public-ux check-repo-security check-dco check-export
 	@echo "make check: all gates passed"
 
 ## check-scope   D-96: no product implementation before architecture freeze
@@ -78,6 +78,11 @@ check-freeze:
 	@echo "--- freeze manifests (D-68) ---"
 	@bash scripts/ci/check_freeze.sh
 
+## check-governance   D-83: governance files unchanged without an owner update of the manifest
+check-governance:
+	@echo "--- governance manifest (D-83) ---"
+	@python3 scripts/ci/check_governance.py
+
 ## check-precommit  IQ-029: the pre-commit hook validates the committed content, not the tree
 check-precommit:
 	@bash scripts/ci/check_precommit_index.sh
@@ -85,6 +90,11 @@ check-precommit:
 ## check-imports  D-84: every runtime import is on the explicit allowlist; fail closed
 check-imports:
 	@python3 scripts/ci/check_runtime_imports.py
+
+## check-exitcodes   OUT-001/D-72: lib/isedraf/exitcodes.json is the one source of exit codes
+check-exitcodes:
+	@echo "--- exit codes (OUT-001, D-72) ---"
+	@python3 scripts/ci/check_exitcodes.py
 
 ## check-index   D-89/Q-15: MASTER_INDEX counts are generated, never hand-maintained
 check-index:
@@ -198,6 +208,11 @@ check-docs-truth:
 	@echo "--- documentation truth (C-01, C-06, D-88) ---"
 	@python3 scripts/ci/check_docs_truth.py
 
+## check-test-inclusion   GOV-002: every tests/test_*.py is run by check-tests or excluded with a reason
+check-test-inclusion:
+	@echo "--- test inclusion (GOV-002) ---"
+	@python3 scripts/ci/check_test_inclusion.py
+
 ## check-tests   W1-B: production implementation tests, incl. golden-byte compatibility
 check-tests:
 	@echo "--- production tests (NORM-039 golden compatibility) ---"
@@ -232,6 +247,27 @@ check-tests:
 	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
 	 else echo "$$out"; exit $$rc; fi
 	@out=$$(python3 tests/test_evidence_limits.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_supervisor.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_run_mode.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_launcher_store.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_reduction.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_launcher_route.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_shadow_operation.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_full_audit_truth.py 2>&1); rc=$$?; \
 	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
 	 else echo "$$out"; exit $$rc; fi
 	@out=$$(python3 tests/test_shared_compare.py 2>&1); rc=$$?; \
@@ -301,6 +337,27 @@ check-tests:
 	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
 	 else echo "$$out"; exit $$rc; fi
 	@out=$$(python3 tests/test_time_helper.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_sudoers_operation.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_sshd_operation.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_mounts_adversarial.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_sshd_effective.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_launcher_relay.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_report_route.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_report_truth.py 2>&1); rc=$$?; \
 	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
 	 else echo "$$out"; exit $$rc; fi
 	@out=$$(python3 tests/test_report.py 2>&1); rc=$$?; \

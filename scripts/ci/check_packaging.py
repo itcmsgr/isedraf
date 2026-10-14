@@ -113,6 +113,65 @@ if not engine or engine.group(1) != version:
         "would install as one version and record the other in its evidence (SNAP-020)"
         % (version, engine.group(1) if engine else "missing"))
 
+# --- 5. the state root is declared, never repaired (AUTH-027, AUTH-026, D-60) ------------
+# The package declares /var/lib/isedraf as an empty root:root 0700 payload directory and the
+# isedraf account through sysusers. No maintainer script or scriptlet may create, change or
+# remove the state root: that would move StateDirectory='s silent repair into packaging.
+BUILD = ROOT / "packaging" / "build.sh"
+POSTINST = ROOT / "packaging" / "deb" / "postinst"
+SYSUSERS = ROOT / "packaging" / "sysusers" / "isedraf.conf"
+MUTATION = re.compile(r"\b(mkdir|chmod|chown|chgrp|rm|rmdir|install|mv|ln|setfacl|"
+                      r"useradd|userdel|groupadd|groupdel|adduser|deluser)\b")
+build_text = BUILD.read_text(encoding="utf-8") if BUILD.exists() else ""
+# AUTH-027 refined 2026-10-08: dpkg replaces an existing file or dangling symlink with a
+# payload directory, so the deb never carries the state root as payload.
+staging_lines = [l.split("#", 1)[0] for l in build_text.splitlines()
+                 if l.strip().startswith(("install", "mkdir"))]
+if [l for l in staging_lines if "/var/lib/isedraf" in l]:
+    bad("packaging/build.sh stages /var/lib/isedraf as payload (AUTH-027)")
+if "-C \"$DEBROOT\" usr var" in build_text:
+    bad("packaging/build.sh ships var/ in the deb data archive (AUTH-027)")
+GHOST = "%ghost %dir %attr(0700,root,root) /var/lib/isedraf"
+# AUTH-027 as refined 2026-10-08: the ONE maintainer-script line allowed to name the state
+# root. It creates the root only when nothing exists at the path and never touches an object.
+RPM_CREATE_IF_ABSENT = ("if [ ! -e /var/lib/isedraf ] && [ ! -L /var/lib/isedraf ]; then "
+                        "mkdir -m 0700 /var/lib/isedraf || :; fi")
+if SPEC.exists():
+    spec_lines = [l.strip() for l in SPEC.read_text(encoding="utf-8").splitlines()]
+    if GHOST not in spec_lines:
+        bad("the rpm spec does not declare %s (AUTH-027: never payload truth)" % GHOST)
+    if [l for l in spec_lines if "/var/lib/isedraf" in l and l.startswith("%dir")]:
+        bad("the rpm spec declares /var/lib/isedraf as payload; rpm repairs payload "
+            "directories on reinstall (AUTH-027)")
+    if [l for l in spec_lines if l.startswith("install") and "/var/lib/isedraf" in l]:
+        bad("the rpm %install stages /var/lib/isedraf as payload (AUTH-027)")
+if not SYSUSERS.exists() or not re.search(r"^u isedraf - ", SYSUSERS.read_text(
+        encoding="utf-8"), re.M):
+    bad("packaging/sysusers/isedraf.conf does not declare the isedraf account (D-60)")
+scripts = []
+if POSTINST.exists():
+    scripts.append(("packaging/deb/postinst", POSTINST.read_text(encoding="utf-8")))
+if SPEC.exists():
+    spec_text = SPEC.read_text(encoding="utf-8")
+    for section in re.findall(r"^%(?:pre|post|preun|postun|pretrans|posttrans)\b.*?(?=^%\w)",
+                              spec_text, re.M | re.S):
+        scripts.append(("rpm scriptlet", section))
+allowed = {}
+for label, body in scripts:
+    for n, line in enumerate(body.splitlines(), 1):
+        code = line.split("#", 1)[0]
+        if code.strip() == RPM_CREATE_IF_ABSENT:
+            allowed[label] = allowed.get(label, 0) + 1
+            continue
+        if MUTATION.search(code) or "/var/lib/isedraf" in code:
+            bad("%s:%d mutates files or accounts (%s); only systemd-sysusers may run "
+                "(AUTH-026, AUTH-027, D-60)" % (label, n, code.strip()))
+
+for label in ("packaging/deb/postinst", "rpm scriptlet"):
+    if allowed.get(label, 0) != 1:
+        bad("%s must create the state root exactly once, only when absent (found %d "
+            "create-if-absent lines; AUTH-027)" % (label, allowed.get(label, 0)))
+
 if FAIL:
     print("=== packaging metadata gate FAILED ===")
     print("  A package that builds on the author's distribution is not a package.")
