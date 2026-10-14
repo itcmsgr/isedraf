@@ -9,9 +9,12 @@
       "isedraf.accounts.sources",
       "isedraf.canonical",
       "isedraf.coverage",
+      "isedraf.fixedop",
       "isedraf.hostio",
       "isedraf.nss",
       "isedraf.nss.model",
+      "isedraf.supervisor",
+      "isedraf.supervisor.protocol",
       "isedraf.textbytes"
     ],
     "isedraf.accounts.model": [
@@ -100,6 +103,8 @@
       "isedraf.exitcodes.INCOMPLETE",
       "isedraf.exitcodes.OK",
       "isedraf.exitcodes.PRIVILEGE_REFUSED",
+      "isedraf.exitcodes.RUN_IN_PROGRESS",
+      "isedraf.exitcodes.STATE_ROOT_UNUSABLE",
       "isedraf.exitcodes.USAGE_OR_ENGINE",
       "isedraf.identity",
       "isedraf.inventory",
@@ -119,6 +124,16 @@
       "isedraf.status.PARTIAL"
     ],
     "isedraf.exitcodes": [],
+    "isedraf.fixedop": [
+      "isedraf",
+      "isedraf.supervisor"
+    ],
+    "isedraf.fullaudit": [
+      "isedraf",
+      "isedraf.accounts",
+      "isedraf.cli",
+      "isedraf.exitcodes"
+    ],
     "isedraf.hostio": [],
     "isedraf.hostname.acquire": [
       "isedraf",
@@ -184,6 +199,33 @@
       "isedraf.status.NOT_TESTED",
       "isedraf.status.PARTIAL",
       "isedraf.status.requires_reason"
+    ],
+    "isedraf.launcher": [],
+    "isedraf.launcher.engine": [],
+    "isedraf.launcher.outer": [
+      "isedraf",
+      "isedraf.exitcodes"
+    ],
+    "isedraf.launcher.renderer": [
+      "isedraf",
+      "isedraf.exitcodes",
+      "isedraf.launcher",
+      "isedraf.supervisor"
+    ],
+    "isedraf.launcher.reportunit": [
+      "isedraf",
+      "isedraf.exitcodes",
+      "isedraf.launcher",
+      "isedraf.supervisor"
+    ],
+    "isedraf.launcher.store": [
+      "isedraf"
+    ],
+    "isedraf.launcher.unit": [
+      "isedraf",
+      "isedraf.exitcodes",
+      "isedraf.launcher",
+      "isedraf.supervisor"
     ],
     "isedraf.ledger": [
       "isedraf",
@@ -381,6 +423,7 @@
     "isedraf.ssh.acquire": [
       "isedraf",
       "isedraf.coverage",
+      "isedraf.hostio",
       "isedraf.hostpath",
       "isedraf.shared",
       "isedraf.shared.filemeta",
@@ -389,6 +432,9 @@
       "isedraf.ssh",
       "isedraf.ssh.model",
       "isedraf.ssh.sources",
+      "isedraf.supervisor",
+      "isedraf.supervisor.frame",
+      "isedraf.supervisor.protocol",
       "isedraf.textbytes"
     ],
     "isedraf.ssh.model": [
@@ -415,6 +461,8 @@
     "isedraf.sudo.acquire": [
       "isedraf",
       "isedraf.coverage",
+      "isedraf.fixedop",
+      "isedraf.hostio",
       "isedraf.hostpath",
       "isedraf.shared",
       "isedraf.shared.bounded",
@@ -424,6 +472,9 @@
       "isedraf.sudo",
       "isedraf.sudo.model",
       "isedraf.sudo.sources",
+      "isedraf.supervisor",
+      "isedraf.supervisor.frame",
+      "isedraf.supervisor.protocol",
       "isedraf.textbytes"
     ],
     "isedraf.sudo.model": [
@@ -444,13 +495,25 @@
       "isedraf.sudo.model",
       "isedraf.textbytes"
     ],
+    "isedraf.supervisor": [],
+    "isedraf.supervisor.contracts": [],
+    "isedraf.supervisor.frame": [],
+    "isedraf.supervisor.perform": [
+      "isedraf.supervisor"
+    ],
+    "isedraf.supervisor.protocol": [],
+    "isedraf.supervisor.serve": [
+      "isedraf.supervisor"
+    ],
     "isedraf.textbytes": [],
     "isedraf.verify": [
       "isedraf",
       "isedraf.canonical",
       "isedraf.ledger",
       "isedraf.snapshot",
-      "isedraf.stateroot"
+      "isedraf.stateroot",
+      "isedraf.supervisor",
+      "isedraf.supervisor.contracts"
     ]
   },
   "layer_inversions": []

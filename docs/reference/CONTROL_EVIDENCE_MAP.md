@@ -33,8 +33,13 @@ Writing rows for domains that are not implemented would turn a reference documen
 and the first operator to follow one to a field that does not exist would be right to stop trusting the
 rest of the page.
 
-**One domain is implemented. It has a complete row. Every other domain gains its row in the milestone that
-implements it** — see the engineering-debt table in [the roadmap](../roadmap/ROADMAP.md).
+**Host identity has a complete row below. The audit sections that `isedraf audit` collects - host and
+platform inventory, local accounts and groups, NSS configuration, hostname, mounts, SSH server
+configuration, PAM, sudo, SSH authorized keys and login policy - do not have their rows here yet.** Until
+they do, the reference for each is its evidence file in the committed run (`sections/<area>.json`) and the
+report's "Evidence limitations" table, which names every source each area tried to read and what that
+means for the evidence. Rows follow as each area's mapping is written; see the engineering-debt table in
+[the roadmap](../roadmap/ROADMAP.md).
 
 ## The two status vocabularies never merge
 

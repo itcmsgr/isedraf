@@ -6,7 +6,7 @@
 #
 # Purpose: The host inventory collectors — platform, machine, compute, storage,
 #          network, DNS and time.
-# Implements: SCOPE-022, SCOPE-045, REC-005, IDENT-041, PRIV-021
+# Implements: SCOPE-022, SCOPE-045, REC-005, IDENT-041, AUTH-005, PRIV-021
 #
 # Capability-driven throughout. There is no `if rhel / elif debian` here and there is not
 # meant to be: W1-C measured ten distributions and found the interpreter, not the
@@ -69,6 +69,11 @@ class _Reads(object):
         self.incomplete.append("statvfs %s (%s)" % (
             target, PERMISSION_DENIED if denied else IO_ERROR))
         self.denied = self.denied or denied
+
+    def not_proven(self, target):
+        """IQ-055: a mount whose sandbox path is not shown to be the host filesystem is not
+        measured, and that is recorded rather than passed over."""
+        self.incomplete.append("statvfs %s (FILESYSTEM_IDENTITY_NOT_PROVEN)" % target)
 
     def file(self, path):
         return self._note(read_file(path), path)
@@ -322,8 +327,15 @@ def collect_memory(root="/"):
 
 
 # --- storage -------------------------------------------------------------------------------
-def collect_storage(root="/"):
-    """Topology and mount configuration are separated from utilisation, which is volatile."""
+def collect_storage(root="/", sandboxed=False):
+    """Topology and mount configuration are separated from utilisation, which is volatile.
+
+    IQ-053, IQ-055: in Full Audit (`sandboxed`), /proc/self/mounts is the sandbox's mount
+    table. The filesystems and their read-only state come from PID 1's table instead; when it
+    cannot be read they are not observed, never taken from the sandbox. Space is measured only
+    where the path inside the sandbox is shown to be the host's filesystem (same device as
+    PID 1's mountinfo records), never because the path names match.
+    """
     reads = _Reads(root)
     devices = []
     block = os.path.join(root, "sys/block")
@@ -392,10 +404,21 @@ def collect_storage(root="/"):
                 "model": devmodel.value.strip() if devmodel.ok else None,
             })
 
+    devices_of = None
+    if sandboxed:
+        mounts = reads.lines(os.path.join(root, "proc/1/mounts"))
+        info = reads.lines(os.path.join(root, "proc/1/mountinfo"))
+        if not (mounts.ok and info.ok):
+            return reads.subdomain(model.PARTIAL, {"devices": devices, "filesystems": None,
+                                                   "utilisation": None},
+                                   method="/sys/block (host mount table not read)",
+                                   reason=HOST_TABLE_REASON)
+        devices_of = _host_devices(mounts.value, info.value)
+    else:
+        mounts = reads.lines(os.path.join(root, "proc/self/mounts"))
     filesystems, utilisation = [], []
-    mounts = reads.lines(os.path.join(root, "proc/self/mounts"))
     if mounts.ok:
-        for line in mounts.value:
+        for index, line in enumerate(mounts.value):
             parts = line.split()
             if len(parts) < 4:
                 continue
@@ -412,7 +435,15 @@ def collect_storage(root="/"):
                 "read_only": "ro" in option_list,
             })
             try:
-                st = os.statvfs(target)
+                if devices_of is None:
+                    st = os.statvfs(target)
+                else:
+                    device = devices_of[index] if devices_of else None
+                    st = (_same_filesystem_statvfs(target, device)
+                          if device is not None else None)
+                    if st is None:
+                        reads.not_proven(target)
+                        continue
             except OSError as exc:
                 reads.unmeasured(target, exc)
                 continue
@@ -427,14 +458,54 @@ def collect_storage(root="/"):
                     # measurement. Renderers divide by ten; evidence keeps integers.
                     "used_permille": int(round((total - free) * 1000.0 / total)),
                 })
+    table = "/proc/1/mounts" if sandboxed else "/proc/self/mounts"
     status = model.COLLECTED if (devices or filesystems) else model.PARTIAL
     reason = None if status == model.COLLECTED else ("SOURCE_ABSENT: neither /sys/block "
-                                                     "nor /proc/self/mounts yielded any "
-                                                     "entry")
+                                                     "nor %s yielded any entry" % table)
+    method = ("/sys/block + /proc/1/mounts + /proc/1/mountinfo + statvfs(2) where the device "
+              "matches" if sandboxed else "/sys/block + /proc/self/mounts + statvfs(2)")
     return reads.subdomain(status, {"devices": devices, "filesystems": filesystems,
                                     "utilisation": utilisation},
-                           method="/sys/block + /proc/self/mounts + statvfs(2)",
-                           reason=reason)
+                           method=method, reason=reason)
+
+
+def _host_devices(mounts, mountinfo):
+    """The device of each line of PID 1's mounts table, from its mountinfo, by position.
+
+    Both files list one namespace's mounts in the same order. They are read one after the
+    other, so a mount can change in between: unless the line counts and every mount point
+    agree, no device is trusted and nothing is measured. Returns a list aligned with
+    `mounts`, or [] when the two disagree."""
+    points, devices = [], []
+    for line in mountinfo:
+        parts = line.split()
+        if len(parts) < 5 or ":" not in parts[2]:
+            return []
+        major, _, minor = parts[2].partition(":")
+        try:
+            devices.append(os.makedev(int(major), int(minor)))
+        except ValueError:
+            return []
+        points.append(parts[4])
+    if [l.split()[1] if len(l.split()) > 1 else None for l in mounts] != points:
+        return []
+    return devices
+
+
+def _same_filesystem_statvfs(target, device):
+    """Space figures of `target`, only when the path inside the sandbox IS that device.
+
+    The path is opened without following a final symlink (O_PATH), and the device of what was
+    opened is compared with the host's before its figures are read from the same descriptor:
+    a sandbox mount at the same path, or a symlink there, gives a different device and no
+    figures. Returns None when the identity does not match."""
+    fd = os.open(target, os.O_PATH | os.O_NOFOLLOW | os.O_CLOEXEC)
+    try:
+        if os.fstat(fd).st_dev != device:
+            return None
+        return os.fstatvfs(fd)
+    finally:
+        os.close(fd)
 
 
 # --- network --------------------------------------------------------------------------------
@@ -553,8 +624,39 @@ def collect_dns(root="/"):
                            else "SOURCE_ABSENT: no nameserver entry was found")
 
 
+# --- Full Audit sandbox (IQ-053, IQ-054; v0.2 P6) ------------------------------------------
+HOST_TABLE_REASON = ("HOST_MOUNT_TABLE_UNREADABLE: /proc/1/mounts or /proc/1/mountinfo could "
+                     "not be read (for example /proc mounted with hidepid), so filesystems and "
+                     "their utilisation were not observed. Full Audit runs in a private mount "
+                     "namespace, and the sandbox's own mount table is never used in its place.")
+SELINUX_ENFORCE = "/sys/fs/selinux/enforce"
+# Helper labels MEASURED on the lab corpus (P6, 2026-10-08) to enter their own SELinux domain,
+# a transition no-new-privileges forbids (AVC nnp_transition). A label is listed only when the
+# corpus showed the denial: /usr/sbin/ip carries ifconfig_exec_t and ran without one.
+NNP_TRANSITION_LABELS = ("chronyc_exec_t",)
+
+
+def selinux_enforcing():
+    """True only when the kernel says SELinux is enforcing."""
+    outcome = read_file(SELINUX_ENFORCE)
+    return outcome.ok and outcome.value.strip() == "1"
+
+
+def selinux_label(path):
+    """The SELinux label of a file, or None when there is none or it cannot be read."""
+    try:
+        return os.getxattr(path, "security.selinux").rstrip(b"\0").decode("ascii", "replace")
+    except (OSError, AttributeError):
+        return None
+
+
+def _label_type(label):
+    parts = (label or "").split(":")
+    return parts[2] if len(parts) >= 4 else None
+
+
 # --- time --------------------------------------------------------------------------------------
-def collect_time(root="/"):
+def collect_time(root="/", sandboxed=False):
     """NTP enabled and clock synchronized are different facts. Both are reported.
 
     `synchronized` is what REC-005 needs: when it is false, every event-time observation
@@ -586,6 +688,10 @@ def collect_time(root="/"):
     partial_reason = ("NOT_TESTED: timedatectl is unavailable, so NTP configuration and "
                       "clock synchronization state could not be resolved")
 
+    # F3 (v0.2 P6, owner ruling 2026-10-08): `timedatectl show` may transiently activate the
+    # system time/date service through normal service-manager behaviour; the service returns
+    # to idle and no persistent configuration is changed. This one effect is declared; it
+    # makes no other service start acceptable.
     timedatectl = run(["timedatectl", "show"]) if _live(root) else Outcome(ok=False)
     if timedatectl.ok:
         properties = {}
@@ -609,11 +715,20 @@ def collect_time(root="/"):
             data["provider"] = "systemd-timesyncd"
 
     helper_reason = None
-    if data["provider"] == "chrony" and _live(root):
+    chronyc = which("chronyc") if data["provider"] == "chrony" and _live(root) else None
+    if chronyc and sandboxed and selinux_enforcing() and \
+            _label_type(selinux_label(chronyc)) in NNP_TRANSITION_LABELS:
+        # IQ-054 fix 2: known from runtime state before anything runs, never inferred from a
+        # failure. Executing it would only produce a denial and an AVC record on the host.
+        helper_reason = ("MAC_DOMAIN_TRANSITION_UNAVAILABLE: SELinux is enforcing and %s is "
+                         "labelled to enter its own domain, which the Full Audit engine's "
+                         "no-new-privileges forbids; chronyc was not executed, so the time "
+                         "source, stratum and offset were not observed." % chronyc)
+    elif chronyc:
         tracking = run(["chronyc", "-n", "tracking"])
         if not tracking.ok:
-            # IQ-054 fix 1: an optional helper that is present and fails is a recorded
-            # limitation, never a silently COLLECTED subdomain.
+            # IQ-054 fix 1, both modes: an optional helper that is present and fails is a
+            # recorded limitation, never a silently COLLECTED subdomain.
             helper_reason = ("HELPER_FAILED: chronyc tracking did not complete, so the time "
                              "source, stratum and offset were not observed; possible causes "
                              "include the time daemon not running or a mandatory access "

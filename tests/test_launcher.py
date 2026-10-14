@@ -24,6 +24,7 @@ import os
 import pathlib
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -63,6 +64,20 @@ class LauncherWritesNoBytecode(unittest.TestCase):
     def test_a_run_writes_no_bytecode_into_a_writable_package(self):
         self.launch("--help")
         self.assertEqual(self.bytecode(), [])
+
+    def test_the_development_state_root_is_refused_under_sudo(self):
+        # PRIV-004, AUTH-019: refused by the launcher before any interpreter starts.
+        r = self.launch("audit", SUDO_USER="someone", ISEDRAF_STATE_ROOT="/tmp/x")
+        self.assertEqual(r.returncode, 70, r.stderr)
+        self.assertIn(b"PRIV-004", r.stderr)
+        self.assertEqual(self.bytecode(), [])
+
+    def test_under_sudo_the_prefix_package_is_never_used(self):
+        # AUTH-020: ISEDRAF_PYTHON and the launcher's own prefix are ignored under sudo; only
+        # the installed /usr/lib package may run, and without it the run is refused.
+        r = self.launch("--version", SUDO_USER="someone", ISEDRAF_PYTHON=sys.executable)
+        self.assertEqual(r.returncode, 70, r.stderr)
+        self.assertNotIn(b"isedraf ", r.stdout)
 
     def test_a_refused_privileged_run_writes_no_bytecode(self):
         r = self.launch("audit", SUDO_USER="someone")

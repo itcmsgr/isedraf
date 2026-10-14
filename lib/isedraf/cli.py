@@ -27,7 +27,8 @@ import sys
 from . import (ENGINE_VERSION, identity, inventory, ledger, report, snapshot,
                stateroot, verify)
 from . import audit as audit_mod
-from .exitcodes import INCOMPLETE, OK, PRIVILEGE_REFUSED, USAGE_OR_ENGINE
+from .exitcodes import (INCOMPLETE, OK, PRIVILEGE_REFUSED, RUN_IN_PROGRESS,
+                        STATE_ROOT_UNUSABLE, USAGE_OR_ENGINE)
 
 # SNAP-022's vocabulary, rendered for an operator. The token is the evidence; this text
 # is only the explanation, and it never becomes state.
@@ -109,20 +110,20 @@ def _commit_run(identity_source, audit_root, err):
             stateroot.check_user_root(root, os.geteuid())
         except stateroot.StateRootError as exc:
             err.write("isedraf: %s\n" % exc)
-            return USAGE_OR_ENGINE
+            return STATE_ROOT_UNUSABLE
         existing = root
         while not os.path.exists(existing) and os.path.dirname(existing) != existing:
             existing = os.path.dirname(existing)
         suitable, reason = stateroot.storage_suitability(existing)
         if not suitable:
             err.write("isedraf: %s\n" % reason)
-            return USAGE_OR_ENGINE
+            return STATE_ROOT_UNUSABLE
 
     try:
         stateroot.prepare(root)
     except stateroot.StateRootError as exc:
         err.write("isedraf: %s\n" % exc)
-        return USAGE_OR_ENGINE
+        return STATE_ROOT_UNUSABLE
 
     try:
         with stateroot.RunLock(root):
@@ -142,7 +143,8 @@ def _commit_run(identity_source, audit_root, err):
                       if audit_root is not None else None)
             built = snapshot.build(ident, snapshot_id, run_id, created_at,
                                    state_root_class, ENGINE_VERSION,
-                                   coverage_manifest=limits, sections=sections)
+                                   coverage_manifest=limits, sections=sections,
+                                   run_mode=stateroot.RUN_MODE_OF_CLASS[state_root_class])
             snapshot.commit(root, built, snapshot_id)
             core, _core_canonical, record_hash = ledger.build_record(
                 root, snapshot_id, built["manifest_hash"], event_id, created_at,
@@ -150,9 +152,13 @@ def _commit_run(identity_source, audit_root, err):
             ledger.append(root, core, record_hash)
 
             problems = verify.verify_store(root)
+    except stateroot.RunInProgress as exc:
+        # AUTH-023: 66, and nothing was collected or written.
+        err.write("isedraf: %s\n" % exc)
+        return RUN_IN_PROGRESS
     except stateroot.StateRootError as exc:
         err.write("isedraf: %s\n" % exc)
-        return USAGE_OR_ENGINE
+        return STATE_ROOT_UNUSABLE
     except Exception as exc:                          # pragma: no cover - engine failure
         err.write("isedraf: engine error: %s\n" % exc)
         return USAGE_OR_ENGINE

@@ -6,7 +6,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
 #
 # Purpose: Find a suitable interpreter the host ALREADY has, then hand over to it.
-# Implements: EXEC-016, D-12
+# Implements: EXEC-016, D-12, AUTH-019, AUTH-020, EXEC-010, PRIV-004
 #
 # This is a shell script, not `#!/usr/bin/env python3`, for one measured reason: a stock
 # EL8 image ships NO python3 on PATH at all, yet always has a working vendor interpreter
@@ -19,11 +19,29 @@
 # meta:type="cli"
 # meta:owner="Antonios Voulvoulis / ITCMS"
 # meta:stability="EXPERIMENTAL"
-# meta:privilege="unprivileged"
+# meta:privilege="unprivileged; under root it hands over to the Full Audit launcher only"
 # meta:mutates="state-root only"
 # meta:binaries="sh,python3"
 # =============================================================================
 set -u
+
+# AUTH-019, AUTH-020: under root or sudo, nothing below runs. No interpreter is searched
+# for, ISEDRAF_PYTHON and PYTHONPATH are ignored, the operator's environment is dropped,
+# and the only thing that runs is the launcher's outer entry, from the root-owned install
+# root, with /usr/bin/python3 -IB. It refuses everything but `sudo isedraf audit`.
+# PRIV-004: the development state root is refused under root before anything starts.
+if [ "$(/usr/bin/id -u)" = "0" ] || [ -n "${SUDO_USER:-}" ]; then
+    if [ -n "${ISEDRAF_STATE_ROOT:-}" ]; then
+        echo "isedraf: ISEDRAF_STATE_ROOT is refused under sudo or root (PRIV-004)." >&2
+        exit 70
+    fi
+    if [ ! -x /usr/bin/python3 ] || [ ! -f /usr/lib/isedraf/launcher/outer.py ]; then
+        echo "isedraf: Under sudo or root, ISEDRAF runs only \`sudo isedraf audit\` (Full Audit), which needs /usr/bin/python3 and the installed package. Run other ISEDRAF commands as your normal user." >&2
+        exit 70
+    fi
+    exec /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin LC_ALL=C \
+        /usr/bin/python3 -IB -c 'import sys; sys.path.insert(0, "/usr/lib"); from isedraf.launcher.outer import main; sys.exit(main(sys.argv[1:]))' "$@"
+fi
 
 # Newest first: the vendor interpreter with the best lifecycle and security support wins,
 # and the 3.6 floor is a compatibility level rather than a version to prefer.

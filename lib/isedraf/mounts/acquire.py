@@ -12,6 +12,11 @@
 # a comparison whose identity silently degraded is worse than one that reports it could
 # not run. findmnt is never invoked.
 #
+# Full Audit (IQ-053, IQ-055): the engine runs in the unit's private mount namespace, so its
+# own table is the sandbox's. It reads PID 1's table instead, which the step C measurement
+# showed the reduced engine can read with no capability on all four lab platforms. When PID
+# 1's table cannot be read, the side is NOT_TESTED; the sandbox's table is never read.
+#
 # meta:type="collector"
 # meta:owner="Antonios Voulvoulis / ITCMS"
 # meta:stability="EXPERIMENTAL"
@@ -30,6 +35,8 @@ from . import model, sources
 FSTAB = "/etc/fstab"
 MOUNTINFO = "/proc/self/mountinfo"
 NAMESPACE = "/proc/self/ns/mnt"
+HOST_MOUNTINFO = "/proc/1/mountinfo"
+HOST_NAMESPACE = "/proc/1/ns/mnt"
 
 
 def declared_path(root):
@@ -43,14 +50,14 @@ def declared_path(root):
     return hostpath.under(root, FSTAB)
 
 
-def active_path(root):
-    """The mountinfo path for a collection root. PURE."""
-    return hostpath.under(root, MOUNTINFO)
+def active_path(root, sandboxed=False):
+    """The mountinfo path for a collection root: PID 1's in Full Audit. PURE."""
+    return hostpath.under(root, HOST_MOUNTINFO if sandboxed else MOUNTINFO)
 
 
-def namespace_path(root):
-    """The namespace-link path for a collection root. PURE."""
-    return hostpath.under(root, NAMESPACE)
+def namespace_path(root, sandboxed=False):
+    """The namespace-link path for a collection root: PID 1's in Full Audit. PURE."""
+    return hostpath.under(root, HOST_NAMESPACE if sandboxed else NAMESPACE)
 
 
 def _contained(root, path):
@@ -138,16 +145,33 @@ def collect_declared(root="/"):
                  records, malformed, base)
 
 
-def collect_active(root="/"):
-    """Active mounts, from the source space the collection root selects."""
+HOST_TABLE_REASON = ("HOST_MOUNT_TABLE_UNREADABLE: %s could not be read (for example /proc "
+                     "mounted with hidepid), so active mounts were not observed. Full Audit runs "
+                     "in a private mount namespace, and the sandbox's own mount table is never "
+                     "used in its place." % HOST_MOUNTINFO)
+HOST_BOUNDARY = ("Active mounts from PID 1's mount namespace, read from inside the Full Audit "
+                 "sandbox, whose own namespace is not the host's (IQ-053, IQ-055). Mounts in "
+                 "other namespaces are neither seen nor claimed absent.")
+
+
+def collect_active(root="/", sandboxed=False):
+    """Active mounts, from the source space the collection root selects.
+
+    IQ-053, IQ-055: `sandboxed` is set only by the Full Audit engine, which runs inside the
+    unit's private mount namespace, where /proc/self/mountinfo is the sandbox's table (`/`
+    read-only under ProtectSystem=strict, sandbox-only mounts, fresh peer groups per run).
+    It reads PID 1's table instead, and when that cannot be read the side is NOT_TESTED:
+    the sandbox's table is never read and never stands in for the host's.
+    """
     space = _source_space(root)
-    path = active_path(root)
-    namespace, namespace_entry = _namespace(root, space)
+    path = active_path(root, sandboxed)
+    logical = HOST_MOUNTINFO if sandboxed else MOUNTINFO
+    namespace, namespace_entry = _namespace(root, space, sandboxed)
     base = {"scope": model.ACTIVE_SCOPE, "dimension": model.ACTIVE,
             "source_name": "mountinfo",
             "source_space": space, "mount_namespace": namespace,
             "extra_coverage": [namespace_entry],
-            "namespace_boundary": (
+            "namespace_boundary": HOST_BOUNDARY if sandboxed else (
                 "Active mounts from one mount namespace. The collector cannot prove it "
                 "shares the initial namespace, so mounts outside the observed one are "
                 "neither seen nor claimed absent. An evidence boundary, not a privilege "
@@ -155,21 +179,24 @@ def collect_active(root="/"):
                 "authority would reveal other namespaces.")}
 
     if not _contained(root, path):
-        return _side(MOUNTINFO, path, result.NOT_TESTED, coverage.NOT_SUPPORTED,
+        return _side(logical, path, result.NOT_TESTED, coverage.NOT_SUPPORTED,
                      "SOURCE_OUTSIDE_COLLECTION_ROOT: %s resolves outside the collection "
-                     "root and was not read." % MOUNTINFO, False, [], 0, base)
+                     "root and was not read." % logical, False, [], 0, base)
 
     outcome = hostio.read_file_lossless(path)
     if not outcome.ok:
         status = (result.NOT_TESTED if outcome.detail in (hostio.NOT_FOUND,
                                                           hostio.PERMISSION_DENIED)
                   else result.ERROR)
-        reason = ("SOURCE_ABSENT: %s is not present, so no active mount evidence was "
-                  "obtained. No fallback to another mount table is attempted, because "
-                  "one would silently lose mount identity and topology." % MOUNTINFO
-                  if outcome.detail == hostio.NOT_FOUND
-                  else "SOURCE_UNREADABLE: %s could not be read." % MOUNTINFO)
-        return _side(MOUNTINFO, path, status, outcome.detail, reason, False, [], 0, base)
+        if sandboxed:
+            reason = HOST_TABLE_REASON
+        elif outcome.detail == hostio.NOT_FOUND:
+            reason = ("SOURCE_ABSENT: %s is not present, so no active mount evidence was "
+                      "obtained. No fallback to another mount table is attempted, because "
+                      "one would silently lose mount identity and topology." % MOUNTINFO)
+        else:
+            reason = "SOURCE_UNREADABLE: %s could not be read." % MOUNTINFO
+        return _side(logical, path, status, outcome.detail, reason, False, [], 0, base)
 
     records, malformed = sources.parse_mountinfo(outcome.value, path)
     status = result.PARTIAL if malformed else result.COLLECTED
@@ -180,12 +207,16 @@ def collect_active(root="/"):
     # A malformed active record makes the ACTIVE universe incomplete. Dropping one - or
     # keeping it while calling the universe complete - would manufacture a false
     # DECLARED_ONLY, which is the worse direction.
-    return _side(MOUNTINFO, path, status, outcome.detail, reason, not malformed,
+    return _side(logical, path, status, outcome.detail, reason, not malformed,
                  records, malformed, base)
 
 
-def _namespace(root, space):
-    """Which namespace was observed, where that question applies."""
+def _namespace(root, space, sandboxed=False):
+    """Which namespace was observed, where that question applies.
+
+    In Full Audit this is PID 1's namespace link, which the kernel guards with a ptrace
+    access check the engine does not pass (measured EACCES, IQ-055): the table is still
+    PID 1's, and the evidence says the namespace identity was not established."""
     if space != model.SOURCE_LIVE_NAMESPACE:
         return None, coverage.source(
             "mounts", namespace_path(root), result.NOT_TESTED, coverage.NOT_SUPPORTED,
@@ -193,7 +224,7 @@ def _namespace(root, space):
             reason="NOT_APPLICABLE: the active evidence is fixture or offline, so it has "
                    "no relationship to this process's mount namespace.",
             universe=coverage.UNIVERSE_NOT_APPLICABLE)
-    path = namespace_path(root)
+    path = namespace_path(root, sandboxed)
     observed, outcome = None, coverage.READ_OK
     try:
         observed = os.readlink(path)
@@ -221,9 +252,9 @@ def compare_declared_active(declared, active):
         active_universe_complete=active.provenance.get("universe_complete", False))
 
 
-def collect(root="/"):
+def collect(root="/", sandboxed=False):
     declared = collect_declared(root)
-    active = collect_active(root)
+    active = collect_active(root, sandboxed=sandboxed)
     comparison = compare_declared_active(declared, active)
     status, reason = _combined(declared, active)
     return result.Evidence(

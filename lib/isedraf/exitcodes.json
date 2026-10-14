@@ -1,0 +1,50 @@
+{
+  "$comment": "OUT-001 (D-72): the single source of ISEDRAF exit codes. OWNER-CONTROLLED (CLAUDE.md section 1). Code, documentation and tests are validated against it by scripts/ci/check_exitcodes.py in make check. It consolidates the codes already admitted by OUT-001, SCOPE-077, AUTH-023 and AUTH-020; it defines no new code. `reachable` says whether this version can return the code; the comparison and baseline codes are frozen and not reachable before v0.4.",
+  "schema_version": 1,
+  "precedence": [5, 4, 6, 3, [2, 1], 0],
+  "codes": [
+    {"code": 0, "name": "OK", "reachable": true, "source": "OUT-001, SCOPE-077",
+     "meaning": "the run or report completed and every area was COLLECTED; nothing unaccepted"},
+    {"code": 1, "name": "UNACCEPTED_CHANGE", "reachable": false, "source": "OUT-001",
+     "meaning": "unaccepted security-relevant change (comparison; v0.4)"},
+    {"code": 2, "name": "INCOMPLETE", "reachable": true, "source": "OUT-001, SCOPE-077",
+     "meaning": "the run or report completed, but some area is PARTIAL, NOT_TESTED or ERROR (or NOT_COMPARABLE in tracked sections)"},
+    {"code": 3, "name": "UNACCEPTED_CHANGE_AND_INCOMPLETE", "reachable": false, "source": "OUT-001",
+     "meaning": "1 and 2 together (comparison; v0.4)"},
+    {"code": 4, "name": "BASELINE_NOT_APPLICABLE", "reachable": false, "source": "OUT-001",
+     "meaning": "baseline not applicable (v0.4)"},
+    {"code": 5, "name": "TOOL_INTEGRITY_FAILURE", "reachable": false, "source": "OUT-001",
+     "meaning": "tool integrity failure"},
+    {"code": 6, "name": "NO_APPROVED_BASELINE", "reachable": false, "source": "OUT-001",
+     "meaning": "no approved baseline (v0.4)"},
+    {"code": 64, "name": "USAGE_OR_ENGINE", "reachable": true, "source": "OUT-001, SCOPE-077",
+     "meaning": "usage error or engine error; nothing was committed"},
+    {"code": 65, "name": "APPROVAL_REFUSED", "reachable": false, "source": "OUT-001, BASE-021",
+     "meaning": "approval refused; never reuses 2 (v0.4)"},
+    {"code": 66, "name": "RUN_IN_PROGRESS", "reachable": true, "source": "AUTH-023",
+     "meaning": "the whole-run lock was not acquired; nothing was collected or written"},
+    {"code": 67, "name": "STATE_ROOT_UNUSABLE", "reachable": true, "source": "AUTH-023",
+     "meaning": "the state root cannot be used (missing, not a conforming directory, a link, wrong owner or mode, not writable, unsuitable storage); detected before any collection"},
+    {"code": 70, "name": "PRIVILEGE_REFUSED", "reachable": true, "source": "SCOPE-077, SCOPE-071, AUTH-019",
+     "meaning": "root or sudo invocation refused; nothing was collected"}
+  ],
+  "signal_statuses": {
+    "$comment": "Not ISEDRAF codes: the shell convention 128 + N that the Full Audit outer entry returns after an interruption, and the status a unit stopped before it could handle the stop ends with (AUTH-020, IQ-063). Numerically above 64; they never mean a usage or engine error.",
+    "source": "AUTH-020",
+    "statuses": [
+      {"status": 129, "signal": "SIGHUP", "meaning": "interrupted before the commit; nothing was committed (or no claim, with a notice saying so)"},
+      {"status": 130, "signal": "SIGINT", "meaning": "interrupted before the commit; nothing was committed (or no claim, with a notice saying so)"},
+      {"status": 143, "signal": "SIGTERM", "meaning": "interrupted before the commit; nothing was committed (also the unit's own status when it is stopped before its commit)"},
+      {"status": 255, "signal": null, "meaning": "the Full Audit unit ended abnormally (stopped before it could handle the stop); no claim about what was committed"}
+    ]
+  },
+  "subcommands": {
+    "isedraf identity": [0, 2, 64, 66, 67, 70],
+    "isedraf audit": [0, 2, 64, 66, 67, 70],
+    "isedraf inventory": [0, 2, 64],
+    "isedraf report": [0, 2, 64, 70],
+    "isedraf (usage error)": [64],
+    "sudo isedraf audit": [0, 2, 64, 66, 67, 70, 129, 130, 143, 255],
+    "sudo isedraf report": [0, 2, 64, 66, 67, 70, 129, 130, 143, 255]
+  }
+}

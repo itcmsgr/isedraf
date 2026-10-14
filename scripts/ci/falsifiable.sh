@@ -597,13 +597,18 @@ PYX' \
 inject "D-123 the supervisor acquisition mode is admitted before anything produces it" \
   'python3 scripts/ci/check_privileged_operations.py' \
   'python3 - <<PYX
-import pathlib
-p = pathlib.Path("lib/isedraf/coverage.py"); s = p.read_text()
-old = "MODES = (MODE_CURRENT_IDENTITY,)\n"
-assert old in s, "mutation anchor miss"
-p.write_text(s.replace(old, "MODES = (MODE_CURRENT_IDENTITY, \"SUPERVISOR_FIXED_OPERATION\")\n"))
+import json, pathlib
+p = pathlib.Path("scripts/ci/privileged_operations.json"); d = json.loads(p.read_text())
+for o in d["operations"]:
+    if o["status"] == "IMPLEMENTED":
+        o["status"] = "PLANNED"
+p.write_text(json.dumps(d, indent=2))
+c = pathlib.Path("lib/isedraf/supervisor/contracts.py"); t = c.read_text()
+old = "        \"status\": IMPLEMENTED,\n"
+assert old in t, "mutation anchor miss"
+c.write_text(t.replace(old, "        \"status\": \"PLANNED\",\n"))
 PYX' \
-  'while no operation is IMPLEMENTED|privileged operations gate FAILED'
+  'while no operation is IMPLEMENTED'
 
 inject "D-123 a fixed executable inherits the caller environment" \
   'python3 scripts/ci/check_privileged_operations.py' \
@@ -681,7 +686,7 @@ inject "D-84 a tracked file carries no licence statement at all" \
 # checked them, so they aged while everything around them was gated.
 inject "D-88 the README version badge disagrees with VERSION" \
   'python3 scripts/ci/check_public_claims.py' \
-  'sed -i "s|badge/version-0.1.2-lightgrey|badge/version-9.9.9-lightgrey|" README.md' \
+  'sed -i "s|badge/version-0.2.0-lightgrey|badge/version-9.9.9-lightgrey|" README.md' \
   'version badge says|public claims gate FAILED'
 
 # OpenSSF Baseline Level 2 (2026-09-29): the repository's security configuration and policy
@@ -843,7 +848,7 @@ inject "SSH only the first of two duplicate directives is recorded" \
   'python3 - <<PYX
 import pathlib
 p = pathlib.Path("lib/isedraf/ssh/acquire.py"); s = p.read_text()
-s = s.replace("    status, reason = _status(graph, records, malformed)", "    seen = set()\n    records = [r for r in records if r.get(\"keyword\") is None or (r[\"keyword\"] not in seen and not seen.add(r[\"keyword\"]))]\n    status, reason = _status(graph, records, malformed)", 1)
+s = s.replace("    status, reason = _status(graph, records, malformed, surface)", "    seen = set()\n    records = [r for r in records if r.get(\"keyword\") is None or (r[\"keyword\"] not in seen and not seen.add(r[\"keyword\"]))]\n    status, reason = _status(graph, records, malformed, surface)", 1)
 p.write_text(s)
 PYX' \
   'FAILED|Error'
@@ -1310,7 +1315,7 @@ inject "W1D a partially read counterpart supports an absence claim" \
 # the representation.
 inject "W1D a lossy reader silently rewrites an undecodable account name" \
   'python3 tests/test_accounts.py' \
-  'sed -i "s|    outcome = _exec.read_file_lossless(path)|    outcome = _exec.read_file(path)|" lib/isedraf/accounts/acquire.py' \
+  'sed -i "s|    return _interpret(relative, _exec.read_file_lossless(path))|    return _interpret(relative, _exec.read_file(path))|" lib/isedraf/accounts/acquire.py' \
   'FAILED|Error'
 
 inject "W1D an undecodable identifier is guessed instead of reported as undecodable" \
@@ -1761,7 +1766,7 @@ inject "GA-AUDIT-1 the report follows the newest directory, not the ledger" \
 
 inject "GA-AUDIT-2 audit sections are bound but never written into the bundle" \
   'python3 tests/test_audit.py' \
-  'sed -i "s|            for name, data in sorted(built\[\"sections\"\].items()):|            for name, data in []:|" lib/isedraf/snapshot.py' \
+  'sed -i "s|        for name, data in sorted(built\[\"sections\"\].items()):|        for name, data in []:|" lib/isedraf/snapshot.py' \
   'FAILED|Error'
 
 inject "GA-AUDIT-3 a collector exception text is recorded in its section" \
@@ -2063,9 +2068,9 @@ inject "R15P an unproducible elevated acquisition mode returns to the vocabulary
   'python3 - <<PYX
 import pathlib
 p = pathlib.Path("lib/isedraf/coverage.py"); s = p.read_text()
-old = "MODES = (MODE_CURRENT_IDENTITY,)\n"
+old = "MODES = (MODE_CURRENT_IDENTITY, MODE_SUPERVISOR_FIXED_OPERATION)\n"
 assert old in s, "mutation anchor miss"
-p.write_text(s.replace(old, "MODE_ELEVATED = \"ELEVATED\"\nMODES = (MODE_CURRENT_IDENTITY, MODE_ELEVATED)\n"))
+p.write_text(s.replace(old, "MODE_ELEVATED = \"ELEVATED\"\nMODES = (MODE_CURRENT_IDENTITY, MODE_SUPERVISOR_FIXED_OPERATION, MODE_ELEVATED)\n"))
 PYX' \
   'FAILED|Error'
 
@@ -2265,7 +2270,7 @@ inject "IQ-042 the evidence-limits writer emits an authority schema 2 does not a
   'python3 - <<PYX
 import pathlib
 p = pathlib.Path("lib/isedraf/coverage.py"); s = p.read_text()
-old = "    out.update({\"collector\": dict(collector), \"acquisition_mode\": acquisition_mode,\n"
+old = "    out.update({\"collector\": dict(collector), \"acquisition_mode\": mode,\n"
 assert old in s, "mutation anchor miss"
 p.write_text(s.replace(old, "    out.update({\"collector\": dict(collector), \"acquisition_mode\": \"ROOT\",\n"))
 PYX' \
@@ -2281,6 +2286,1321 @@ assert old in s, "mutation anchor miss"
 p.write_text(s.replace(old, ""))
 PYX' \
   'FAILED|Error'
+
+inject "P4 the supervisor performs an operation that is not enabled" \
+  'python3 tests/test_supervisor.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/supervisor/contracts.py"); s = p.read_text()
+old = "    if contract is None or contract[\"status\"] != IMPLEMENTED:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if contract is None:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P4 the supervisor accepts a caller argument after the identifier" \
+  'python3 tests/test_supervisor.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/supervisor/protocol.py"); s = p.read_text()
+old = "        text = line[:-1].decode(\"ascii\")\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        text = line[:-1].decode(\"ascii\").split(\" \")[0]\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P4 the supervisor follows a symlinked target" \
+  'python3 tests/test_supervisor.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/supervisor/perform.py"); s = p.read_text()
+old = " | os.O_NOFOLLOW"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P4 the supervisor returns output past the contract bound" \
+  'python3 tests/test_supervisor.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/supervisor/perform.py"); s = p.read_text()
+old = "            if total > bound:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "            if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P4 the supervisor ignores the operation timeout" \
+  'python3 tests/test_supervisor.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/supervisor/perform.py"); s = p.read_text()
+old = "            if _elapsed() > deadline:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "            if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P4 a fixed executable inherits the caller environment" \
+  'python3 tests/test_supervisor.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/supervisor/perform.py"); s = p.read_text()
+old = "env=dict(contracts.EXEC_ENVIRONMENT)"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "env=dict(os.environ)", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P4 a nonzero exit counts as a completed operation" \
+  'python3 tests/test_supervisor.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/supervisor/perform.py"); s = p.read_text()
+old = "    if proc.returncode != 0:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P4 an untrusted executable is run" \
+  'python3 tests/test_supervisor.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/supervisor/perform.py"); s = p.read_text()
+old = "        return b\"UNTRUSTED_EXECUTABLE\"\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        return None\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P4 the engine accepts a supervisor answer with an extra field" \
+  'python3 tests/test_supervisor.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/supervisor/protocol.py"); s = p.read_text()
+old = "sorted(body) != sorted(FIELDS)"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "not set(FIELDS) <= set(body)", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P4 the supervisor imports an engine parser" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/supervisor/perform.py"); s = p.read_text()
+old = "from isedraf.supervisor import contracts\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "from isedraf.accounts import sources  # noqa: F401\nfrom isedraf.supervisor import contracts\n", 1))
+PYX' \
+  'imports isedraf.accounts'
+
+inject "P4 a supervisor contract drifts from the registry" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/supervisor/contracts.py"); s = p.read_text()
+old = "        \"output_bound_bytes\": 1048576,\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        \"output_bound_bytes\": 2097152,\n", 1))
+PYX' \
+  'the registry has'
+
+# D-124. The Full Audit implementation semantics: a STANDARD_AUDIT source never carries an
+# operation_id, the supervisor mode is admitted only with an IMPLEMENTED operation, and
+# IMPLEMENTED means reachable in production, one vertical slice first.
+inject "D-124 a current-identity source records an operation_id" \
+  'python3 scripts/ci/check_evidence_limits_schema.py' \
+  'python3 - <<PYX
+import json, pathlib, sys
+sys.path.insert(0, "lib")
+from isedraf import canonical
+p = pathlib.Path("tests/fixtures/evidence_limits/v2/valid/unprivileged-run.json")
+m = json.loads(p.read_text())
+m["sources"][0]["operation_id"] = "read_shadow_v1"
+m["limitations"] = [s for s in m["sources"] if s["affects_completeness"]]
+p.write_bytes(canonical.canonical_bytes(m))
+PYX' \
+  'should conform: ELIM-008|evidence limits schema gate FAILED'
+
+inject "D-124 the operation_id coupling stops firing" \
+  'python3 scripts/ci/check_evidence_limits_schema.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("scripts/ci/check_evidence_limits_schema.py"); s = p.read_text()
+old = "        elif oid is not None:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        elif False:\n"))
+PYX' \
+  'should violate ELIM-008|evidence limits schema gate FAILED'
+
+inject "D-124 the admission rule ignores an IMPLEMENTED operation" \
+  'python3 scripts/ci/check_evidence_limits_schema.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("scripts/ci/check_evidence_limits_schema.py"); s = p.read_text()
+old = "    return [m for m in vocab[\"acquisition_mode\"] if m != SUPERVISOR or implemented]\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    return [m for m in vocab[\"acquisition_mode\"] if m != SUPERVISOR]\n"))
+PYX' \
+  'evidence limits schema gate FAILED'
+
+inject "D-124 an operation is IMPLEMENTED that its section never requests" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/accounts/acquire.py"); s = p.read_text()
+old = "SHADOW_OPERATION = \"read_shadow_v1\"\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "SHADOW_OPERATION = \"read_shadow_\" + \"v1\"\n", 1))
+PYX' \
+  'never requests it by its exact identifier'
+
+# D-124 extended 2026-10-09 (AUTH-025 amended): one new operation at a time. Implementation
+# state is the registry; validation is the owner's frozen admission block; release mode refuses
+# an unvalidated operation and the release workflow must run it before building.
+inject "AUTH-025 an operation becomes IMPLEMENTED out of turn" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import json, pathlib
+p = pathlib.Path("scripts/ci/privileged_operations.json"); d = json.loads(p.read_text())
+for o in d["operations"]:
+    if o["operation_id"] == "inspect_mount_namespaces_v1":
+        o["status"] = "IMPLEMENTED"
+p.write_text(json.dumps(d, indent=2))
+PYX' \
+  'inspect_mount_namespaces_v1 is IMPLEMENTED out of turn'
+
+inject "AUTH-025 next_candidate disagrees with the frozen order" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("docs/architecture/FULL_AUDIT_AUTHORITY_MODEL.md"); s = p.read_text()
+old = "  \"next_candidate\": null\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "  \"next_candidate\": \"read_shadow_v1\"\n", 1))
+PYX' \
+  'is not the first unvalidated operation in the order'
+
+inject "AUTH-025 an operation is recorded validated out of order" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("docs/architecture/FULL_AUDIT_AUTHORITY_MODEL.md"); s = p.read_text()
+old = "  \"validated\": [\"read_shadow_v1\", \"read_sudoers_graph_v1\", \"read_sshd_declared_config_v1\",\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "  \"validated\": [\"read_shadow_v1\", \"read_sshd_declared_config_v1\", \"read_sudoers_graph_v1\",\n", 1))
+PYX' \
+  'is not a prefix of the admission order'
+
+inject "AUTH-025 the release workflow stops running release mode" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path(".github/workflows/release-candidate.yml"); s = p.read_text()
+old = "        run: python3 scripts/ci/check_privileged_operations.py --release\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        run: true\n", 1))
+PYX' \
+  'does not run .python3 scripts/ci/check_privileged_operations.py --release. before it builds'
+
+inject "AUTH-025 the out-of-turn rule stops firing" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("scripts/ci/check_privileged_operations.py"); s = p.read_text()
+old = "        if oid != candidate:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if False:\n", 1))
+PYX' \
+  'admission self-test: an operation out of turn was accepted'
+
+inject "AUTH-025 next_candidate stops being held to the order" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("scripts/ci/check_privileged_operations.py"); s = p.read_text()
+old = "    if candidate != first_unvalidated:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n", 1))
+PYX' \
+  'admission self-test: a next_candidate that is not the first unvalidated operation was accepted'
+
+inject "AUTH-025 validated records stop being held to the order" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("scripts/ci/check_privileged_operations.py"); s = p.read_text()
+old = "    if validated != order[:len(validated)]:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n", 1))
+PYX' \
+  'admission self-test: a validated record out of order was accepted'
+
+inject "AUTH-025 a validated operation need not be IMPLEMENTED" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("scripts/ci/check_privileged_operations.py"); s = p.read_text()
+old = "        if status.get(oid) != \"IMPLEMENTED\":\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if False:\n", 1))
+PYX' \
+  'admission self-test: a validated operation that is not IMPLEMENTED was accepted'
+
+inject "AUTH-025 release mode stops refusing an unvalidated operation" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("scripts/ci/check_privileged_operations.py"); s = p.read_text()
+old = "    if release:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n", 1))
+PYX' \
+  'admission self-test: a release with an unvalidated operation was accepted'
+
+# v0.2 P5a (D-124). The run mode is recorded by the route and held by the verifier.
+inject "P5 the audit route stops recording its run mode" \
+  'python3 tests/test_run_mode.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/cli.py"); s = p.read_text()
+old = "run_mode=stateroot.RUN_MODE_OF_CLASS[state_root_class])"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "run_mode=None)", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 the verifier accepts a run mode that does not pair with its class" \
+  'python3 tests/test_run_mode.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/verify.py"); s = p.read_text()
+old = "        elif run_mode != stateroot.RUN_MODE_OF_CLASS.get(core.get(\"state_root\")):\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        elif False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 the verifier accepts a supervisor source outside FULL_AUDIT" \
+  'python3 tests/test_run_mode.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/verify.py"); s = p.read_text()
+old = "            if run_mode != stateroot.FULL_AUDIT:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "            if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 the verifier accepts an operation_id without a supervisor acquisition" \
+  'python3 tests/test_run_mode.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/verify.py"); s = p.read_text()
+old = "        elif oid is not None:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        elif False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+# D-124 (extended, AUTH-026): a capability is a candidate before it is ever granted, and
+# CAP_KILL is never one; the engine timeout is RuntimeMaxSec=.
+inject "AUTH-026 CAP_KILL becomes a capability candidate" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("docs/architecture/FULL_AUDIT_AUTHORITY_MODEL.md"); s = p.read_text()
+old = "  \"capability_candidates\": [\"CAP_DAC_READ_SEARCH\","
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "  \"capability_candidates\": [\"CAP_KILL\", \"CAP_DAC_READ_SEARCH\","))
+PYX' \
+  'both a capability candidate and excluded'
+
+# D-124 (extended, AUTH-027): CAP_CHOWN was measured not required and cannot return as a
+# candidate of the current design.
+inject "AUTH-027 CAP_CHOWN returns as a capability candidate" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("docs/architecture/FULL_AUDIT_AUTHORITY_MODEL.md"); s = p.read_text()
+old = "  \"capability_candidates\": [\"CAP_DAC_READ_SEARCH\","
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "  \"capability_candidates\": [\"CAP_CHOWN\", \"CAP_DAC_READ_SEARCH\","))
+PYX' \
+  'measured not required'
+
+# v0.2 P5b-0 (AUTH-023): 66 and 67 each have one meaning in every run mode.
+inject "P5 lock contention falls back to the engine-error code" \
+  'python3 tests/test_stateroot.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/cli.py"); s = p.read_text()
+old = "        return RUN_IN_PROGRESS\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        return USAGE_OR_ENGINE\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 an unsuitable user store falls back to the engine-error code" \
+  'python3 tests/test_stateroot.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/cli.py"); s = p.read_text()
+old = "        suitable, reason = stateroot.storage_suitability(existing)\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, old + "        if not suitable:\n            return USAGE_OR_ENGINE\n", 1))
+PYX' \
+  'FAILED|Error'
+
+# v0.2 P5b-1 (AUTH-022, AUTH-027): the store is validated, never repaired or created at
+# runtime; promotion takes only what the engine may produce.
+inject "P5 the launcher accepts a state root of the wrong owner or mode" \
+  'python3 tests/test_launcher_store.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/store.py"); s = p.read_text()
+old = "    if (st.st_uid, st.st_gid) != (uid, gid) or stat.S_IMODE(st.st_mode) != mode:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 the launcher accepts a missing state root" \
+  'python3 tests/test_launcher_store.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/store.py"); s = p.read_text()
+old = "    if _conforms(root, True, 0o700, OWNER_UID, OWNER_GID) is None:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if _conforms(root, True, 0o700, OWNER_UID, OWNER_GID) is None and False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 promotion accepts a hard-linked staged file" \
+  'python3 tests/test_launcher_store.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/store.py"); s = p.read_text()
+old = "        if st.st_nlink != 1:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 promotion accepts an undeclared staged entry" \
+  'python3 tests/test_launcher_store.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/store.py"); s = p.read_text()
+old = "            raise PromotionRefused(\"undeclared staged entry %s\" % name)\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "            pass\n", 1))
+PYX' \
+  'FAILED|Error'
+
+# v0.2 P5b-2 (AUTH-020): the engine proves its reduction; its command is constant.
+inject "P5 the engine ignores a non-empty bounding set" \
+  'python3 tests/test_reduction.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/fullaudit.py"); s = p.read_text()
+old = "CAPABILITY_SETS = (\"CapInh\", \"CapPrm\", \"CapEff\", \"CapBnd\", \"CapAmb\")\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "CAPABILITY_SETS = (\"CapInh\", \"CapPrm\", \"CapEff\", \"CapAmb\")\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 the engine runs without no-new-privileges" \
+  'python3 tests/test_reduction.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/fullaudit.py"); s = p.read_text()
+old = "    if fields.get(\"NoNewPrivs\") != [\"1\"]:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 the engine command loses no-new-privileges" \
+  'python3 tests/test_reduction.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/engine.py"); s = p.read_text()
+old = "\"--bounding-set=-all\", \"--no-new-privs\","
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "\"--bounding-set=-all\",", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 the engine inherits the launcher environment" \
+  'python3 tests/test_reduction.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/engine.py"); s = p.read_text()
+old = "    return subprocess.Popen(list(ARGV), cwd=staging, env=dict(ENVIRONMENT),"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    return subprocess.Popen(list(ARGV), cwd=staging, env=dict(os.environ),", 1))
+PYX' \
+  'FAILED|Error'
+
+# v0.2 P5b-3 (AUTH-019 to AUTH-027): the Full Audit route.
+inject "P5 the outer entry accepts arguments after audit" \
+  'python3 tests/test_launcher_route.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/outer.py"); s = p.read_text()
+old = "list(argv) != [\"audit\"]"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "list(argv)[:1] != [\"audit\"]", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 the unit creates the state root through StateDirectory" \
+  'python3 tests/test_launcher_route.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/outer.py"); s = p.read_text()
+old = "    \"ReadWritePaths=-/var/lib/isedraf\",\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    \"StateDirectory=isedraf\",\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 the unit bounding set gains CAP_CHOWN" \
+  'python3 tests/test_launcher_route.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/outer.py"); s = p.read_text()
+old = "CAPABILITY_BOUNDING_SET = \"CAP_DAC_READ_SEARCH"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "CAPABILITY_BOUNDING_SET = \"CAP_CHOWN CAP_DAC_READ_SEARCH", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 the launcher promotes while an engine process remains" \
+  'python3 tests/test_launcher_route.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/unit.py"); s = p.read_text()
+old = "                if left:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "                if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 the launcher promotes the bundle of a failed engine" \
+  'python3 tests/test_launcher_route.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/unit.py"); s = p.read_text()
+old = "                if code not in (OK, INCOMPLETE):\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "                if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 the launcher honours the development state root under sudo" \
+  'python3 tests/test_launcher.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("bin/isedraf"); s = p.read_text()
+old = "        echo \"isedraf: ISEDRAF_STATE_ROOT is refused under sudo or root (PRIV-004).\" >&2\n        exit 70\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        :\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 the staging cleanup inherits the launcher environment" \
+  'python3 tests/test_reduction.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/engine.py"); s = p.read_text()
+old = "    return subprocess.run(list(CLEAN_ARGV), cwd=staging, env=dict(ENVIRONMENT),"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    return subprocess.run(list(CLEAN_ARGV), cwd=staging, env=dict(os.environ),", 1))
+PYX' \
+  'FAILED|Error'
+
+# v0.2 P5b-4 (AUTH-026, AUTH-027, D-60): the package declares the state root and the account;
+# no maintainer script repairs or creates the root.
+inject "P5 the deb postinst creates the state root" \
+  'python3 scripts/ci/check_packaging.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("packaging/deb/postinst"); s = p.read_text()
+old = "exit 0\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "mkdir -m 0700 /var/lib/isedraf\nexit 0\n", 1))
+PYX' \
+  'mutates files or accounts'
+
+inject "P5 the deb stages the state root as payload again" \
+  'python3 scripts/ci/check_packaging.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("packaging/build.sh"); s = p.read_text()
+old = "install -D -m 0644 packaging/sysusers/isedraf.conf"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "install -d -m 0700 /var/lib/isedraf-staged-as-payload; " + old, 1).replace("isedraf-staged-as-payload", "isedraf", 1))
+PYX' \
+  'stages /var/lib/isedraf as payload'
+
+inject "AUTH-027 the deb postinst guard forgets dangling symlinks" \
+  'python3 scripts/ci/check_packaging.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("packaging/deb/postinst"); s = p.read_text()
+old = " && [ ! -L /var/lib/isedraf ]"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "", 1))
+PYX' \
+  'mutates files or accounts|exactly once'
+
+# D-124 (AUTH-027 refined 2026-10-08): the RPM declares the root %ghost and creates it only
+# when nothing exists at the path; it never repairs an existing object.
+inject "AUTH-027 the rpm %post repairs an existing state root" \
+  'python3 scripts/ci/check_packaging.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("packaging/rpm/isedraf.spec.in"); s = p.read_text()
+old = "%ghost %dir %attr(0700,root,root) /var/lib/isedraf\n"
+assert old in s, "mutation anchor miss"
+s = s.replace("%files\n", "chmod 0700 /var/lib/isedraf || :\n\n%files\n", 1)
+p.write_text(s)
+PYX' \
+  'mutates files or accounts'
+
+inject "AUTH-027 the rpm guard forgets dangling symlinks" \
+  'python3 scripts/ci/check_packaging.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("packaging/rpm/isedraf.spec.in"); s = p.read_text()
+old = " && [ ! -L /var/lib/isedraf ]"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "", 1))
+PYX' \
+  'mutates files or accounts|exactly once'
+
+inject "AUTH-027 the rpm declares the state root as payload again" \
+  'python3 scripts/ci/check_packaging.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("packaging/rpm/isedraf.spec.in"); s = p.read_text()
+old = "%ghost %dir %attr(0700,root,root) /var/lib/isedraf\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "%dir %attr(0700,root,root) /var/lib/isedraf\n", 1))
+PYX' \
+  'never payload truth|declares /var/lib/isedraf as payload'
+
+# v0.2 P5c (AUTH-017, AUTH-024): read_shadow_v1, the first privileged vertical slice.
+inject "P5 the accounts section ignores the supervisor channel" \
+  'python3 tests/test_shadow_operation.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/accounts/acquire.py"); s = p.read_text()
+old = "    results[SHADOW] = (acquire_supervised(channel) if channel is not None\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    results[SHADOW] = (acquire_supervised(channel) if False\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 a supervisor-acquired source loses its operation_id" \
+  'python3 tests/test_shadow_operation.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/accounts/acquire.py"); s = p.read_text()
+old = "                            operation_id=r.get(\"operation_id\"))"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "                            operation_id=None)", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 a refused operation is reported as an unreadable file" \
+  'python3 tests/test_shadow_operation.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/accounts/acquire.py"); s = p.read_text()
+old = "        if outcome == coverage.NOT_SUPPORTED:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 the evidence-limits entry ignores the record authority" \
+  'python3 tests/test_shadow_operation.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/coverage.py"); s = p.read_text()
+old = "    mode = record.get(\"acquisition_mode\", acquisition_mode)\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    mode = acquisition_mode\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P5 the engine stops handing its channel to the collectors" \
+  'python3 tests/test_reduction.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/fullaudit.py"); s = p.read_text()
+old = "    sections, run_status = audit.collect(\"/\", channel=channel, sandboxed=True)\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    sections, run_status = audit.collect(\"/\", sandboxed=True)\n", 1))
+PYX' \
+  'FAILED|Error'
+
+# v0.2 P6 fixes (IQ-053, IQ-054): the sandbox is never the host; a failing helper is not silence.
+# AUTH-029 (read_sudoers_graph_v1): the frame carries facts only and is decoded strictly; the
+# performer never opens a link; the engine alone interprets, from the frame alone.
+inject "AUTH-029 the performer opens a symlinked entry" \
+  'python3 tests/test_sudoers_operation.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/supervisor/perform.py"); s = p.read_text()
+old = "    if stat.S_ISLNK(info.st_mode):\n        return frame.item(frame.ENTRY, name, frame.SYMLINK, _lstat_fields(info))\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n        return frame.item(frame.ENTRY, name, frame.SYMLINK, _lstat_fields(info))\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-029 the frame lets a non-read item carry content" \
+  'python3 tests/test_sudoers_operation.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/supervisor/frame.py"); s = p.read_text()
+old = "    if content and outcome != READ_OK:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-029 the decoder tolerates trailing bytes" \
+  'python3 tests/test_sudoers_operation.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/supervisor/frame.py"); s = p.read_text()
+old = "    if at != len(data):\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-029 the frame admits a collection status as an acquisition outcome" \
+  'python3 tests/test_sudoers_operation.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/supervisor/frame.py"); s = p.read_text()
+old = "                        TRUNCATED, IO_ERROR)\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "                        TRUNCATED, IO_ERROR, \"COLLECTED\")\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-029 the Full Audit engine reads sudoers itself" \
+  'python3 tests/test_sudoers_operation.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/sudo/acquire.py"); s = p.read_text()
+old = "    if channel is not None:\n        return _collect_supervised(channel)\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n        return _collect_supervised(channel)\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-029 an include outside the surface is reported absent" \
+  'python3 tests/test_sudoers_operation.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/sudo/acquire.py"); s = p.read_text()
+old = "            return []\n        return [target]\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "            return []\n        return []\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-029 a listing the supervisor could not make reads as empty" \
+  'python3 tests/test_sudoers_operation.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/sudo/acquire.py"); s = p.read_text()
+old = "        if outcome != frame.READ_OK:\n            # IQ-046 (1): a listing the supervisor"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if outcome != frame.READ_OK and False:\n            # IQ-046 (1): a listing the supervisor", 1))
+PYX' \
+  'FAILED|Error'
+
+# Report truth F1-F5 (2026-10-10): what the Full Audit report says.
+inject "F1 the privilege line shows the store class again" \
+  'python3 tests/test_report_truth.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/report/render.py"); s = p.read_text()
+old = "    level = (\"FULL_AUDIT\" if ident.get(\"run_mode\") == \"FULL_AUDIT\"\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    level = (ident.get(\"state_root_class\") if ident.get(\"run_mode\") == \"FULL_AUDIT\"\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "F2 the Markdown report drops the SSH dimensions" \
+  'python3 tests/test_report_truth.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/report/render.py"); s = p.read_text()
+old = "            for label, status, detail in s.get(\"dimensions\") or []:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "            for label, status, detail in []:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "F3 the dimensions share one status" \
+  'python3 tests/test_report_truth.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/report/sections.py"); s = p.read_text()
+old = "    return [(\"Declared configuration\", d_status, d_detail),\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    d_status = r_status\n    return [(\"Declared configuration\", d_status, d_detail),\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "F4 the authority summary assumes CURRENT_IDENTITY" \
+  'python3 tests/test_report_truth.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/report/model.py"); s = p.read_text()
+old = "        elif mode == \"CURRENT_IDENTITY\":\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        elif True:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "F5 the authorized-keys limit is not stated" \
+  'python3 tests/test_report_truth.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/report/model.py"); s = p.read_text()
+old = "                        + ([FULL_AUDIT_KEYS_LIMITATION]\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "                        + ([]\n", 1))
+PYX' \
+  'FAILED|Error'
+
+# D-83 (2026-10-10): governance files change only with the owner's manifest.
+inject "D-83 a governance file changes without the manifest" \
+  'python3 scripts/ci/check_governance.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/runtime-imports.allow"); s = p.read_text()
+old = "argparse\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "argparse\nsocket\n", 1))
+PYX' \
+  'changed without an owner update of the manifest'
+
+# D-83, IQ-069 (2026-10-12): a release export may omit CLAUDE.md, and only a release export.
+# The engineering cases need CLAUDE.md to exist; the export cases need the export marker.
+NEXT_REQUIRES=CLAUDE.md
+inject "D-83 CLAUDE.md is deleted from an engineering tree" \
+  'python3 scripts/ci/check_governance.py' \
+  'rm -f CLAUDE.md' \
+  'CLAUDE.md is listed but missing'
+
+NEXT_REQUIRES=CLAUDE.md
+inject "D-83 an export marker is honoured in an engineering tree" \
+  'python3 scripts/ci/check_governance.py' \
+  'python3 - <<PYX
+import hashlib, pathlib
+rels = ("docs/development/GOVERNANCE_MANIFEST.sha256", "scripts/ci/release_surface.txt")
+pathlib.Path("docs/development/PUBLIC_EXPORT.sha256").write_text("".join(
+    "%s  %s\n" % (hashlib.sha256(pathlib.Path(r).read_bytes()).hexdigest(), r) for r in rels))
+pathlib.Path("CLAUDE.md").unlink()
+PYX' \
+  'valid only in a release export, never in the engineering repository'
+
+NEXT_REQUIRES=docs/development/PUBLIC_EXPORT.sha256
+inject "D-83 a release export marker no longer binds the manifest" \
+  'python3 scripts/ci/check_governance.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("docs/development/PUBLIC_EXPORT.sha256"); s = p.read_text()
+p.write_text(("0" if s[0] != "0" else "1") + s[1:])
+PYX' \
+  'does not bind this tree'
+
+NEXT_REQUIRES=docs/development/PUBLIC_EXPORT.sha256
+inject "D-83 a release export omits a governance file it publishes" \
+  'python3 scripts/ci/check_governance.py' \
+  'rm -f lib/isedraf/exitcodes.json' \
+  'lib/isedraf/exitcodes.json is listed but missing'
+
+# D-83, IQ-069: the gate's own export rule cannot quietly stop checking the release surface.
+inject "D-83 the export context stops requiring the excluded paths to be absent" \
+  'python3 scripts/ci/check_governance.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("scripts/ci/check_governance.py"); s = p.read_text()
+old = "        if (root / rel).exists() or (root / rel).is_symlink():\n            problems.append"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if False:\n            problems.append", 1))
+PYX' \
+  'governance self-test: case'
+
+# OUT-001 (2026-10-10): exit codes have one source.
+inject "OUT-001 a constant drifts from exitcodes.json" \
+  'python3 scripts/ci/check_exitcodes.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/exitcodes.py"); s = p.read_text()
+old = "STATE_ROOT_UNUSABLE = 67"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "STATE_ROOT_UNUSABLE = 68", 1))
+PYX' \
+  'is not a reachable code of that name'
+
+# AUTH-032 (2026-10-10): the read-only report route.
+inject "AUTH-032 an undeclared snapshot entry is read" \
+  'python3 tests/test_report_route.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/reportunit.py"); s = p.read_text()
+old = "            raise Refused(\"undeclared entry %s in snapshot %s\" % (name, sid))\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "            continue\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-032 the report reads a store mid-promotion" \
+  'python3 tests/test_report_route.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/reportunit.py"); s = p.read_text()
+old = "        with _ReadOnlyLock(root):\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        with open(os.devnull):\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-032 an unverified store is rendered" \
+  'python3 tests/test_report_route.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/renderer.py"); s = p.read_text()
+old = "        if problems:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-032 the renderer accepts a name outside the bundle" \
+  'python3 tests/test_report_route.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/renderer.py"); s = p.read_text()
+old = "match.group(2) not in store.BUNDLE_FILES"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "False", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-032 the verification scope is not stated" \
+  'python3 tests/test_report_route.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/renderer.py"); s = p.read_text()
+old = "        model_obj[\"identity_evidence\"][\"verification\"][\"scope\"] = SCOPE\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-032 report --save is admitted under root" \
+  'python3 tests/test_launcher_route.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/outer.py"); s = p.read_text()
+old = "(\"report\", \"--html\"): \"html\"}"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "(\"report\", \"--html\"): \"html\", (\"report\", \"--save\"): \"markdown\"}", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-032 the report unit can write the store" \
+  'python3 tests/test_launcher_route.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/outer.py"); s = p.read_text()
+old = "REPORT_PROPERTIES = tuple(p for p in PROPERTIES if not p.startswith(\"ReadWritePaths=\"))"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "REPORT_PROPERTIES = PROPERTIES", 1))
+PYX' \
+  'FAILED|Error'
+
+# IQ-063 (2026-10-10): an interrupted Full Audit is never committed afterwards; a committed one
+# keeps its snapshot and its code.
+inject "IQ-063 systemd-run shares the terminal session" \
+  'python3 tests/test_launcher_relay.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/outer.py"); s = p.read_text()
+old = "                            start_new_session=True)"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "                            start_new_session=False)", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "IQ-063 a committed run is reported as interrupted" \
+  'python3 tests/test_launcher_relay.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/outer.py"); s = p.read_text()
+old = "    if code in COMMITTED:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "IQ-063 a failed stop request is not retried" \
+  'python3 tests/test_launcher_relay.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/outer.py"); s = p.read_text()
+old = "            if stop(proc):\n                stopped.append(True)\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "            stop(proc)\n            stopped.append(True)\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "IQ-063 a stop just before the commit is ignored" \
+  'python3 tests/test_launcher_route.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/unit.py"); s = p.read_text()
+old = "                try:\n                    if _stop:\n                        raise _Interrupted()\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "                try:\n                    if False:\n                        raise _Interrupted()\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "IQ-063 an engine ending mid-response crashes the launcher" \
+  'python3 tests/test_launcher_route.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/unit.py"); s = p.read_text()
+old = "    except OSError:\n        pass        # the engine ended mid-exchange"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    except ZeroDivisionError:\n        pass        # the engine ended mid-exchange", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "IQ-063 a late stop can still kill an exiting run" \
+  'python3 tests/test_launcher_route.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/unit.py"); s = p.read_text()
+old = "    signal.pthread_sigmask(signal.SIG_BLOCK, STOP_SIGNALS)\n    return code"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    return code", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "IQ-063 the unit stops with a clean-exit signal" \
+  'python3 tests/test_launcher_route.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/outer.py"); s = p.read_text()
+old = "    \"KillSignal=SIGUSR2\",\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "", 1))
+PYX' \
+  'FAILED|Error'
+
+# GOV-002 test inclusion (2026-10-10): a test file run by nothing in make check is caught.
+inject "GOV-002 a test file is dropped from check-tests" \
+  'python3 scripts/ci/check_test_inclusion.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("Makefile"); s = p.read_text()
+old = "python3 tests/test_mounts_adversarial.py"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "true", 1))
+PYX' \
+  'test_mounts_adversarial.py is run by nothing'
+
+# AUTH-031 (resolve_sshd_effective_config_v1): the global effective configuration only, fail
+# closed, raw bytes kept, repeated-directive order kept (IQ-064), Match never claimed resolved.
+inject "AUTH-031 exit 0 with empty stdout is accepted" \
+  'python3 tests/test_sshd_effective.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/ssh/acquire.py"); s = p.read_text()
+old = "            if not data:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "            if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-031 an unparseable line is tolerated" \
+  'python3 tests/test_sshd_effective.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/ssh/acquire.py"); s = p.read_text()
+old = "            elif bad_line is not None:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "            elif False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-031 repeated-directive order is dropped" \
+  'python3 tests/test_sshd_effective.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/ssh/acquire.py"); s = p.read_text()
+old = "\"occurrence\": seen.get(keyword, 0)"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "\"occurrence\": 0", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-031 the connection context is claimed resolved" \
+  'python3 tests/test_sshd_effective.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/ssh/acquire.py"); s = p.read_text()
+old = "\"connection_context\": {\"status\": result.NOT_TESTED,"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "\"connection_context\": {\"status\": result.COLLECTED,", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-031 the raw stdout is not kept byte-for-byte" \
+  'python3 tests/test_sshd_effective.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/ssh/acquire.py"); s = p.read_text()
+old = "base64.b64encode(data)"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "base64.b64encode(data.strip())", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-031 the report stops saying Match is not resolved" \
+  'python3 tests/test_sshd_effective.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/report/sections.py"); s = p.read_text()
+old = "\"hostname\": _hostname, \"ssh\": _ssh}"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "\"hostname\": _hostname}", 1))
+PYX' \
+  'FAILED|Error'
+
+# AUTH-030 (read_sshd_declared_config_v1): the fixed surface from the frame; everything outside it
+# read by the engine as itself and labelled so; never a discovered path to the supervisor.
+inject "AUTH-030 an include outside the surface is not read by the engine" \
+  'python3 tests/test_sshd_operation.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/ssh/acquire.py"); s = p.read_text()
+old = "            self.own.add(path)\n            return hostio.read_file_lossless(path)\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "            self.own.add(path)\n            return hostio.Outcome(ok=False, reason=\"SOURCE_UNREADABLE\", source=path, detail=coverage.IO_ERROR)\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-030 an engine-read source is labelled with the operation" \
+  'python3 tests/test_sshd_operation.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/ssh/acquire.py"); s = p.read_text()
+old = "        supervised = surface is not None and node[\"path\"] not in surface.own\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        supervised = surface is not None\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-030 the Full Audit engine reads /etc/ssh itself" \
+  'python3 tests/test_sshd_operation.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/ssh/acquire.py"); s = p.read_text()
+old = "    if channel is not None:\n        return _with_effective(_collect_supervised(channel), _resolve_effective(channel))\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n        return _with_effective(_collect_supervised(channel), _resolve_effective(channel))\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-030 the drop-in glob stops filtering names" \
+  'python3 tests/test_sshd_operation.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/ssh/acquire.py"); s = p.read_text()
+old = "                if fnmatch.fnmatchcase(n, name)]\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "                if True]\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-030 a drop-in directory the supervisor could not list reads as empty" \
+  'python3 tests/test_sshd_operation.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/ssh/acquire.py"); s = p.read_text()
+old = "        if self.listing != frame.READ_OK:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-030 a symlinked drop-in is no longer recorded as not followed" \
+  'python3 tests/test_sshd_operation.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/ssh/acquire.py"); s = p.read_text()
+old = "        if outcome == frame.SYMLINK and path not in self.unfollowed:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+# IQ-058: `@include` and `@includedir` are directives, never malformed policy records.
+inject "IQ-058 the sudo parser counts an @includedir directive as a malformed record again" \
+  'python3 tests/test_sudo_adversarial.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/sudo/sources.py"); s = p.read_text()
+old = "        if stripped.startswith(\"#\") or _AT_DIRECTIVE.match(stripped):\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if stripped.startswith(\"#\"):\n", 1))
+PYX' \
+  'FAILED|Error'
+
+# IQ-057 (AUTH-029): a symlink in a fixture's sudoers.d is observed, never dereferenced.
+inject "IQ-057 a fixture sudoers.d symlink is dereferenced again" \
+  'python3 tests/test_sudo.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/sudo/acquire.py"); s = p.read_text()
+old = "            if entry.get(\"is_symlink\") and not self._live():\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "            if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+# IQ-055 (owner ruling A): in Full Audit the host table is PID 1's, read by the engine with no
+# capability; the sandbox's own table is never read; space only where the device matches.
+inject "IQ-055 Full Audit reads the sandbox's own mount table as host mounts" \
+  'python3 tests/test_full_audit_truth.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/mounts/acquire.py"); s = p.read_text()
+old = "    return hostpath.under(root, HOST_MOUNTINFO if sandboxed else MOUNTINFO)\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    return hostpath.under(root, MOUNTINFO)\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "IQ-055 Full Audit storage reads the sandbox's own mounts table" \
+  'python3 tests/test_full_audit_truth.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/inventory/collectors.py"); s = p.read_text()
+old = "        mounts = reads.lines(os.path.join(root, \"proc/1/mounts\"))\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        mounts = reads.lines(os.path.join(root, \"proc/self/mounts\"))\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "IQ-055 an unreadable host table is reported as no filesystems" \
+  'python3 tests/test_full_audit_truth.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/inventory/collectors.py"); s = p.read_text()
+old = "        if not (mounts.ok and info.ok):\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "IQ-055 space is measured because the path matches, not the device" \
+  'python3 tests/test_full_audit_truth.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/inventory/collectors.py"); s = p.read_text()
+old = "        if os.fstat(fd).st_dev != device:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "IQ-055 mounts and mountinfo that disagree still lend a device" \
+  'python3 tests/test_full_audit_truth.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/inventory/collectors.py"); s = p.read_text()
+old = "    if [l.split()[1] if len(l.split()) > 1 else None for l in mounts] != points:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P6 a failing optional helper leaves time silently collected" \
+  'python3 tests/test_full_audit_truth.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/inventory/collectors.py"); s = p.read_text()
+old = "        if not tracking.ok:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P6 Full Audit executes a helper whose domain transition NNP forbids" \
+  'python3 tests/test_full_audit_truth.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/inventory/collectors.py"); s = p.read_text()
+old = "            _label_type(selinux_label(chronyc)) in NNP_TRANSITION_LABELS:\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "            _label_type(selinux_label(chronyc)) in NNP_TRANSITION_LABELS and False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "P6 the Full Audit engine stops telling collectors they are sandboxed" \
+  'python3 tests/test_reduction.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/fullaudit.py"); s = p.read_text()
+old = "channel=channel, sandboxed=True)"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "channel=channel, sandboxed=False)", 1))
+PYX' \
+  'FAILED|Error'
+
+# D-124 (AUTH-028): the frozen Full Audit bounding set is exactly the REQUIRED set; a
+# candidate is not enough to enter it.
+inject "AUTH-028 the launcher bounding set gains a candidate that is not required" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/outer.py"); s = p.read_text()
+old = "CAPABILITY_BOUNDING_SET = \"CAP_DAC_READ_SEARCH CAP_SETGID CAP_SETPCAP CAP_SETUID\"\n"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "CAPABILITY_BOUNDING_SET = \"CAP_DAC_READ_SEARCH CAP_SETGID CAP_SETPCAP CAP_SETUID CAP_SYS_PTRACE\"\n", 1))
+PYX' \
+  'not exactly the REQUIRED'
+
+inject "AUTH-028 the REQUIRED set drifts from the measured route" \
+  'python3 scripts/ci/check_privileged_operations.py' \
+  'python3 - <<PYX
+import pathlib
+p = pathlib.Path("docs/architecture/FULL_AUDIT_AUTHORITY_MODEL.md"); s = p.read_text()
+old = "  \"capability_required\": [\"CAP_DAC_READ_SEARCH\", \"CAP_SETGID\", \"CAP_SETPCAP\", \"CAP_SETUID\"],"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "  \"capability_required\": [\"CAP_DAC_READ_SEARCH\", \"CAP_SETGID\", \"CAP_SETUID\"],", 1))
+PYX' \
+  'not the measured route|not exactly the REQUIRED'
 
 inject "IQ-043 a collected audit section loses its registry entry" \
   'python3 scripts/docs/current_state.py check' \

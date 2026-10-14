@@ -1,0 +1,4 @@
+{
+  "$comment": "Consumed by scripts/ci/check_test_inclusion.py. A tests/test_*.py file that `make check-tests` deliberately does not run is listed here with the reason; every other one must be run there. Empty means every test file is a release test.",
+  "excluded": {}
+}

@@ -91,7 +91,8 @@ class TheRegistryIsTrue(unittest.TestCase):
 
     def test_full_audit_gain_follows_the_operation_registry(self):
         name = [n for n, c in self.caps.items() if c.get("audit_section") == "accounts"][0]
-        self.assertEqual(self.caps[name]["full_audit_gain"], "PLANNED_FIXED_OPERATION")
+        # v0.2 P5c: read_shadow_v1, which serves accounts, is IMPLEMENTED.
+        self.assertEqual(self.caps[name]["full_audit_gain"], "IMPLEMENTED_FIXED_OPERATION")
         self.caps[name]["full_audit_gain"] = "NONE"
         self.assertTrue([p for p in truth(self.caps) if name in p])
 

@@ -53,6 +53,12 @@ jobs:
       - name: make check
         run: make check
 
+      # AUTH-025 (D-124): no release includes a privileged operation that is IMPLEMENTED but
+      # not yet validated on the corpus. make check allows one under validation; a release
+      # does not.
+      - name: Privileged operations, release mode
+        run: python3 scripts/ci/check_privileged_operations.py --release
+
       - name: Build packages
         run: bash packaging/build.sh
 

@@ -166,6 +166,9 @@ documentation and tests derive from or validate against it; `make check` verifie
 | `67` | state root unwritable (`PRIV-008`) |
 | `64+` | usage / engine error |
 
+Codes `66` and `67` carry exactly the meanings `AUTH-023` fixes (D-124), in every run mode,
+and are never used for another outcome.
+
 **OUT-002 (D-57) SHALL** Precedence is `5 > 4 > 6 > 3 > 2/1 > 0`.
 **OUT-003 (D-57) SHALL** The exit code SHALL propagate unchanged through `systemd-run` re-exec.
 

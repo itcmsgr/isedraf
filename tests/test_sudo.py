@@ -252,5 +252,59 @@ class FixtureConfinement(unittest.TestCase):
                          "/etc/sudoers.d")
 
 
+class FixtureSymlinksAreNeverFollowed(unittest.TestCase):
+    """IQ-057 (AUTH-029): a symlink in a fixture's sudoers.d is observed as a symlink and never
+    dereferenced - not into the machine running the collection, and not inside the fixture
+    either - and the section is PARTIAL."""
+
+    def setUp(self):
+        self.base = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.base, True)
+        os.makedirs(os.path.join(self.base, "etc/sudoers.d"))
+        with open(os.path.join(self.base, "etc/sudoers"), "w") as handle:
+            handle.write("@includedir /etc/sudoers.d\n")
+        with open(os.path.join(self.base, "etc/sudoers.d/plain"), "w") as handle:
+            handle.write("root ALL=(ALL) ALL\n")
+        with open(os.path.join(self.base, "etc/target"), "w") as handle:
+            handle.write("linked ALL=(ALL) NOPASSWD: ALL\n")
+        # absolute, as a real host would have it, and relative
+        os.symlink("/etc/isedraf-iq057-absent-target", os.path.join(self.base, "etc/sudoers.d/link"))
+        os.symlink("../target", os.path.join(self.base, "etc/sudoers.d/rel-link"))
+
+    def collect(self):
+        from unittest import mock
+        from isedraf.shared import include_graph
+        reads = []
+        real = include_graph._exec.read_file_lossless
+        with mock.patch.object(include_graph._exec, "read_file_lossless",
+                               lambda p, *a, **k: reads.append(p) or real(p, *a, **k)):
+            ev = acquire.collect(self.base)
+        return ev, reads
+
+    def test_no_symlink_is_dereferenced_and_nothing_outside_the_fixture_is_read(self):
+        _ev, reads = self.collect()
+        for path in reads:
+            self.assertFalse(os.path.islink(path), "dereferenced %s" % path)
+            self.assertTrue(os.path.realpath(path).startswith(os.path.realpath(self.base)),
+                            "read outside the fixture: %s" % path)
+
+    def test_the_symlinks_are_observed_as_symlinks_and_the_section_is_partial(self):
+        ev, _reads = self.collect()
+        self.assertEqual(ev.status, result.PARTIAL)
+        self.assertIn("SYMLINK_NOT_FOLLOWED", ev.reason)
+        observed = dict((e["name"], e) for e in ev.provenance["includedir_entries_observed"])
+        self.assertIn("link", observed)
+        self.assertIn("rel-link", observed)
+        not_followed = [c for c in ev.provenance["coverage"]
+                        if c["source"].endswith(("/link", "/rel-link"))]
+        self.assertEqual(sorted(c["status"] for c in not_followed), ["NOT_TESTED", "NOT_TESTED"])
+
+    def test_policy_behind_a_symlink_never_enters_the_evidence(self):
+        ev, _reads = self.collect()
+        principals = json.dumps([r.get("principals") for r in ev.records])
+        self.assertNotIn("linked", principals)
+        self.assertIn("root", principals)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=0)

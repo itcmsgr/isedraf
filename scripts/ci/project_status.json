@@ -1,7 +1,7 @@
 {
   "$comment": "THE single authoritative status registry. docs/CURRENT_STATE.md is GENERATED from this file, and check_docs_truth.py validates documentation claims against it. One source, so a generated page and a gate cannot disagree \u2014 which is exactly how CURRENT_STATE.md came to announce that no product code existed while three commands worked.",
   "project_stage": "GENERAL_AVAILABILITY",
-  "public_release": "AWAITING_OWNER_AUTHORIZATION",
+  "public_release": "0.1.2, published 2026-10-08; 0.2.0 awaiting owner authorization",
   "identity": {
     "$comment": "THE canonical identity strings. Five surfaces described the same product five different ways - file headers, README, package metadata, CLI help and the GitHub About field - and nothing compared them. They legitimately differ in LENGTH and CASE, because a banner, a subtitle, a one-line package Summary and a 131-character About field are different formats. They must not differ in SUBSTANCE. Each form is declared here and check-public-claims holds its surface to it.",
     "name": "ISEDRAF",
@@ -143,7 +143,7 @@
       ],
       "audit_section": "accounts",
       "authority": "CURRENT_IDENTITY",
-      "full_audit_gain": "PLANNED_FIXED_OPERATION"
+      "full_audit_gain": "IMPLEMENTED_FIXED_OPERATION"
     },
     "sudo_privilege": {
       "status": "IMPLEMENTED",
@@ -154,7 +154,7 @@
       ],
       "audit_section": "sudo",
       "authority": "CURRENT_IDENTITY",
-      "full_audit_gain": "PLANNED_FIXED_OPERATION"
+      "full_audit_gain": "IMPLEMENTED_FIXED_OPERATION"
     },
     "ssh_state": {
       "status": "IMPLEMENTED",
@@ -165,7 +165,7 @@
       ],
       "audit_section": "ssh",
       "authority": "CURRENT_IDENTITY",
-      "full_audit_gain": "PLANNED_FIXED_OPERATION"
+      "full_audit_gain": "IMPLEMENTED_FIXED_OPERATION"
     },
     "pam": {
       "status": "IMPLEMENTED",
@@ -254,9 +254,10 @@
       "full_audit_gain": "NOT_APPLICABLE"
     },
     "production_mode_a": {
-      "status": "DEFERRED",
-      "evidence": "SCOPE-072",
-      "note": "the privileged topology that owns /var/lib/isedraf is Freeze Set 2",
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/launcher",
+      "command": "sudo isedraf audit",
+      "note": "Full Audit: the privileged topology that owns /var/lib/isedraf (D-124). Four fixed privileged operations (read_shadow_v1, read_sudoers_graph_v1, read_sshd_declared_config_v1, resolve_sshd_effective_config_v1); first packaged in 0.2.0",
       "reachable_from": [],
       "audit_section": null,
       "authority": "NOT_APPLICABLE",
@@ -516,7 +517,7 @@
   "runtime": {
     "production_python_floor": "3.6",
     "tooling_python_floor": "3.9",
-    "execution_model": "unprivileged, ISEDRAF_STATE_ROOT required",
+    "execution_model": "unprivileged by default (`isedraf audit`, user evidence store); Full Audit (`sudo isedraf audit`) from 0.2.0",
     "dependencies": "Python standard library only"
   },
   "platforms": {
@@ -540,8 +541,30 @@
       "CentOS Stream 9",
       "openSUSE Leap 15.6"
     ],
-    "none_certified_because": "reboot stability and version-upgrade stability were not exercised"
+    "none_certified_because": "no external or independent certification exists or is claimed. Reboot and version-upgrade stability are exercised in the release rehearsals and the v0.2 corpus proof; that is testing, not certification"
   },
+  "release_line": [
+    ["0.1.0", "PUBLISHED 2026-09-28 - general availability, unprivileged"],
+    ["0.1.1", "PUBLISHED 2026-10-06 - correction release (authorized_keys evidence)"],
+    ["0.1.2", "PUBLISHED 2026-10-08 - correction release (evidence truth, evidence limits); latest"],
+    ["v0.2 P0 authority model", "DONE (D-122, D-123)"],
+    ["v0.2 P1 truth fixes", "DONE - released in 0.1.1 and 0.1.2"],
+    ["v0.2 P2 registry truth", "DONE - released in 0.1.2"],
+    ["v0.2 P3 evidence contract", "DONE - released in 0.1.2"],
+    ["v0.2 P4/P5 supervisor and Full Audit route", "DONE - in 0.2.0"],
+    ["read_shadow_v1", "IMPLEMENTED and corpus-validated in engineering - in 0.2.0"],
+    ["v0.2 P6 corpus proof", "PASSED 2026-10-08 (Debian 12, Ubuntu 24.04, Rocky 9, AlmaLinux 9)"],
+    ["OD-06 capability model under SELinux", "CLOSED 2026-10-08"],
+    ["AUTH-025 admission of privileged operations", "AMENDED 2026-10-09 - one new operation at a time; validated: read_shadow_v1, read_sudoers_graph_v1, read_sshd_declared_config_v1, resolve_sshd_effective_config_v1 - the order is complete; admission grants no capability"],
+    ["read_sudoers_graph_v1", "IMPLEMENTED and corpus-validated in engineering (AUTH-029; lab proof 2026-10-09) - in 0.2.0"],
+    ["read_sshd_declared_config_v1", "IMPLEMENTED and corpus-validated in engineering (AUTH-030; lab proof 2026-10-09) - in 0.2.0"],
+    ["resolve_sshd_effective_config_v1", "IMPLEMENTED and corpus-validated in engineering (AUTH-031; lab proof 2026-10-09) - the global effective configuration only, Match not resolved - in 0.2.0"],
+    ["Full Audit mounts and storage", "engine reads PID 1's mount table with no added privilege (IQ-055); space only where the device matches; four-platform lab proof PASSED 2026-10-09"],
+    ["Full Audit time on SELinux-enforcing EL9", "chronyc not executed; recorded as MAC_DOMAIN_TRANSITION_UNAVAILABLE"],
+    ["Deferred past v0.2 (owner decision 2026-10-10)", "inspect_mount_namespaces_v1 (PLANNED) and read_authorized_keys_v1 (DESIGN_OPEN) - post-v0.2 candidates, not v0.2 scope; Full Audit does not collect other users' authorized_keys"],
+    ["v0.2 release", "0.2.0 prepared; release acceptance PASSED 2026-10-12 (Debian 12, Ubuntu 24.04, Rocky 9.7, AlmaLinux 9.7 Full Audit; AlmaLinux 8.10 standard audit); publication awaits owner authorization"]
+  ],
+  "$release_line_comment": "PUBLIC-SAFE ONLY, like release_blockers. Where each published release and the unreleased engineering line stand, one row per item, rendered into docs/CURRENT_STATE.md. Engineering status is not a release: an item marked NOT RELEASED is in no published package.",
   "release_blockers": [],
   "$release_blockers_comment": "PUBLIC-SAFE ONLY. This file is published and docs/CURRENT_STATE.md is generated from it, so anything written here reaches the public surface automatically. Earlier text here described an unresolved internal finding in operational detail. The detail belongs in the private governance record; a public project does not need to publish every internal reason a release has not happened. Use public_reason_class for the category and say no more. See PUBLIC-OPS-001.",
   "$capabilities_truth_comment": "Every capability carries four closed fields, checked against the code in both directions by scripts/docs/current_state.py (IQ-043, IQ-035): reachable_from (public CLI surfaces, read from the argument parser), audit_section (snapshot.SECTION_NAMES or host_identity), authority (a source authority coverage.MODES admits today, or NOT_APPLICABLE; D-123) and full_audit_gain (derived from scripts/ci/privileged_operations.json). A reachable capability is IMPLEMENTED; every reachable surface and section has exactly one entry; an entry naming a surface or section names one that exists."

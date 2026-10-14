@@ -5,12 +5,12 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 # Evidence model
 
 This page explains what ISEDRAF records, what each status means, and why a run can be
-trusted as a record of what was collected. It describes ISEDRAF 0.1.
+trusted as a record of what was collected. It describes ISEDRAF 0.2.
 
 ## Collecting is not judging
 
 ISEDRAF records what it saw and whether it could see it. It never decides whether what it
-saw is good or bad. There is no PASS, FAIL, score or finding in 0.1.
+saw is good or bad. There is no PASS, FAIL, score or finding in 0.2.
 
 A fact that could not be observed is reported as not observed, never as absent and never
 as fine. That rule decides almost everything else on this page.
@@ -57,14 +57,27 @@ otherwise it is PARTIAL. Each non-COLLECTED area carries a reason, such as
 A missing tool is NOT_TESTED; a tool that was present and failed is ERROR. Neither is ever
 shown as an empty success.
 
-## Privilege level
+## Run mode and privilege level
 
-ISEDRAF 0.1 always runs without root, and every run says so: **PRIVILEGE LEVEL:
-UNPRIVILEGED**. Sources only root can read, such as `/etc/shadow` and the sudo policy, are
-reported as NOT_TESTED or PARTIAL with a reason.
+Every run records its run mode, and the report states it:
 
-NOT_TESTED means those facts were not observed. It does not mean they passed, and it does
-not mean they are absent. A privileged collection is not included in this release.
+| Run mode | Command | Report line |
+|---|---|---|
+| STANDARD_AUDIT | `isedraf audit`, as your own user | PRIVILEGE LEVEL: UNPRIVILEGED |
+| FULL_AUDIT | `sudo isedraf audit` | PRIVILEGE LEVEL: FULL_AUDIT |
+
+In a standard audit, sources only root can read, such as `/etc/shadow` and the sudo policy,
+are NOT_TESTED or PARTIAL with a reason. NOT_TESTED means those facts were not observed. It
+does not mean they passed, and it does not mean they are absent. Runs committed by 0.1.x
+carry no run mode; their reports show none rather than a guessed one.
+
+## How each source was acquired
+
+Each source a run tried to read is recorded with how it was read. `CURRENT_IDENTITY` means
+the collecting identity read it itself: your own user, or in Full Audit the unprivileged
+`isedraf` account. `SUPERVISOR_FIXED_OPERATION` means it was read by one of Full Audit's four
+fixed privileged operations, which the record names. A section can mix both and still be
+COLLECTED. A Full Audit report summarizes this per operation from the run's record.
 
 ## A file is not the whole system
 
@@ -88,7 +101,7 @@ are recorded separately, with their relation (EQUAL, DIFFERENT or NOT_COMPARABLE
 
 Each run records the ISEDRAF version and how each fact was collected, separately from the
 facts themselves. A new ISEDRAF version, or a different collection method, on an unchanged
-host must never look like the host changed. ISEDRAF 0.1 does not yet compare runs, but it
+host must never look like the host changed. ISEDRAF does not yet compare runs, but it
 keeps this separation so a later comparison can respect it.
 
 ## How a run is verified
@@ -105,6 +118,10 @@ report. The report states the result ("verified: hashes, bindings and ledger cha
 Every digest is SHA-256, and anyone can recompute them without ISEDRAF; the
 [Auditor guide](AUDITOR_GUIDE.md) shows how.
 
+`sudo isedraf report` re-verifies the ledger chain and the run it reports, from the bytes
+it was given, before it renders anything, and the report states that scope; other runs in
+the store are not re-verified by it.
+
 Verification shows that the files have not changed since they were committed, as far as
 the ledger can tell. It cannot show that the host told the truth, or that someone with
 root did not replace the whole store.
@@ -118,13 +135,15 @@ report. Hosts cloned without regenerating their machine-id share a host id.
 
 ## Where the evidence lives, and who can read it
 
-The store is `~/.local/state/isedraf` (or `$XDG_STATE_HOME/isedraf`), a directory owned by
-you with mode 0700; files are created mode 0600. It is protected by filesystem permissions
-only. Each run and ledger record states its evidence class:
+A standard audit's store is `~/.local/state/isedraf` (or `$XDG_STATE_HOME/isedraf`), a
+directory owned by you with mode 0700; files are created mode 0600. A Full Audit's store is
+`/var/lib/isedraf`, owned by root with mode 0700. Both are protected by filesystem
+permissions only. Each run and ledger record states its evidence class:
 
 | Class | Produced by |
 |---|---|
-| USER_PRODUCTION | a normal run as your own user |
+| USER_PRODUCTION | a standard audit as your own user |
+| SYSTEM_PRODUCTION | a Full Audit |
 | DEV | a run with `ISEDRAF_STATE_ROOT` set; for development, never production evidence |
 
 ## Normative references
@@ -132,5 +151,6 @@ only. Each run and ledger record states its evidence class:
 For readers who need the binding text: collection versus evaluation and status semantics
 (EVID-001, SCOPE-045, D-13); commit order and orphaned runs (SNAP-014, SNAP-018, D-50);
 section binding (D-115); user store and storage checks (STORE-026, STORE-027, D-116);
-unprivileged release (D-117); development runs (PRIV-004). The frozen design is under
+run modes and acquisition authority (AUTH-009, AUTH-017); the Full Audit store and report
+(AUTH-022, AUTH-032); development runs (PRIV-004). The frozen design is under
 [docs/architecture](architecture/).

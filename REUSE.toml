@@ -73,6 +73,21 @@ precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
 SPDX-License-Identifier = "MPL-2.0"
 
+# D-83: the governance manifest, and the marker a release export carries (IQ-069), both in
+# sha256sum format read by check_governance.py.
+[[annotations]]
+path = ["docs/development/GOVERNANCE_MANIFEST.sha256", "docs/development/PUBLIC_EXPORT.sha256"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
+SPDX-License-Identifier = "MPL-2.0"
+
+# OUT-001: the exit-code source, strict JSON read by check_exitcodes.py.
+[[annotations]]
+path = ["lib/isedraf/exitcodes.json"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
+SPDX-License-Identifier = "MPL-2.0"
+
 # Package metadata templates: consumed verbatim by dpkg/rpm, which reject unknown fields.
 # The built packages state MPL-2.0 in their own metadata and ship the licence text.
 # packaging/deb/copyright is itself a DEP-5 licence declaration; an SPDX comment header

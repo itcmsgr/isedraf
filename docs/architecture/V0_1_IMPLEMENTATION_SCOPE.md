@@ -318,6 +318,11 @@ as a "full host audit". `SCOPE-071` and `SCOPE-072` are unchanged.
 message *"Privileged execution is not supported in ISEDRAF 0.1. Run ISEDRAF as your normal user. Evidence requiring elevated privilege is reported as NOT_TESTED."*,
 exit `70` (`SCOPE-076`). This is temporary and explicit, not a silent degradation.
 
+**Amended for v0.2 by D-124.** From v0.2, `sudo isedraf audit` with no further argument enters
+the Full Audit route of `AUTH-019` (`docs/architecture/FULL_AUDIT_AUTHORITY_MODEL.md`) on a supported
+systemd platform. Every other invocation as root or through sudo still refuses with exit `70`, with the
+message `AUTH-019` fixes. The W1 and GA 0.1.x behaviour above is unchanged for those releases.
+
 **SCOPE-072 (owner directive) SHALL** The privileged execution model — sandbox, root supervisor, capability
 ceiling, pre/post privileged collection, engine privilege reduction, SELinux enforcing — is
 **`DEFERRED_TO_FREEZE_SET_2`** and SHALL be proven against real Linux behaviour in the VM corpus rather

@@ -430,8 +430,21 @@ v0.1  Evidence Foundation - RELEASED 2026-09-28
       Python standard-library engine; user-mode production store; `isedraf audit`;
       committed evidence; first report; DEB/RPM; upgrade, reboot and uninstall proven.
       No privileged component and no compiled code.
+      Corrections: 0.1.1 (2026-10-06), 0.1.2 (2026-10-08, latest): the v0.2 P1-P3
+      truth fixes, registry truth and evidence limits, all unprivileged.
 
-v0.2  Evidence Authority - Full Audit (D-118)
+v0.2  Evidence Authority - Full Audit (D-118) - IN ENGINEERING, NOT RELEASED
+      Status 2026-10-08: P0-P6 done; the supervisor and Full Audit route are built;
+      read_shadow_v1 is implemented and corpus-validated; OD-06 is closed. AUTH-025,
+      amended 2026-10-09, admits one new operation at a time, validated by the owner in a
+      frozen order, and grants no capability. The host mount table needs no privileged
+      operation (IQ-055) and is fixed in the engine. read_sudoers_graph_v1,
+      read_sshd_declared_config_v1 and resolve_sshd_effective_config_v1 (the global
+      effective configuration only) are implemented and corpus-validated; the admission
+      order is complete.
+      Deferred past v0.2: inspect_mount_namespaces_v1 (PLANNED) and read_authorized_keys_v1
+      (DESIGN_OPEN); Full Audit does not collect other users' authorized_keys.
+      The canonical status table is in `docs/CURRENT_STATE.md`.
       root supervisor, systemd sandbox, a dedicated non-login isedraf identity for the
       engine, authority classes, bounded one-run IPC, root-only acquisition, and the
       system production store. It also fixes the evidence contract v0.3 consumes:
@@ -537,6 +550,18 @@ Content that belongs to a third party - benchmark text, rules, mappings - enters
 under the licensing modes above (validated open mappings, provider-authorized BYOL); this
 lane never copies it.
 
+**External context, recorded 2026-10-09 (not a decision).** CIS and SAFECode published *Secure by
+Design v1.1: A Guide to Assessing Software Security Practices* (July 2026). It builds on the NIST
+Secure Software Development Framework and maps its practices to the CIS Controls, SAFECode
+Development Groups, organizational roles and the development artifacts that demonstrate them, with
+expanded coverage of AI-assisted development. CIS also published the CIS MCP Server Benchmark v1.0.0 in September 2026. Both point toward
+assessment from evidence rather than self-attestation. They change nothing in v0.2: D-111 and D-112
+already keep native assurance independent of any mapping, and any CIS use stays subject to OD-08 and
+the clean-room rule (D-63). For this lane they are candidates to assess, alongside CISA Secure by
+Design and the EU Cyber Resilience Act, not destinations; v1.1 assesses how software is produced, so
+it applies most directly to ISEDRAF's own development evidence, not to host assessment. The
+framework-pack design records the one open question this raised, user-supplied framework import.
+
 **Project-level criteria that can be verified before any product standard.** Some
 evidence already exists and is recorded in `../CURRENT_STATE.md`: code scanning, the
 OpenSSF Scorecard workflow, a software bill of materials, a reproducible build and build
@@ -554,6 +579,9 @@ The absence of a locally detectable external agent is never reported as the abse
 
 ## Blocking open decisions
 
-**OD-01 — public project name.** Blocks any public release; an existing cybersecurity company uses
-"ISEDRAF". **OD-07** repository hosting and package signing-key custody · **OD-09** release signing ·
+**OD-01 — public project name.** Resolved 2026-09-18 by D-108: the name is ISEDRAF. It blocked the
+first public release until it was resolved; it does not block the published 0.1.x releases. Still
+open, and separate from OD-01: D-108 records formal EUIPO / WIPO / USPTO trademark clearance as
+required before public release, and the register records neither that clearance nor a waiver. That
+is an owner item. **OD-07** repository hosting and package signing-key custody · **OD-09** release signing ·
 **OD-11** documentation publishing. Full list in `../architecture/INTERNAL_RECORDS.md`.

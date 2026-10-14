@@ -59,6 +59,10 @@ no interpreter is installed, bundled or downgraded by this package.
 %install
 install -d -m 0755 %{buildroot}%{_bindir} %{buildroot}%{_prefix}/lib/isedraf
 install -m 0755 bin/isedraf %{buildroot}%{_bindir}/isedraf
+# AUTH-027 (D-124): the Full Audit state root is %ghost - never payload truth, so rpm never
+# repairs it - and is created in %post only when nothing exists at the path.
+# D-60 as amended by AUTH-012: one sysusers file.
+install -D -m 0644 packaging/sysusers/isedraf.conf %{buildroot}%{_prefix}/lib/sysusers.d/isedraf.conf
 cp -a lib/isedraf/. %{buildroot}%{_prefix}/lib/isedraf/
 find %{buildroot}%{_prefix}/lib/isedraf -name '__pycache__' -prune -exec rm -rf {} + || :
 find %{buildroot} -name '*.pyc' -delete || :
@@ -78,13 +82,34 @@ for guide in GETTING_STARTED EVIDENCE_MODEL AUDITOR_GUIDE REPORT_GUIDE SECURITY_
     install -m 0644 docs/$guide.md %{buildroot}%{_docdir}/isedraf/docs/$guide.md
 done
 
+%post
+# D-60 as amended by AUTH-012: declare the isedraf account from the sysusers file, as the
+# distribution's sysusers macros do. Nothing else.
+if [ -x /usr/bin/systemd-sysusers ]; then /usr/bin/systemd-sysusers isedraf.conf || :; fi
+# AUTH-027: create the state root only when NOTHING exists at the path (a dangling symlink
+# exists); never modify, normalize, replace, remove, chmod or chown an existing path. mkdir,
+# not install -d, so a racing object is left untouched. The launcher decides acceptability.
+if [ ! -e /var/lib/isedraf ] && [ ! -L /var/lib/isedraf ]; then mkdir -m 0700 /var/lib/isedraf || :; fi
+
 %files
 %{_bindir}/isedraf
 %{_prefix}/lib/isedraf
+%{_prefix}/lib/sysusers.d/isedraf.conf
+%ghost %dir %attr(0700,root,root) /var/lib/isedraf
 %doc %{_docdir}/isedraf
 
 %changelog
-* Thu Oct 08 2026 Antonios Voulvoulis <contact@itcms.gr> - @VERSION@-@RELEASE@
+* Mon Oct 12 2026 Antonios Voulvoulis <contact@itcms.gr> - @VERSION@-@RELEASE@
+- 0.2.0: Full Audit (sudo isedraf audit) collects evidence a standard audit cannot read
+  through four fixed privileged operations, with the engine unprivileged; sudo isedraf
+  report renders it read-only.
+
+* Mon Oct 12 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.2.0-0.rc1
+- 0.2.0 release candidate: Full Audit (sudo isedraf audit) collects evidence a standard
+  audit cannot read through four fixed privileged operations, with the engine unprivileged;
+  sudo isedraf report renders it read-only.
+
+* Thu Oct 08 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.1.2-1
 - 0.1.2, a correction release: incomplete collection is reported as not observed instead
   of absent or complete, and each audit records its evidence limits.
 

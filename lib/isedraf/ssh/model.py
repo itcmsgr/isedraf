@@ -39,6 +39,8 @@ from ..shared import result
 DIRECTIVE = "DIRECTIVE"
 MATCH = "MATCH"
 UNSUPPORTED = "UNSUPPORTED"
+# AUTH-031: one line of `sshd -T`, the global effective configuration (Full Audit only).
+RESOLVED_SETTING = "RESOLVED_SETTING"
 
 GLOBAL = "GLOBAL"
 MATCH_SCOPE = "MATCH"
@@ -62,6 +64,10 @@ CLASSIFICATION = {
     "scope": result.STATE, "match_index": result.STATE,
     "match_criteria": result.STATE, "criteria": result.STATE,
     "raw_digest": result.STATE,
+    # AUTH-031, IQ-064: the position of a setting among the lines with the same keyword.
+    # The order of a repeated directive is meaning (overlapping listen addresses bind
+    # first-come), so it is state; the position in the whole output is not.
+    "occurrence": result.STATE,
     "source_path": result.PROVENANCE, "source_line": result.PROVENANCE,
     "ordinal": result.PROVENANCE, "reason": result.PROVENANCE,
 }
@@ -74,3 +80,22 @@ LIMITATION = (
 
 NOT_COLLECTED = ("sshd -T", "sshd -T -C", "running sshd process state",
                  "authorized_keys")
+
+# Full Audit (AUTH-031): sshd -T runs once, fixed, through the supervisor. What it gives is
+# the GLOBAL effective configuration: Match blocks are applied only with a connection
+# context (-C), which this operation never has.
+RESOLVED_SCOPE = "GLOBAL_EFFECTIVE_SSHD_CONFIGURATION"
+SUPERVISED_SCOPE = "DECLARED_SSHD_CONFIGURATION + %s" % RESOLVED_SCOPE
+SUPERVISED_DIMENSION = "%s + %s" % (DECLARED, RESOLVED)
+SUPERVISED_LIMITATION = (
+    "Declared sshd configuration from sshd_config and the files it includes, and the global "
+    "effective configuration from sshd -T. The global effective configuration is what sshd "
+    "computes when no connection is known: it does not resolve Match blocks, so it is not "
+    "the effective configuration of any particular connection, and Match-dependent values "
+    "are NOT_TESTED. The Match blocks themselves are recorded as declared context. sshd -T "
+    "re-reads the configuration on disk; what a running sshd loaded is not observed.")
+SUPERVISED_NOT_COLLECTED = ("sshd -T -C", "running sshd process state", "authorized_keys")
+CONNECTION_CONTEXT_REASON = (
+    "NO_CONNECTION_CONTEXT: sshd -T ran without -C, so Match blocks were not applied; "
+    "Match-dependent values are not resolved and no absence of Match restrictions is "
+    "claimed (SCOPE-020, AUTH-031).")

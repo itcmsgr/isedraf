@@ -47,7 +47,8 @@ IMPLEMENTED_STATES = ("IMPLEMENTED", "CERTIFIED")
 NOT_APPLICABLE = "NOT_APPLICABLE"
 #: full_audit_gain is derived from scripts/ci/privileged_operations.json (D-123): what the
 #: registered fixed operations serving the section would add. Never narrative.
-GAIN = ("NONE", "PLANNED_FIXED_OPERATION", "DESIGN_OPEN_OPERATION", NOT_APPLICABLE)
+GAIN = ("NONE", "IMPLEMENTED_FIXED_OPERATION", "PLANNED_FIXED_OPERATION",
+        "DESIGN_OPEN_OPERATION", NOT_APPLICABLE)
 #: Output flags that make a distinct public surface of a command.
 OUTPUT_FLAGS = ("--json", "--html")
 #: The snapshot core is a section too, though it is not one of the audit sections.
@@ -101,7 +102,9 @@ def cli_surfaces(source=None):
 
 def _gain(section, operations):
     serving = [o for o in operations if o["serves"] == section]
-    if any(o["status"] in ("PLANNED", "IMPLEMENTED") for o in serving):
+    if any(o["status"] == "IMPLEMENTED" for o in serving):
+        return "IMPLEMENTED_FIXED_OPERATION"
+    if any(o["status"] == "PLANNED" for o in serving):
         return "PLANNED_FIXED_OPERATION"
     if any(o["status"] == "DESIGN_OPEN" for o in serving):
         return "DESIGN_OPEN_OPERATION"
@@ -268,6 +271,13 @@ def render():
            "| Execution model | %s |" % r["runtime"]["execution_model"],
            "| Runtime dependencies | %s |" % r["runtime"]["dependencies"],
            ""]
+
+    out += ["## Releases and engineering status", "",
+            "Engineering status is not a release: an item marked NOT RELEASED is in no "
+            "published package.", "",
+            "| Item | Status |", "|---|---|"]
+    out += ["| %s | %s |" % (item, status) for item, status in r["release_line"]]
+    out += [""]
 
     out += ["## Implemented", "",
             "What exists and runs today. Nothing else on this page does.", "",

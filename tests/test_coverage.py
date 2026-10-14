@@ -258,8 +258,28 @@ class RootIsNotCompleteness(unittest.TestCase):
 class NoUnproducibleMode(unittest.TestCase):
     """Ruling D: nothing may be frozen that production cannot emit."""
 
-    def test_only_one_mode_exists(self):
-        self.assertEqual(coverage.MODES, (coverage.MODE_CURRENT_IDENTITY,))
+    def test_the_supervisor_mode_is_admitted_exactly_while_an_operation_is_implemented(self):
+        # AUTH-007: admitted when a mechanism produces it, and only then (v0.2 P5c).
+        import json, pathlib
+        registry = json.loads((pathlib.Path(__file__).resolve().parent.parent / "scripts" /
+                               "ci" / "privileged_operations.json").read_text())
+        implemented = [o for o in registry["operations"] if o["status"] == "IMPLEMENTED"]
+        expected = (coverage.MODE_CURRENT_IDENTITY,) + (
+            (coverage.MODE_SUPERVISOR_FIXED_OPERATION,) if implemented else ())
+        self.assertEqual(coverage.MODES, expected)
+
+    def test_only_an_operation_id_produces_the_supervisor_mode(self):
+        plain = coverage.source("accounts", "etc/shadow", "COLLECTED", coverage.READ_OK,
+                                coverage.OP_FILE_READ)
+        self.assertNotIn("acquisition_mode", plain)
+        supervised = coverage.source("accounts", "etc/shadow", "COLLECTED", coverage.READ_OK,
+                                     coverage.OP_FILE_READ, operation_id="read_shadow_v1")
+        self.assertEqual((supervised["acquisition_mode"], supervised["operation_id"]),
+                         (coverage.MODE_SUPERVISOR_FIXED_OPERATION, "read_shadow_v1"))
+        for bad in ("read_shadow", "cat /etc/shadow", ""):
+            with self.assertRaises(ValueError):
+                coverage.source("accounts", "etc/shadow", "COLLECTED", coverage.READ_OK,
+                                coverage.OP_FILE_READ, operation_id=bad)
 
     def test_an_elevated_mode_is_not_in_the_vocabulary(self):
         self.assertFalse(hasattr(coverage, "MODE_ELEVATED"))
@@ -276,7 +296,8 @@ class NoUnproducibleMode(unittest.TestCase):
             # A token that STARTS with MODE_; NSS_MODE_NOT_ASSERTED (IQ-036) is an account
             # reason code in another namespace, not a coverage mode.
             for token in re.findall(r"(?<![A-Za-z0-9_])MODE_[A-Z_]+", line):
-                self.assertIn(token, ("MODE_CURRENT_IDENTITY", "MODES"),
+                self.assertIn(token, ("MODE_CURRENT_IDENTITY", "MODE_SUPERVISOR_FIXED_OPERATION",
+                                      "MODES"),
                               "production names %s, which is not producible" % token)
 
     def test_an_invented_mode_is_refused(self):

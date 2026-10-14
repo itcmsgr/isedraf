@@ -20,14 +20,15 @@ Python's standard library is enough.
 
 ## Five things to read first
 
-1. **Privilege level.** ISEDRAF 0.1 always reports UNPRIVILEGED. Anything that needs root
-   was not observed.
-2. **Overall evidence status.** COLLECTED, PARTIAL or ERROR. PARTIAL is normal for an
-   unprivileged run.
-3. **Evidence class.** USER_PRODUCTION is a normal run. DEV is a development run and is not
-   production evidence.
+1. **Privilege level and run mode.** UNPRIVILEGED for a standard audit, where anything
+   that needs root was not observed; FULL_AUDIT for `sudo isedraf audit`, where the report
+   also says which sources the four fixed privileged operations read.
+2. **Overall evidence status.** COLLECTED, PARTIAL or ERROR. PARTIAL is normal on a real
+   host, in either mode.
+3. **Evidence class.** USER_PRODUCTION is a standard audit, SYSTEM_PRODUCTION a Full Audit.
+   DEV is a development run and is not production evidence.
 4. **Verification line.** The report states whether the digests, bindings and ledger chain
-   held when it was rendered.
+   held when it was rendered, and, for a Full Audit report, which evidence it re-verified.
 5. **Each area's status and reason.** A reason tells you exactly what was not read and why,
    for example `SOURCE_UNREADABLE: /etc/sudoers could not be read.`
 
@@ -122,7 +123,10 @@ If you have access to the host, compare with the source file, for example
 These limits hold for every run. They are not caveats to skip.
 
 - **An accepted baseline is not a secure host.** When baselines arrive, accepting one will
-  record a decision, not a security judgement. ISEDRAF 0.1 has no baselines at all.
+  record a decision, not a security judgement. ISEDRAF 0.2 has no baselines at all.
+- **The SSH global effective configuration is not every connection's.** `sshd -T` without
+  a connection context does not apply `Match` blocks; those values are reported as not
+  resolved, and the `Match` blocks themselves are in the declared configuration.
 - **No observed change does not mean uncompromised.** ISEDRAF reads what userspace and the
   kernel expose. Someone with root can alter those sources, the logs, the evidence store
   and ISEDRAF itself.
@@ -138,11 +142,12 @@ These limits hold for every run. They are not caveats to skip.
   is signed.
 
 [Security and limitations](SECURITY_AND_LIMITATIONS.md) lists everything outside the
-scope of ISEDRAF 0.1.
+scope of ISEDRAF 0.2.
 
 ## Questions worth asking the operator
 
-- Was this run made on the host it names, as a normal user, without `ISEDRAF_STATE_ROOT`?
+- Was this run made on the host it names, without `ISEDRAF_STATE_ROOT`, and in which run
+  mode?
 - Are there later runs, and why was this one chosen?
 - Who else can read or write the evidence store, and who has root on the host?
 - Which areas were NOT_TESTED, and is there other evidence for them?

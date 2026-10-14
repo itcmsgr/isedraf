@@ -728,6 +728,10 @@ exactly one `state_root` literal, and the literal names the class:
 | `USER_PRODUCTION` | `"USER_PRODUCTION"` | `$XDG_STATE_HOME/isedraf/` when `XDG_STATE_HOME` is an absolute path, otherwise `~/.local/state/isedraf/` | the invoking UID; directories 0700, files 0600 | UNPRIVILEGED |
 | `SYSTEM_PRODUCTION` | `"SYSTEM_PRODUCTION"` | `/var/lib/isedraf/` (`STORE-001`) | root; 0700 | privileged, `DEFERRED_TO_FREEZE_SET_2` (`SCOPE-072`) |
 
+**Amended for v0.2 by D-124.** The `SYSTEM_PRODUCTION` row is no longer deferred: its owners,
+modes, creators and writers are fixed by `AUTH-022`, its run mode is `FULL_AUDIT` (`AUTH-018`), and it
+is written only through the route of `AUTH-019`.
+
 Each root holds `STORE-001`'s layout, within the subset `STORE-025` permits; it is not restated here.
 The class is fixed by how the root was selected, never inferred from a path, and never changes during
 a run. A relative `XDG_STATE_HOME` is ignored. `USER_PRODUCTION` is never selected under euid 0 or

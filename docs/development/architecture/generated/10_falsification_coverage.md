@@ -22,7 +22,7 @@ GENERATED from `scripts/ci/falsifiable.sh`. A large total is not coverage if mos
 | privacy / disclosure | 30 |
 | licensing / framework | 21 |
 | packaging / release | 10 |
-| governance / gates | 8 |
+| governance / gates | 9 |
 | docs truth | 7 |
-| other / cross-cutting | 235 |
-| **total** | **401** |
+| other / cross-cutting | 350 |
+| **total** | **517** |

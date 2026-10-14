@@ -24,6 +24,11 @@ import json
 import os
 
 from . import canonical, ledger, snapshot as snapshot_mod, stateroot
+from .supervisor import contracts
+
+# AUTH-017. Recognised here only to refuse it out of place; coverage.MODES admits it
+# when an operation is IMPLEMENTED (AUTH-007), and nothing here produces it.
+SUPERVISOR_ACQUISITION = "SUPERVISOR_FIXED_OPERATION"
 
 
 def _reserialize(obj):
@@ -83,7 +88,51 @@ def verify_snapshot(snapshot_dir):
     if "host_id" not in core:
         problems.append("%s: SNAP-023 manifest_core has no host_id key" % snapshot_dir)
     problems.extend(_auxiliary(snapshot_dir, core))
+    problems.extend(_authority(snapshot_dir, core))
     return problems
+
+
+def _authority(snapshot_dir, core):
+    """AUTH-017 and AUTH-018 (D-124). Refused, never repaired.
+
+    The run mode, when recorded, is one of the two values and pairs with the class. Every
+    source in the bound Evidence Limits Manifest then agrees with it: a supervisor
+    acquisition only in a FULL_AUDIT run and only under the exact identifier of an
+    operation this version has IMPLEMENTED; anything else carries a null operation_id.
+    A snapshot without run_mode (GA 0.1.x, W1-A) is "not recorded", which is never
+    FULL_AUDIT.
+    """
+    out = []
+    run_mode = core.get("run_mode")
+    if "run_mode" in core:
+        if run_mode not in stateroot.RUN_MODES:
+            out.append("%s: AUTH-018 run_mode %r is not a run mode" % (snapshot_dir, run_mode))
+        elif run_mode != stateroot.RUN_MODE_OF_CLASS.get(core.get("state_root")):
+            out.append("%s: AUTH-018 run_mode %s cannot pair with state_root %r"
+                       % (snapshot_dir, run_mode, core.get("state_root")))
+    if "coverage/evidence_limits.json" not in (core.get("auxiliary_artifacts") or {}):
+        return out
+    try:
+        with open(os.path.join(snapshot_dir, "coverage", "evidence_limits.json"), "rb") as fh:
+            limits = json.loads(fh.read())
+        sources = list(limits.get("sources", []))
+    except (OSError, ValueError, AttributeError, TypeError):
+        return out + ["%s: AUTH-017 the bound evidence limits cannot be read" % snapshot_dir]
+    for entry in sources:
+        mode = entry.get("acquisition_mode") if isinstance(entry, dict) else None
+        oid = entry.get("operation_id") if isinstance(entry, dict) else None
+        where = "%s: AUTH-017 source %s/%s" % (
+            snapshot_dir, entry.get("domain") if isinstance(entry, dict) else "?",
+            entry.get("source") if isinstance(entry, dict) else "?")
+        if mode == SUPERVISOR_ACQUISITION:
+            if run_mode != stateroot.FULL_AUDIT:
+                out.append("%s was acquired by the supervisor outside a FULL_AUDIT run" % where)
+            if contracts.enabled(oid) is None:
+                out.append("%s names %r, which is not an IMPLEMENTED operation" % (where, oid))
+        elif oid is not None:
+            out.append("%s carries operation_id %r without a supervisor acquisition"
+                       % (where, oid))
+    return out
 
 
 def _auxiliary(snapshot_dir, core):

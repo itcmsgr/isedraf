@@ -85,8 +85,54 @@ def _records(e):
     return [("Records observed", len((e or {}).get("records") or []))]
 
 
+MATCH_NOT_RESOLVED = ("not resolved by this audit: sshd -T ran without a connection context, "
+                      "so Match blocks were not applied; the Match blocks are recorded as "
+                      "declared configuration")
+
+
+def ssh_dimensions(e):
+    """AUTH-031: [(dimension, collection status, detail)] for an ssh section with a resolved
+    dimension, else None. Each dimension keeps its own status; the global effective
+    configuration is never presented as the effective configuration of every connection."""
+    provenance = (e or {}).get("provenance") or {}
+    resolved = provenance.get("resolved")
+    if not resolved:
+        return None
+    records = (e or {}).get("records") or []
+    settings = [r for r in records if r.get("kind") == "RESOLVED_SETTING"]
+    declared = provenance.get("declared") or {}
+    d_status = declared.get("status") or "NOT RECORDED SEPARATELY"
+    d_detail = "%d records" % (len(records) - len(settings))
+    if declared.get("status") not in (None, "COLLECTED") and declared.get("reason"):
+        d_detail += "; " + declared["reason"]
+    r_status = resolved.get("status")
+    r_detail = ("%d settings" % len(settings) if r_status == "COLLECTED"
+                else (resolved.get("reason") or "no reason recorded"))
+    return [("Declared configuration", d_status, d_detail),
+            ("Global effective configuration (sshd -T, global only)", r_status, r_detail),
+            ("Match-dependent (connection-specific) values", "NOT_TESTED", MATCH_NOT_RESOLVED)]
+
+
+def _ssh(e):
+    """A declared-only section renders exactly as before."""
+    dims = ssh_dimensions(e)
+    if dims is None:
+        return _records(e)
+    return [(label, "%s - %s" % (status, detail)) for label, status, detail in dims]
+
+
+def dimensions(name, section):
+    """The per-dimension rows of a section, for both formats; empty when it has none."""
+    if name != "ssh" or section.get("evidence") is None:
+        return []
+    try:
+        return ssh_dimensions(section["evidence"]) or []
+    except (AttributeError, TypeError, KeyError):
+        return []
+
+
 _SUMMARIES = {"inventory": _inventory, "accounts": _accounts, "nss": _nss,
-              "hostname": _hostname}
+              "hostname": _hostname, "ssh": _ssh}
 
 
 def summarize(name, section):

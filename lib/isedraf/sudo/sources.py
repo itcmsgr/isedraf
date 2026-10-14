@@ -41,6 +41,7 @@ import re
 from .. import textbytes
 from . import model
 
+_AT_DIRECTIVE = re.compile(r"^@include(?:dir)?(?:\s|$)")
 _ALIAS = re.compile(r"^(User_Alias|Runas_Alias|Host_Alias|Cmnd_Alias)\s+(\S+)\s*=\s*(.*)$")
 _DEFAULTS = re.compile(r"^Defaults(?:([:>@!])(\S+))?\s+(.*)$")
 _SPEC = re.compile(r"^(.+?)\s+([^\s=]+)\s*=\s*(.*)$")
@@ -60,9 +61,10 @@ def parse(text, source=None, start_ordinal=0):
         stripped = line.strip()
         if not stripped:
             continue
-        if stripped.startswith("#"):
-            # `#include` and `#includedir` are directives, not comments. They are handled
-            # by the include adapter in acquire.py; here they are simply not records.
+        if stripped.startswith("#") or _AT_DIRECTIVE.match(stripped):
+            # `#include` and `#includedir`, and their sudo 1.9 spellings `@include` and
+            # `@includedir`, are directives, not policy. They are handled by the include
+            # adapter in acquire.py; here they are simply not records (IQ-058).
             continue
         record = _line(stripped, source, line_number, ordinal, continued)
         if record["kind"] == model.UNSUPPORTED:

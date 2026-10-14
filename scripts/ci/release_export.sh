@@ -92,6 +92,18 @@ for forbidden in planning .git GITHUB_CONNECT.md CLAUDE.md \
     [ -n "$found" ] && bad "forbidden path in the export: ${found#$OUT/}"
 done
 
+# D-83 (IQ-069): the governance manifest lists CLAUDE.md, which no export carries. The export
+# says so explicitly with a marker binding the manifest and the release surface; the governance
+# gate below honours it only when every excluded path is absent. An engineering checkout never
+# has the marker, so deleting a governance file there still fails.
+( cd "$OUT" && python3 - <<'PYM'
+import hashlib, pathlib
+rels = ("docs/development/GOVERNANCE_MANIFEST.sha256", "scripts/ci/release_surface.txt")
+pathlib.Path("docs/development/PUBLIC_EXPORT.sha256").write_text("".join(
+    "%s  %s\n" % (hashlib.sha256(pathlib.Path(r).read_bytes()).hexdigest(), r) for r in rels))
+PYM
+) || bad "could not write the export marker"
+
 # A temporary history, only so the gates below can run: they resolve the repository root
 # from git, and an export with no history is not a repository. It is removed at the end.
 ( cd "$OUT" && git init -q && git add -A >/dev/null 2>&1 \
@@ -110,6 +122,9 @@ if [ "$FAIL" -eq 0 ]; then
         || bad "the export failed the documentation truth gate"
     ( cd "$OUT" && bash "$ROOT/scripts/ci/check_freeze.sh" ) \
         || bad "the export failed freeze verification"
+    # The export's own copy of the gate: it is the one the public repository runs.
+    ( cd "$OUT" && python3 scripts/ci/check_governance.py ) \
+        || bad "the export failed the governance manifest gate (D-83)"
 fi
 
 if [ "$FAIL" -eq 0 ] && [ "$BUILD" -eq 1 ]; then

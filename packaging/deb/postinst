@@ -1,0 +1,18 @@
+#!/bin/sh
+# SPDX-License-Identifier: MPL-2.0
+# SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
+#
+# D-60 as amended by AUTH-012: declare the isedraf account from the package's sysusers file,
+# exactly as debhelper's dh_installsysusers would.
+# AUTH-027 (refined 2026-10-08): create the state root only when NOTHING exists at the path (a
+# dangling symlink exists); never modify, normalize, replace, remove, chmod or chown an existing
+# path. mkdir, not install -d, so a racing object is left untouched. The launcher decides
+# whether an existing object is acceptable.
+set -e
+if [ "$1" = "configure" ] && [ -x /usr/bin/systemd-sysusers ]; then
+    /usr/bin/systemd-sysusers isedraf.conf
+fi
+if [ "$1" = "configure" ]; then
+if [ ! -e /var/lib/isedraf ] && [ ! -L /var/lib/isedraf ]; then mkdir -m 0700 /var/lib/isedraf || :; fi
+fi
+exit 0
