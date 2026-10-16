@@ -17,10 +17,7 @@ It is not a general writing guide.
 **ISEDRAF** — one word, all capitals. Never `Isedraf`, `IseDraf`, `ISE-DRAF` or `ise draf`.
 The CLI and package identifier is lowercase `isedraf`.
 
-OD-01 is resolved (D-108): ISEDRAF is the project name. Formal trademark clearance is still
-outstanding. It is an open owner item, to be resolved before the v0.2 release; it does not
-retroactively invalidate the published 0.1.x releases. Public-facing pages say so once, near the top;
-they do not repeat the disclaimer in every paragraph. The command is lowercase: `isedraf`.
+OD-01 is resolved (D-108): ISEDRAF is the project name. The command is lowercase: `isedraf`.
 
 ## Voice
 
