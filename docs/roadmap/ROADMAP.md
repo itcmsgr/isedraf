@@ -580,8 +580,6 @@ The absence of a locally detectable external agent is never reported as the abse
 ## Blocking open decisions
 
 **OD-01 — public project name.** Resolved 2026-09-18 by D-108: the name is ISEDRAF. It blocked the
-first public release until it was resolved; it does not block the published 0.1.x releases. Still
-open, and separate from OD-01: D-108 records formal EUIPO / WIPO / USPTO trademark clearance as
-required before public release, and the register records neither that clearance nor a waiver. That
-is an owner item. **OD-07** repository hosting and package signing-key custody · **OD-09** release signing ·
+first public release until it was resolved; it does not block the published 0.1.x releases.
+**OD-07** repository hosting and package signing-key custody · **OD-09** release signing ·
 **OD-11** documentation publishing. Full list in `../architecture/INTERNAL_RECORDS.md`.

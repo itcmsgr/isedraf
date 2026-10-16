@@ -131,18 +131,11 @@ Falsifying that history would be worse than an inconsistent string.
 Active instructions never treat the old name as current product identity, and `check-refs`/`check-paths`
 scan only the active tree. The earlier name was an internal codename; ISEDRAF is the project name (D-108).
 
-## KGG-008 — Trademark clearance outstanding
+## KGG-008 — Withdrawn 2026-10-15
 
-**State:** `NOT_CLEARED`
+**State:** `CLOSED`
 
-`NAME_STATUS = FINALIST — CLEARED FOR PROJECT USE`. Preliminary technical and brand clearance passed with
-no exact software, company, package, domain or obvious trademark collision. The near-name **ISEDRA** — an
-active Cyprus company with no observed software or security activity, and a fashion product name — is
-recorded rather than ignored, because one letter of distance deserves a formal opinion rather than an
-assumption.
-
-**Formal EUIPO / WIPO / USPTO / TMview clearance is required before public release.** D-90 already blocks
-public release; this is the remaining condition on it.
+Withdrawn by the owner (D-108, amended 2026-10-15); no longer tracked.
 
 ## KGG-009 — `actions/setup-python` pinned by tag — CLOSED 2026-09-18
 

@@ -297,10 +297,10 @@ Until v0.2 is
 released, public documentation states that the published 0.1.x packages do not include Full Audit
 (IQ-051).
 
-**Before P7 (owner direction 2026-10-09).** v0.2 is not released until all five hold: every
+**Before P7 (owner direction 2026-10-09).** v0.2 is not released until all four hold: every
 intended v0.2 operation is validated; the `AUTH-025` admission chain is satisfied (release mode
-passes); the public documentation is updated for Full Audit (IQ-051); the trademark governance
-item OD-17 is resolved; and the launcher defect IQ-062 is fixed and proven on EL9.
+passes); the public documentation is updated for Full Audit (IQ-051); and the launcher defect
+IQ-062 is fixed and proven on EL9.
 
 **IQ-062 (owner direction 2026-10-09): a v0.2 blocker, fixed before any further Full Audit lab
 validation.** On AlmaLinux 9 the launcher's `systemd-run --pipe`, handed a caller's regular-file
