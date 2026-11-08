@@ -68,6 +68,17 @@ def _under_sudo():
     return bool(os.environ.get("SUDO_USER"))
 
 
+def check_unprivileged(environ=None, euid=None):
+    """SCOPE-071's refusal, on its own: `isedraf explain` needs no state root (EVAL-001)
+    but is refused under root exactly as every other unrouted invocation is (AUTH-032)."""
+    environ = os.environ if environ is None else environ
+    euid = os.geteuid() if euid is None else euid
+    if euid == 0 or bool(environ.get("SUDO_USER")):
+        raise PrivilegeRefused(
+            "Privileged execution is not supported in ISEDRAF 0.1. Run ISEDRAF as your "
+            "normal user. Evidence requiring elevated privilege is reported as NOT_TESTED.")
+
+
 def resolve(environ=None, euid=None):
     """Returns (path, state_root_class).
 
@@ -76,11 +87,7 @@ def resolve(environ=None, euid=None):
     produces is marked DEV so it can never be mistaken for production evidence.
     """
     environ = os.environ if environ is None else environ
-    euid = os.geteuid() if euid is None else euid
-    if euid == 0 or bool(environ.get("SUDO_USER")):
-        raise PrivilegeRefused(
-            "Privileged execution is not supported in ISEDRAF 0.1. Run ISEDRAF as your "
-            "normal user. Evidence requiring elevated privilege is reported as NOT_TESTED.")
+    check_unprivileged(environ, euid)
     override = environ.get(ENV_STATE_ROOT)
     if override:
         if not os.path.isabs(override):

@@ -1,0 +1,771 @@
+{
+  "$comment": "The ISEDRAF NATIVE CONTROL CATALOG registry: the one record of every native criterion (D-111, D-125). Authority for the ISE-* namespace. Installed with the package; read by the evaluator, isedraf explain, the report and the generated pages, and by scripts/ci/check_native_catalog.py, which requires this file and docs/architecture/NATIVE_CONTROL_CATALOG.md to agree - two authorities that can disagree are how a namespace drifts. Criteria are admitted by owner amendment; the owner admitted the first, ISE-ACCOUNT-001, on 2026-11-01 (D-111). Admission authors the record only: whether an evaluator implements a criterion is stated by the status registry, not here. There is no other copy, in the repository or in a package (D-125).",
+  "catalog_version": 1,
+  "namespace_pattern": "^ISE-[A-Z]+-[0-9]{3}$",
+  "families": {
+    "ISE-ASSET":   "asset and host inventory",
+    "ISE-SW":      "software and package state",
+    "ISE-ACCOUNT": "user, service and administrative accounts",
+    "ISE-AUTH":    "authentication",
+    "ISE-PRIV":    "sudo and privilege",
+    "ISE-SSH":     "SSH posture",
+    "ISE-SVC":     "service exposure and state",
+    "ISE-KERNEL":  "sysctl and kernel security",
+    "ISE-LOG":     "audit and logging",
+    "ISE-TIME":    "clock and time synchronization",
+    "ISE-CRYPTO":  "cryptographic posture",
+    "ISE-STORAGE": "filesystem, storage and mount security",
+    "ISE-NET":     "network configuration",
+    "ISE-UPDATE":  "update and support posture"
+  },
+  "check_types": {
+    "ISE-ASSET": [], "ISE-SW": [], "ISE-ACCOUNT": ["local account identity", "local credential storage"], "ISE-AUTH": ["password hashing policy"], "ISE-PRIV": [],
+    "ISE-SSH": ["effective daemon configuration"], "ISE-SVC": [], "ISE-KERNEL": [], "ISE-LOG": [], "ISE-TIME": [],
+    "ISE-CRYPTO": [], "ISE-STORAGE": [], "ISE-NET": [], "ISE-UPDATE": []
+  },
+  "$check_types_comment": "D-111 extended 2026-10-14: the groups a criterion's check_type may name, per family. ISEDRAF-authored names, never a framework's categories. Empty until criteria are authored; declaring a check type authors no criterion. 2026-11-01: ISE-ACCOUNT declares \"local account identity\".",
+  "reserved_families": {
+    "ISE-IDENT": "RESERVED, NOT IN USE. An earlier draft of the namespace used ISE-IDENT-* for accounts. Host IDENTITY (machine-id, host_id) and user ACCOUNTS are different domains, and one prefix meaning both would have been a permanent source of confusion. Accounts are ISE-ACCOUNT-*. ISE-IDENT stays reserved so it cannot be reused for something else and so the earlier draft resolves to an explanation rather than to silence."
+  },
+  "required_criterion_fields": [
+    "criterion_id", "purpose", "rationale", "check_type", "facts_required", "dimensions",
+    "evaluation_semantics", "applicability", "limitations", "evidence_pointers", "version",
+    "default_severity"
+  ],
+  "optional_criterion_fields": ["manual_verification", "remediation_guidance"],
+  "result_states": ["PASS", "FAIL", "NOT_APPLICABLE", "MANUAL_REVIEW", "NOT_EVALUATED"],
+  "severity_levels": ["critical", "high", "medium", "low"],
+  "retired_criteria": [],
+  "$retired_criteria_comment": "D-111 extended 2026-10-14: withdrawn criteria, each {criterion_id, last_version, retired_on}. An ID here is never reused and never reappears among the active criteria.",
+  "criteria": [
+    {
+      "criterion_id": "ISE-ACCOUNT-001",
+      "version": 1,
+      "check_type": "local account identity",
+      "purpose": "Detect entries in the local account file /etc/passwd, as committed in the snapshot, other than the single root entry, that are assigned UID 0. The conclusion is scoped to that file.",
+      "rationale": "UID 0 is the identity the kernel treats as root, whatever the account is called. Every additional name mapped to UID 0 is another way to act with full control of the host, and actions taken under it are recorded as UID 0, which makes them hard to attribute to a person.",
+      "facts_required": [
+        "the collection status of the local passwd source (etc/passwd), decided per source by the accounts collector",
+        "whether a compat INCLUDE directive in etc/passwd widens the identity domain beyond the file",
+        "for every local passwd record: the exact name bytes and the numeric UID"
+      ],
+      "dimensions": {
+        "declared": "the local passwd file as read in the committed snapshot",
+        "resolved": "not evaluated: NSS resolution through other services is not observed",
+        "active": "not evaluated: running processes are not inspected"
+      },
+      "applicability": "Every Linux host: the local passwd file is a universal source, and the condition does not depend on the host's role or purpose (IQ-070 does not apply). This criterion never yields NOT_APPLICABLE.",
+      "evaluation_semantics": {
+        "input": "the committed, verified snapshot only: sections/accounts.json whose digest matches the snapshot manifest. Nothing is read from the live host and missing evidence is never reconstructed.",
+        "evidence_sufficient_when": [
+          "sources[\"etc/passwd\"].status is COLLECTED (the per-source status; group and shadow are not required facts, so the section's combined collection_status is not used)",
+          "remote_identity_inclusion.via_compat_directives_in does not list etc/passwd",
+          "every local passwd record carries a numeric UID and exact name bytes"
+        ],
+        "rules": [
+          {
+            "result": "NOT_EVALUATED",
+            "when": "the evidence is not sufficient (above). This includes PARTIAL, ERROR, NOT_TESTED, truncated or malformed passwd evidence, and a passwd domain widened by an INCLUDE directive. An additional UID-0 record observed in insufficient evidence is reported as an observed fact beside the result, never as FAIL."
+          },
+          {
+            "result": "PASS",
+            "when": "the evidence is sufficient and exactly one local passwd record has UID 0, and its name is exactly the bytes of \"root\" (726f6f74)."
+          },
+          {
+            "result": "FAIL",
+            "when": "the evidence is sufficient and the PASS condition does not hold: a UID-0 record whose name is not exactly \"root\", more than one UID-0 record (including a duplicate root line), or no UID-0 record."
+          }
+        ],
+        "never_produced": [
+          "NOT_APPLICABLE",
+          "MANUAL_REVIEW"
+        ],
+        "determinism": "the result is a function of the committed evidence alone; evaluating the same snapshot again yields the same result and the same evidence references."
+      },
+      "default_severity": "high",
+      "limitations": [
+        "Only /etc/passwd is evaluated. A PASS means that, in /etc/passwd as committed, root is the only entry with UID 0. It does not establish that no other UID-0 identity exists: identities from other NSS services (LDAP and other directory services, SSSD, NIS maps), containers, user namespaces or any other identity source are not observed and are not covered.",
+        "Whether NSS consults the local file is reported beside the result (nss_file_effectiveness) and does not change it.",
+        "The criterion concerns account entries, not processes: a process running as UID 0 is not observed here.",
+        "Names are compared as exact bytes; a look-alike name is not root."
+      ],
+      "evidence_pointers": [
+        {
+          "artifact": "manifest.json",
+          "pointer": "/manifest_core/auxiliary_artifacts/sections~1accounts.json",
+          "role": "the digest that binds the accounts section"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/sources/etc~1passwd/status",
+          "role": "per-source collection status"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/remote_identity_inclusion/via_compat_directives_in",
+          "role": "identity domain widened beyond the file"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/local_accounts/<i>/uid",
+          "role": "numeric UID of each record"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/local_accounts/<i>/name_bytes_hex",
+          "role": "exact name of each record"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/local_accounts/<i>/passwd_line",
+          "role": "line number of each UID-0 record"
+        }
+      ],
+      "manual_verification": "Read-only: list the local entries with UID 0, for example with `awk -F: '$3 == 0 {print NR\": \"$1}' /etc/passwd`, and compare them with the snapshot's records. The command changes nothing.",
+      "remediation_guidance": "Guidance only; ISEDRAF changes nothing. An additional UID-0 entry is usually given its own non-zero UID or removed, after confirming which files, processes and scripts depend on it; changing the UID of an account in use can break ownership and running services, so the change is planned, not immediate."
+    },
+    {
+      "criterion_id": "ISE-ACCOUNT-002",
+      "version": 1,
+      "check_type": "local credential storage",
+      "purpose": "Detect Empty Local Shadow Password Fields: local accounts whose /etc/shadow password field, as committed, is empty and not locked. The conclusion is an observation of that field only.",
+      "rationale": "An empty password field records that no password is set for the account. Whether a login without a password is then possible depends on the authentication stack (PAM, SSH), which this criterion does not evaluate; the observed empty field is still a weakness worth knowing about.",
+      "facts_required": [
+        "the collection status of etc/passwd and etc/shadow, per source",
+        "whether a compat INCLUDE directive widens either source",
+        "for every local account: its shadow relation (PRESENT, ABSENT_FROM_COLLECTED_SOURCE, SOURCE_NOT_COLLECTED) and, when PRESENT, the redacted password state (lock_prefix, content)"
+      ],
+      "dimensions": {
+        "declared": "the local passwd and shadow files as read in the committed snapshot",
+        "resolved": "not evaluated: which field the authentication stack consults is not observed",
+        "active": "not evaluated: login attempts are not made"
+      },
+      "applicability": "Every Linux host with local accounts. Role-independent. This criterion never yields NOT_APPLICABLE.",
+      "evaluation_semantics": {
+        "input": "the committed, verified snapshot only: sections/accounts.json whose digest matches the snapshot manifest. etc/shadow is collected only by a Full Audit (read_shadow_v1); a Standard Audit records it NOT_TESTED.",
+        "evidence_sufficient_when": [
+          "sources[\"etc/passwd\"].status and sources[\"etc/shadow\"].status are COLLECTED",
+          "remote_identity_inclusion.via_compat_directives_in lists neither etc/passwd nor etc/shadow",
+          "every local account's shadow relation is PRESENT"
+        ],
+        "rules": [
+          {
+            "result": "NOT_EVALUATED",
+            "when": "the evidence is not sufficient (above). An account whose shadow relation is ABSENT_FROM_COLLECTED_SOURCE is NOT_EVALUATED, because the field the system then consults is the /etc/passwd password field, which the committed evidence does not carry (IQ-077). An empty unlocked field seen in insufficient evidence is reported as an observation, never as FAIL."
+          },
+          {
+            "result": "FAIL",
+            "when": "the evidence is sufficient and at least one account's shadow password state has content EMPTY and lock_prefix LOCK_PREFIX_ABSENT."
+          },
+          {
+            "result": "PASS",
+            "when": "the evidence is sufficient and no account's shadow password state has content EMPTY with lock_prefix LOCK_PREFIX_ABSENT. A locked field (leading '!') and the DISABLED_TOKEN ('*') are not empty fields."
+          }
+        ],
+        "never_produced": [
+          "NOT_APPLICABLE",
+          "MANUAL_REVIEW"
+        ],
+        "determinism": "the result is a function of the committed evidence alone; evaluating the same snapshot again yields the same result and the same evidence references."
+      },
+      "default_severity": "high",
+      "limitations": [
+        "The conclusion concerns the /etc/shadow password field as committed. It does not establish whether a login without a password is possible: PAM and SSH configuration are not evaluated here.",
+        "The /etc/passwd password field is not in the committed evidence (IQ-077); an account without a shadow record is therefore not evaluated.",
+        "No password, hash or salt is stored or shown; only the redacted state the collector records.",
+        "Only the local account files are evaluated. Identities from other NSS services (LDAP and other directory services, SSSD, NIS maps), containers or user namespaces are not observed and are not covered."
+      ],
+      "evidence_pointers": [
+        {
+          "artifact": "manifest.json",
+          "pointer": "/manifest_core/auxiliary_artifacts/sections~1accounts.json",
+          "role": "the digest that binds the accounts section"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/sources/etc~1passwd/status",
+          "role": "passwd collection status"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/sources/etc~1shadow/status",
+          "role": "shadow collection status"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/remote_identity_inclusion/via_compat_directives_in",
+          "role": "identity domain widened beyond the files"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/local_accounts/<i>/shadow_record",
+          "role": "shadow relation of each account"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/local_accounts/<i>/shadow/password_state",
+          "role": "redacted password state of each account"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/local_accounts/<i>/name_bytes_hex",
+          "role": "exact name of each account"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/local_accounts/<i>/passwd_line",
+          "role": "line of each account"
+        }
+      ],
+      "manual_verification": "Read-only, as root: `awk -F: '$2 == \"\" {print NR\": \"$1}' /etc/shadow` lists entries whose password field is empty. The command changes nothing and prints no password material.",
+      "remediation_guidance": "Guidance only; ISEDRAF changes nothing. An account with an empty field is usually locked or given a password, after confirming which logins or automated jobs depend on it."
+    },
+    {
+      "criterion_id": "ISE-ACCOUNT-003",
+      "version": 1,
+      "check_type": "local account identity",
+      "purpose": "Detect Duplicate Local UIDs: two or more different local account names in /etc/passwd, as committed, that share one UID. The conclusion is scoped to that file.",
+      "rationale": "The kernel knows accounts only by UID. Two names with the same UID are the same identity to every file, process and log entry, so actions under one cannot be told apart from actions under the other.",
+      "facts_required": [
+        "the collection status of etc/passwd, per source, and whether a compat INCLUDE widens it",
+        "for every local passwd record: the exact name bytes, the numeric UID and the line"
+      ],
+      "dimensions": {
+        "declared": "the local passwd file as read in the committed snapshot",
+        "resolved": "not evaluated: NSS resolution through other services is not observed",
+        "active": "not evaluated: running processes are not inspected"
+      },
+      "applicability": "Every Linux host. Role-independent. This criterion never yields NOT_APPLICABLE.",
+      "evaluation_semantics": {
+        "input": "the committed, verified snapshot only: sections/accounts.json whose digest matches the snapshot manifest. A Standard Audit is sufficient.",
+        "evidence_sufficient_when": [
+          "sources[\"etc/passwd\"].status is COLLECTED",
+          "remote_identity_inclusion.via_compat_directives_in does not list etc/passwd",
+          "every local passwd record carries a numeric UID and exact name bytes"
+        ],
+        "rules": [
+          {
+            "result": "NOT_EVALUATED",
+            "when": "the evidence is not sufficient (above). A duplicate seen in insufficient evidence is reported as an observation, never as FAIL."
+          },
+          {
+            "result": "FAIL",
+            "when": "the evidence is sufficient and two or more records with different exact name bytes have the same UID."
+          },
+          {
+            "result": "MANUAL_REVIEW",
+            "when": "the evidence is sufficient, no two different names share a UID, but one name appears on more than one line with different UIDs: which line the system resolves is a judgement this criterion does not make, so the lines are listed for a person to decide. Repeated lines of one name with the same UID are listed as an observation and do not change the result."
+          },
+          {
+            "result": "PASS",
+            "when": "the evidence is sufficient and every UID belongs to exactly one name."
+          }
+        ],
+        "never_produced": [
+          "NOT_APPLICABLE"
+        ],
+        "determinism": "the result is a function of the committed evidence alone; evaluating the same snapshot again yields the same result and the same evidence references."
+      },
+      "default_severity": "medium",
+      "limitations": [
+        "Only /etc/passwd is evaluated. A PASS means that, in /etc/passwd as committed, every UID belongs to one name; UIDs from other identity sources are not observed.",
+        "UID 0 shared by root and another name is also reported by ISE-ACCOUNT-001.",
+        "Only the local account files are evaluated. Identities from other NSS services (LDAP and other directory services, SSSD, NIS maps), containers or user namespaces are not observed and are not covered."
+      ],
+      "evidence_pointers": [
+        {
+          "artifact": "manifest.json",
+          "pointer": "/manifest_core/auxiliary_artifacts/sections~1accounts.json",
+          "role": "the digest that binds the accounts section"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/sources/etc~1passwd/status",
+          "role": "passwd collection status"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/remote_identity_inclusion/via_compat_directives_in",
+          "role": "identity domain widened beyond the file"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/local_accounts/<i>/uid",
+          "role": "numeric UID of each record"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/local_accounts/<i>/name_bytes_hex",
+          "role": "exact name of each record"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/local_accounts/<i>/passwd_line",
+          "role": "line of each record"
+        }
+      ],
+      "manual_verification": "Read-only: `cut -d: -f3 /etc/passwd | sort | uniq -d` lists UIDs that appear more than once. The command changes nothing.",
+      "remediation_guidance": "Guidance only; ISEDRAF changes nothing. Duplicate UIDs are usually resolved by giving each account its own UID, after re-owning the files of the moved account; the change affects file ownership and running processes, so it is planned."
+    },
+    {
+      "criterion_id": "ISE-ACCOUNT-004",
+      "version": 1,
+      "check_type": "local credential storage",
+      "purpose": "Detect Legacy MD5 Password Hash Schemes: local /etc/shadow entries, as committed, whose stored hash uses an MD5-based scheme (MD5_CRYPT or SUN_MD5). The conclusion concerns the stored scheme only.",
+      "rationale": "MD5-based password hashes are fast to compute, so a stolen /etc/shadow is much easier to crack. A stored MD5 hash is a weakness even on a locked account, because the hash itself is what an attacker would take.",
+      "facts_required": [
+        "the collection status of etc/passwd and etc/shadow, per source, and whether a compat INCLUDE widens either",
+        "for every local account with a shadow record: the redacted password state (content, hash_scheme)",
+        "whether shadow records exist without a passwd account (orphan_shadow_records), whose state is not recorded"
+      ],
+      "dimensions": {
+        "declared": "the local shadow file as read in the committed snapshot",
+        "resolved": "not evaluated: the hashing policy configured for new passwords is not observed",
+        "active": "not evaluated"
+      },
+      "applicability": "Every Linux host with local accounts. Role-independent. This criterion never yields NOT_APPLICABLE.",
+      "evaluation_semantics": {
+        "input": "the committed, verified snapshot only: sections/accounts.json whose digest matches the snapshot manifest. etc/shadow is collected only by a Full Audit.",
+        "evidence_sufficient_when": [
+          "sources[\"etc/passwd\"].status and sources[\"etc/shadow\"].status are COLLECTED",
+          "remote_identity_inclusion.via_compat_directives_in lists neither etc/passwd nor etc/shadow"
+        ],
+        "rules": [
+          {
+            "result": "NOT_EVALUATED",
+            "when": "the evidence is not sufficient (above); or no MD5 scheme is seen but some state cannot be classified: content OTHER, hash_scheme OTHER_RECOGNIZED_FORMAT, an account whose shadow relation is not PRESENT, or an orphan shadow record, whose state is not recorded. OTHER is never read as safe and never as DES."
+          },
+          {
+            "result": "FAIL",
+            "when": "the evidence is sufficient and at least one shadow password state has content HASH_PRESENT and hash_scheme MD5_CRYPT or SUN_MD5, locked or not."
+          },
+          {
+            "result": "PASS",
+            "when": "the evidence is sufficient, every account has a PRESENT shadow record, there is no orphan shadow record, and every HASH_PRESENT state names one of BCRYPT, SHA256_CRYPT, SHA512_CRYPT, SCRYPT, YESCRYPT or GOST_YESCRYPT. EMPTY and DISABLED_TOKEN fields carry no hash and do not affect this criterion."
+          }
+        ],
+        "never_produced": [
+          "NOT_APPLICABLE",
+          "MANUAL_REVIEW"
+        ],
+        "determinism": "the result is a function of the committed evidence alone; evaluating the same snapshot again yields the same result and the same evidence references."
+      },
+      "default_severity": "medium",
+      "limitations": [
+        "Only MD5_CRYPT and SUN_MD5 are detected. Traditional DES crypt has no recognised prefix and is recorded as content OTHER, which gives NOT_EVALUATED, not FAIL (IQ-075).",
+        "The scheme of the stored hash is evaluated, not the policy for new passwords; a FAIL does not claim that the account can log in.",
+        "No password, hash or salt is stored or shown; only the bounded scheme name the collector records.",
+        "Only the local account files are evaluated. Identities from other NSS services (LDAP and other directory services, SSSD, NIS maps), containers or user namespaces are not observed and are not covered."
+      ],
+      "evidence_pointers": [
+        {
+          "artifact": "manifest.json",
+          "pointer": "/manifest_core/auxiliary_artifacts/sections~1accounts.json",
+          "role": "the digest that binds the accounts section"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/sources/etc~1passwd/status",
+          "role": "passwd collection status"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/sources/etc~1shadow/status",
+          "role": "shadow collection status"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/remote_identity_inclusion/via_compat_directives_in",
+          "role": "identity domain widened beyond the files"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/local_accounts/<i>/shadow_record",
+          "role": "shadow relation of each account"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/local_accounts/<i>/shadow/password_state",
+          "role": "redacted password state of each account"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/local_accounts/<i>/name_bytes_hex",
+          "role": "exact name of each account"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/orphan_shadow_records",
+          "role": "shadow lines without a passwd account"
+        }
+      ],
+      "manual_verification": "Read-only, as root: `awk -F: '$2 ~ /^!?\\$(1|md5)\\$/ {print NR\": \"$1}' /etc/shadow` lists entries with an MD5-based hash. The command prints names and line numbers only, never the hash.",
+      "remediation_guidance": "Guidance only; ISEDRAF changes nothing. An MD5 hash is replaced only when the password is next set; confirming the system's default scheme for new passwords and asking the account owner to change the password removes it."
+    },
+    {
+      "criterion_id": "ISE-SSH-001",
+      "version": 1,
+      "check_type": "effective daemon configuration",
+      "purpose": "SSH Global PermitEmptyPasswords Configuration: the global value of PermitEmptyPasswords that sshd -T reports, as committed. The conclusion concerns the global configuration only, not every connection.",
+      "rationale": "When PermitEmptyPasswords is yes, the SSH server accepts a password login for an account whose password is empty. With no, it refuses such logins globally.",
+      "facts_required": [
+        "the collection status of the resolved dimension: the coverage entry whose operation_id is resolve_sshd_effective_config_v1",
+        "the resolved setting permitemptypasswords and its value",
+        "declared DIRECTIVE records with keyword permitemptypasswords and scope MATCH, as observations only"
+      ],
+      "dimensions": {
+        "declared": "observations only: Match-scoped declarations are listed, never resolved",
+        "resolved": "sshd -T without a connection context: the global effective configuration",
+        "active": "not evaluated: no connection is attempted"
+      },
+      "applicability": "Hosts where the Full Audit could run sshd -T. Role-independent. This criterion never yields NOT_APPLICABLE: an sshd absent at the fixed path /usr/sbin/sshd does not prove that no SSH server exists.",
+      "evaluation_semantics": {
+        "input": "the committed, verified snapshot only: sections/ssh.json whose digest matches the snapshot manifest. sshd -T is run only by a Full Audit (resolve_sshd_effective_config_v1).",
+        "evidence_sufficient_when": [
+          "the one coverage entry whose operation_id is resolve_sshd_effective_config_v1 has status COLLECTED",
+          "exactly one RESOLVED_SETTING record has keyword permitemptypasswords"
+        ],
+        "rules": [
+          {
+            "result": "NOT_EVALUATED",
+            "when": "the resolved dimension is not COLLECTED (including TOOL_ABSENT, a refused or failed sshd -T, and every Standard Audit), or the setting is not reported exactly once. The reason names the coverage status."
+          },
+          {
+            "result": "PASS",
+            "when": "the evidence is sufficient and the value is no. The result concerns the global configuration."
+          },
+          {
+            "result": "FAIL",
+            "when": "the evidence is sufficient and the value is yes."
+          },
+          {
+            "result": "NOT_EVALUATED",
+            "when": "the evidence is sufficient but the value is neither yes nor no."
+          }
+        ],
+        "never_produced": [
+          "NOT_APPLICABLE",
+          "MANUAL_REVIEW"
+        ],
+        "determinism": "the result is a function of the committed evidence alone; evaluating the same snapshot again yields the same result and the same evidence references."
+      },
+      "default_severity": "high",
+      "limitations": [
+        "sshd -T is run without a connection context, so Match blocks are not applied. A global no does not establish that every connection refuses empty passwords; Match-scoped PermitEmptyPasswords declarations are listed as observations and never change the result.",
+        "Only the sshd at /usr/sbin/sshd is observed; another SSH server (another path, a different implementation) is not.",
+        "Whether any account has an empty password is ISE-ACCOUNT-002, not this criterion."
+      ],
+      "evidence_pointers": [
+        {
+          "artifact": "manifest.json",
+          "pointer": "/manifest_core/auxiliary_artifacts/sections~1ssh.json",
+          "role": "the digest that binds the ssh section"
+        },
+        {
+          "artifact": "sections/ssh.json",
+          "pointer": "/evidence/provenance/coverage/<i>/status",
+          "role": "status of the coverage entry whose operation_id is resolve_sshd_effective_config_v1"
+        },
+        {
+          "artifact": "sections/ssh.json",
+          "pointer": "/evidence/provenance/coverage/<i>/operation_id",
+          "role": "the fixed operation that selects that coverage entry"
+        },
+        {
+          "artifact": "sections/ssh.json",
+          "pointer": "/evidence/records/<i>/kind",
+          "role": "RESOLVED_SETTING marks an sshd -T line; DIRECTIVE a declared one"
+        },
+        {
+          "artifact": "sections/ssh.json",
+          "pointer": "/evidence/records/<i>/keyword",
+          "role": "the setting name"
+        },
+        {
+          "artifact": "sections/ssh.json",
+          "pointer": "/evidence/records/<i>/value",
+          "role": "the setting value"
+        },
+        {
+          "artifact": "sections/ssh.json",
+          "pointer": "/evidence/records/<i>/scope",
+          "role": "the scope of a declared setting (Match observations)"
+        }
+      ],
+      "manual_verification": "Read-only, as root: `sshd -T | grep -i '^permitemptypasswords'` prints the global value; `sshd -T -C user=<name>,host=<host>,addr=<address>` shows the value for one connection context. Neither command changes anything.",
+      "remediation_guidance": "Guidance only; ISEDRAF changes nothing. Setting PermitEmptyPasswords no in sshd_config, including inside any Match block that sets it, and reloading sshd refuses such logins; check first that no automated access depends on them."
+    },
+    {
+      "criterion_id": "ISE-ACCOUNT-005",
+      "version": 1,
+      "check_type": "local account identity",
+      "purpose": "Detect Duplicate Local GIDs: two or more different group names in /etc/group, as committed, that share one GID. The conclusion is scoped to that file.",
+      "rationale": "The kernel knows groups only by GID. Two group names with the same GID are one group to every file and process, so membership and access granted under one name silently apply under the other, which blurs who was meant to have access.",
+      "facts_required": [
+        "the collection status of etc/group, per source, and whether a compat INCLUDE widens it",
+        "for every local group record: the exact name bytes, the numeric GID and the line"
+      ],
+      "dimensions": {
+        "declared": "the local group file as read in the committed snapshot",
+        "resolved": "not evaluated: NSS resolution through other services is not observed",
+        "active": "not evaluated: process credentials are not inspected"
+      },
+      "applicability": "Every Linux host. Role-independent. This criterion never yields NOT_APPLICABLE.",
+      "evaluation_semantics": {
+        "input": "the committed, verified snapshot only: sections/accounts.json whose digest matches the snapshot manifest. A Standard Audit is sufficient (/etc/group is world-readable).",
+        "evidence_sufficient_when": [
+          "sources[\"etc/group\"].status is COLLECTED",
+          "remote_identity_inclusion.via_compat_directives_in does not list etc/group",
+          "every local group record carries a numeric GID and exact name bytes"
+        ],
+        "rules": [
+          {
+            "result": "NOT_EVALUATED",
+            "when": "the evidence is not sufficient (above). A duplicate seen in insufficient evidence is reported as an observation, never as FAIL."
+          },
+          {
+            "result": "FAIL",
+            "when": "the evidence is sufficient and two or more records with different exact name bytes have the same GID."
+          },
+          {
+            "result": "MANUAL_REVIEW",
+            "when": "the evidence is sufficient, no two different names share a GID, but one name appears on more than one line with different GIDs, both lines kept in the evidence: which line the system resolves needs a person. Repeated identical entries are listed as observations and do not change the result."
+          },
+          {
+            "result": "PASS",
+            "when": "the evidence is sufficient and every GID belongs to exactly one name."
+          }
+        ],
+        "never_produced": [
+          "NOT_APPLICABLE"
+        ],
+        "determinism": "the result is a function of the committed evidence alone; evaluating the same snapshot again yields the same result and the same evidence references."
+      },
+      "default_severity": "low",
+      "limitations": [
+        "Only /etc/group is evaluated. A PASS means that, in /etc/group as committed, every GID belongs to one name; groups from LDAP, SSSD, NIS or other NSS services are not observed.",
+        "A shared GID is an identity and accountability problem; on its own it is not evidence of a privilege escalation.",
+        "Group membership and group passwords are not evaluated."
+      ],
+      "evidence_pointers": [
+        {
+          "artifact": "manifest.json",
+          "pointer": "/manifest_core/auxiliary_artifacts/sections~1accounts.json",
+          "role": "the digest that binds the accounts section"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/sources/etc~1group/status",
+          "role": "group collection status"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/remote_identity_inclusion/via_compat_directives_in",
+          "role": "identity domain widened beyond the file"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/local_groups/<i>/gid",
+          "role": "numeric GID of each record"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/local_groups/<i>/name_bytes_hex",
+          "role": "exact name of each record"
+        },
+        {
+          "artifact": "sections/accounts.json",
+          "pointer": "/evidence/local_groups/<i>/group_line",
+          "role": "line of each record"
+        }
+      ],
+      "manual_verification": "Read-only: `cut -d: -f3 /etc/group | sort | uniq -d` lists GIDs that appear more than once. The command changes nothing.",
+      "remediation_guidance": "Guidance only; ISEDRAF changes nothing. Duplicate GIDs are usually resolved by giving each group its own GID, after re-owning the files of the moved group; the change affects file access, so it is planned."
+    },
+    {
+      "criterion_id": "ISE-AUTH-001",
+      "version": 1,
+      "check_type": "password hashing policy",
+      "purpose": "Declared login.defs Password Hashing Method: evaluate the ENCRYPT_METHOD value declared in /etc/login.defs, as committed, against a narrowly defined legacy-algorithm policy (MD5 and DES are legacy), without claiming the effective PAM password hashing behaviour.",
+      "rationale": "ENCRYPT_METHOD is the hashing method that the shadow-utils tools reading login.defs use for new passwords. Declaring MD5 or DES there means passwords set by those tools are stored with a legacy, fast-to-crack hash.",
+      "facts_required": [
+        "the collection status of the LOGIN_DEFS source family",
+        "the ENCRYPT_METHOD records declared in /etc/login.defs: key, value, retention and malformed flag"
+      ],
+      "dimensions": {
+        "declared": "the ENCRYPT_METHOD value declared in /etc/login.defs as committed",
+        "resolved": "not evaluated: the method pam_unix or another tool applies is not observed",
+        "active": "not evaluated: no password is set"
+      },
+      "applicability": "Every Linux host with /etc/login.defs. Role-independent. This criterion never yields NOT_APPLICABLE.",
+      "evaluation_semantics": {
+        "input": "the committed, verified snapshot only: sections/loginpolicy.json whose digest matches the snapshot manifest. A Standard Audit is sufficient.",
+        "evidence_sufficient_when": [
+          "every provenance source of family LOGIN_DEFS has status COLLECTED",
+          "exactly one well-formed ENCRYPT_METHOD record of family LOGIN_DEFS exists, with retention RETAIN_VALUE"
+        ],
+        "rules": [
+          {
+            "result": "NOT_EVALUATED",
+            "when": "the evidence is not sufficient: a LOGIN_DEFS source not COLLECTED, no ENCRYPT_METHOD declared (the built-in default differs between distributions), more than one ENCRYPT_METHOD (conflicting), a malformed record, or a value not retained."
+          },
+          {
+            "result": "FAIL",
+            "when": "the evidence is sufficient and the value is exactly MD5 or DES."
+          },
+          {
+            "result": "PASS",
+            "when": "the evidence is sufficient and the value is exactly SHA256 or SHA512: the declared method is not a legacy one. This is not a claim that the system as a whole uses a secure password hashing policy."
+          },
+          {
+            "result": "NOT_EVALUATED",
+            "when": "the value is YESCRYPT or BCRYPT, whose support depends on the shadow-utils and libxcrypt build of the platform, which the committed evidence does not record; or any other value, including a known method spelled in another case, which never passes."
+          }
+        ],
+        "never_produced": [
+          "NOT_APPLICABLE",
+          "MANUAL_REVIEW"
+        ],
+        "determinism": "the result is a function of the committed evidence alone; evaluating the same snapshot again yields the same result and the same evidence references."
+      },
+      "default_severity": "medium",
+      "limitations": [
+        "The criterion evaluates the declared login.defs setting only. pam_unix options, other tools and distribution defaults decide the method actually applied when a password is changed; they are not evaluated.",
+        "A PASS does not mean that the system uses a secure password hashing policy, only that the declared ENCRYPT_METHOD is not MD5 or DES.",
+        "YESCRYPT and BCRYPT give NOT_EVALUATED: platform support for them is not in the committed evidence."
+      ],
+      "evidence_pointers": [
+        {
+          "artifact": "manifest.json",
+          "pointer": "/manifest_core/auxiliary_artifacts/sections~1loginpolicy.json",
+          "role": "the digest that binds the loginpolicy section"
+        },
+        {
+          "artifact": "sections/loginpolicy.json",
+          "pointer": "/evidence/provenance/sources/<i>/family",
+          "role": "the source family"
+        },
+        {
+          "artifact": "sections/loginpolicy.json",
+          "pointer": "/evidence/provenance/sources/<i>/status",
+          "role": "the collection status of each source"
+        },
+        {
+          "artifact": "sections/loginpolicy.json",
+          "pointer": "/evidence/records/<i>/family",
+          "role": "the record family"
+        },
+        {
+          "artifact": "sections/loginpolicy.json",
+          "pointer": "/evidence/records/<i>/key",
+          "role": "the declared key"
+        },
+        {
+          "artifact": "sections/loginpolicy.json",
+          "pointer": "/evidence/records/<i>/value",
+          "role": "the declared value"
+        },
+        {
+          "artifact": "sections/loginpolicy.json",
+          "pointer": "/evidence/records/<i>/retention",
+          "role": "whether the value is retained verbatim"
+        },
+        {
+          "artifact": "sections/loginpolicy.json",
+          "pointer": "/evidence/records/<i>/malformed",
+          "role": "whether the line was read exactly"
+        }
+      ],
+      "manual_verification": "Read-only: `grep -E '^[[:space:]]*ENCRYPT_METHOD' /etc/login.defs` prints the declared value. The command changes nothing.",
+      "remediation_guidance": "Guidance only; ISEDRAF changes nothing. Declaring ENCRYPT_METHOD SHA512 (or a stronger method the platform supports) in /etc/login.defs affects passwords set later by the tools that read it; check pam_unix options separately, as they decide the method for passwd changes."
+    },
+    {
+      "criterion_id": "ISE-SSH-002",
+      "version": 1,
+      "check_type": "effective daemon configuration",
+      "purpose": "Global SSH StrictModes Configuration: the global value of StrictModes that sshd -T reports, as committed. The conclusion concerns the global configuration only.",
+      "rationale": "With StrictModes yes, sshd refuses a login when the user's home directory or key files can be written by others, so a key cannot be planted through loose permissions. With no, those checks are skipped.",
+      "facts_required": [
+        "the collection status of the resolved dimension: the coverage entry whose operation_id is resolve_sshd_effective_config_v1",
+        "the resolved setting strictmodes and its value"
+      ],
+      "dimensions": {
+        "declared": "not evaluated",
+        "resolved": "sshd -T without a connection context: the global effective configuration",
+        "active": "not evaluated: no connection is attempted"
+      },
+      "applicability": "Hosts where the Full Audit could run sshd -T. Role-independent. This criterion never yields NOT_APPLICABLE: an sshd absent at /usr/sbin/sshd does not prove that no SSH server exists.",
+      "evaluation_semantics": {
+        "input": "the committed, verified snapshot only: sections/ssh.json whose digest matches the snapshot manifest. sshd -T is run only by a Full Audit.",
+        "evidence_sufficient_when": [
+          "the one coverage entry whose operation_id is resolve_sshd_effective_config_v1 has status COLLECTED",
+          "exactly one RESOLVED_SETTING record has keyword strictmodes"
+        ],
+        "rules": [
+          {
+            "result": "NOT_EVALUATED",
+            "when": "the resolved dimension is not COLLECTED (including TOOL_ABSENT, a refused or failed sshd -T, and every Standard Audit), or the setting is not reported exactly once."
+          },
+          {
+            "result": "PASS",
+            "when": "the evidence is sufficient and the value is yes. The result concerns the global configuration."
+          },
+          {
+            "result": "FAIL",
+            "when": "the evidence is sufficient and the value is no."
+          },
+          {
+            "result": "NOT_EVALUATED",
+            "when": "the evidence is sufficient but the value is neither yes nor no."
+          }
+        ],
+        "never_produced": [
+          "NOT_APPLICABLE",
+          "MANUAL_REVIEW"
+        ],
+        "determinism": "the result is a function of the committed evidence alone; evaluating the same snapshot again yields the same result and the same evidence references."
+      },
+      "default_severity": "medium",
+      "limitations": [
+        "sshd -T is run without a connection context; the result concerns the global configuration, and connection-specific state is not established by it.",
+        "Only the sshd at /usr/sbin/sshd is observed.",
+        "The permissions of individual home directories and key files are not evaluated here."
+      ],
+      "evidence_pointers": [
+        {
+          "artifact": "manifest.json",
+          "pointer": "/manifest_core/auxiliary_artifacts/sections~1ssh.json",
+          "role": "the digest that binds the ssh section"
+        },
+        {
+          "artifact": "sections/ssh.json",
+          "pointer": "/evidence/provenance/coverage/<i>/status",
+          "role": "status of the coverage entry whose operation_id is resolve_sshd_effective_config_v1"
+        },
+        {
+          "artifact": "sections/ssh.json",
+          "pointer": "/evidence/provenance/coverage/<i>/operation_id",
+          "role": "the fixed operation that selects that coverage entry"
+        },
+        {
+          "artifact": "sections/ssh.json",
+          "pointer": "/evidence/records/<i>/kind",
+          "role": "RESOLVED_SETTING marks an sshd -T line"
+        },
+        {
+          "artifact": "sections/ssh.json",
+          "pointer": "/evidence/records/<i>/keyword",
+          "role": "the setting name"
+        },
+        {
+          "artifact": "sections/ssh.json",
+          "pointer": "/evidence/records/<i>/value",
+          "role": "the setting value"
+        }
+      ],
+      "manual_verification": "Read-only, as root: `sshd -T | grep -i '^strictmodes'` prints the global value. The command changes nothing.",
+      "remediation_guidance": "Guidance only; ISEDRAF changes nothing. Setting StrictModes yes in sshd_config and reloading sshd restores the permission checks; first make sure no account depends on loose home or key permissions."
+    }
+  ],
+  "$criteria_comment": "2026-11-01 (D-111): the first native criterion, ISE-ACCOUNT-001, admitted to the catalog; 2026-11-04: ISE-ACCOUNT-002, ISE-ACCOUNT-003, ISE-ACCOUNT-004 and ISE-SSH-001; 2026-11-05: ISE-ACCOUNT-005, ISE-AUTH-001 and ISE-SSH-002. Admission authors the record; evaluation is implemented separately, after the owner approves it. Every criterion carries the required fields; the gate checks namespace, fields, check type and independence."
+}

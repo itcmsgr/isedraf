@@ -27,6 +27,8 @@ import sys
 from . import (ENGINE_VERSION, identity, inventory, ledger, report, snapshot,
                stateroot, verify)
 from . import audit as audit_mod
+from . import catalog, explain as explain_mod
+from .evaluate import run as evaluate_run
 from .exitcodes import (INCOMPLETE, OK, PRIVILEGE_REFUSED, RUN_IN_PROGRESS,
                         STATE_ROOT_UNUSABLE, USAGE_OR_ENGINE)
 
@@ -197,6 +199,91 @@ def cmd_audit(args, out=None, err=None):
     return OK if complete else INCOMPLETE
 
 
+def cmd_evaluate(args, out=None, err=None):
+    """EVAL-001: verify one committed snapshot, evaluate it, commit one evaluation.
+
+    Never collects. The exit code says whether the evaluation completed (EVAL-007): a
+    FAIL or a NOT_EVALUATED result is an assurance result, and still exits 0.
+    """
+    out = sys.stdout if out is None else out
+    err = sys.stderr if err is None else err
+    try:
+        root, state_root_class = stateroot.resolve()
+    except stateroot.PrivilegeRefused as exc:
+        _refused(exc, err)
+        return PRIVILEGE_REFUSED
+    except stateroot.StateRootError as exc:
+        err.write("isedraf: %s\n" % exc)
+        return USAGE_OR_ENGINE
+    if state_root_class == stateroot.USER_PRODUCTION:
+        try:
+            stateroot.check_user_root(root, os.geteuid())
+        except stateroot.StateRootError as exc:
+            err.write("isedraf: %s\n" % exc)
+            return STATE_ROOT_UNUSABLE
+    if not os.path.isdir(os.path.join(root, "ledger")):
+        err.write("isedraf: there is no committed run to evaluate in %s; run `isedraf audit` "
+                  "first\n" % root)
+        return USAGE_OR_ENGINE
+    try:
+        with stateroot.RunLock(root):
+            evl_id, raw, results = evaluate_run.build(
+                root, state_root_class, ENGINE_VERSION, snapshot_id=args.snapshot)
+            path, created = evaluate_run.commit(root, evl_id, raw)
+    except stateroot.RunInProgress as exc:
+        err.write("isedraf: %s\n" % exc)
+        return RUN_IN_PROGRESS
+    except evaluate_run.EvaluationRefused as exc:
+        err.write("isedraf: evaluation refused, nothing was written: %s\n" % exc)
+        return USAGE_OR_ENGINE
+    except stateroot.StateRootError as exc:
+        err.write("isedraf: %s\n" % exc)
+        return STATE_ROOT_UNUSABLE
+    except Exception as exc:                          # pragma: no cover - engine failure
+        err.write("isedraf: engine error: %s\n" % exc)
+        return USAGE_OR_ENGINE
+    out.write("ISEDRAF native evaluation\n")
+    out.write("  evaluation        : %s%s\n" % (evl_id, "" if created else
+                                                 " (already committed, identical)"))
+    out.write("  evaluated snapshot: %s\n" % json.loads(raw["results.json"])["snapshot_id"])
+    out.write("  evidence root     : %s (%s)\n" % (root, state_root_class))
+    if state_root_class == stateroot.DEV:
+        out.write("  note              : development state root; this evaluation is marked\n")
+        out.write("                      DEV and is not production evidence\n")
+    for r in results:
+        out.write("  %-17s : %s  %s\n" % (r["criterion_id"], r["result"], r["reason_code"]))
+        out.write("                      %s\n" % r["reason"])
+        for o in r["observations"]:
+            out.write("                      observed: %s\n" % report.render.observation_text(o))
+    out.write("\nScope: each result covers only the evidence its criterion names;\n")
+    out.write("run `isedraf explain <criterion>` for what a result does not establish.\n")
+    return OK
+
+
+def cmd_explain(args, out=None, err=None):
+    """EVAL-009: render one criterion record. No state root, no evidence, no evaluation."""
+    out = sys.stdout if out is None else out
+    err = sys.stderr if err is None else err
+    try:
+        stateroot.check_unprivileged()
+    except stateroot.PrivilegeRefused as exc:
+        _refused(exc, err)
+        return PRIVILEGE_REFUSED
+    try:
+        registry, _raw = catalog.load()
+    except catalog.CatalogError as exc:
+        err.write("isedraf: %s\n" % exc)
+        return USAGE_OR_ENGINE
+    record = catalog.criterion(registry, args.criterion_id)
+    if record is None:
+        err.write("isedraf: %s is not an admitted criterion; admitted: %s\n"
+                  % (args.criterion_id, ", ".join(c["criterion_id"]
+                                                 for c in registry["criteria"]) or "none"))
+        return USAGE_OR_ENGINE
+    out.write("\n".join(explain_mod.lines(record)) + "\n")
+    return OK
+
+
 _STATUS_NOTE = {
     "NOT_TESTED": "not observable here",
     "PARTIAL": "partly observable",
@@ -347,7 +434,8 @@ def cmd_report(args, out=None, err=None):
                                  assessment=assessment,
                                  audit_sections=committed["sections"],
                                  audit_digests=committed["digests"],
-                                 coverage_manifest=committed.get("evidence_limits"))
+                                 coverage_manifest=committed.get("evidence_limits"),
+                                 snapshot_id=committed["snapshot_id"])
         if getattr(args, "json", False):
             rendered, extension = report.render.to_json(model_obj), "json"
         elif getattr(args, "html", False):
@@ -415,6 +503,14 @@ def main(argv=None):
     p_report.add_argument("--save", action="store_true",
                           help="write the report under <state root>/reports/")
     p_report.set_defaults(func=cmd_report)
+    p_evaluate = sub.add_parser("evaluate", help="evaluate the latest committed audit run "
+                                                 "against the native criteria (never collects)")
+    p_evaluate.add_argument("--snapshot", default=None,
+                            help="a committed snapshot ID (default: the latest committed run)")
+    p_evaluate.set_defaults(func=cmd_evaluate)
+    p_explain = sub.add_parser("explain", help="explain a native criterion (reads no evidence)")
+    p_explain.add_argument("criterion_id", help="for example ISE-ACCOUNT-001")
+    p_explain.set_defaults(func=cmd_explain)
 
     args = parser.parse_args(argv)
     if not getattr(args, "func", None):

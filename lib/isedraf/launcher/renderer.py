@@ -31,7 +31,7 @@ import secrets
 import shutil
 import sys
 
-from isedraf import ids, report, verify
+from isedraf import fullaudit, ids, report, verify
 from isedraf.exitcodes import INCOMPLETE, OK, USAGE_OR_ENGINE
 from isedraf.launcher import reportunit, store
 from isedraf.supervisor import frame
@@ -43,6 +43,9 @@ TMP = "/tmp"
 SCOPE = ("the ledger chain and the reported snapshot (its manifest, every file it lists and its "
          "ledger record); other snapshots in the store are not re-verified by this report")
 _SNAPSHOT_NAME = re.compile(r"\Asnapshots/(SDS-[^/]+)/(.+)\Z")
+# D-126: the committed evaluation the root side located for the reported snapshot.
+_EVALUATION_NAME = re.compile(r"\Aevaluations/(EVL-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{16})/"
+                              r"(manifest\.json|results\.json|findings\.json|changes\.json)\Z")
 
 
 class FrameRefused(Exception):
@@ -65,6 +68,8 @@ def layout(items, base):
         seen.add(name)
         if name == ledger_name:
             rel = name
+        elif _EVALUATION_NAME.match(name):
+            rel = name                  # checked by its manifest digests when it is shown
         else:
             match = _SNAPSHOT_NAME.match(name)
             if not match or match.group(2) not in store.BUNDLE_FILES or not ids.ID_RE.match(
@@ -98,7 +103,7 @@ def bound_to_ledger(base, sid):
 
 def render(fmt, data, out, err):
     try:
-        items = frame.decode(data, reportunit.FRAME_LIMIT, reportunit.FRAME_ITEMS)
+        items = frame.decode(data, reportunit.FRAME_LIMIT, reportunit.REPORT_FRAME_ITEMS)
     except frame.FrameError as exc:
         err.write("isedraf: REPORT_REFUSED: the evidence frame is invalid (%s); no report was "
                   "rendered.\n" % exc)
@@ -127,7 +132,8 @@ def render(fmt, data, out, err):
         model_obj = report.build(base, committed["sections"]["inventory"]["evidence"],
                                  audit_sections=committed["sections"],
                                  audit_digests=committed["digests"],
-                                 coverage_manifest=committed.get("evidence_limits"))
+                                 coverage_manifest=committed.get("evidence_limits"),
+                                 snapshot_id=sid)
         model_obj["identity_evidence"]["evidence_root"] = PRODUCTION_ROOT
         model_obj["identity_evidence"]["verification"]["scope"] = SCOPE
         if fmt == "json":
@@ -142,9 +148,20 @@ def render(fmt, data, out, err):
         shutil.rmtree(base, ignore_errors=True)
 
 
+def reduction_check():
+    """IQ-076: the renderer proves it IS the reduced identity before it reads the frame,
+    as the engine and the evaluator do; the unit declaration alone is not the proof."""
+    return fullaudit.current_reduction_problems()
+
+
 def main(argv):
     if len(argv) != 1 or argv[0] not in reportunit.FORMATS:
         sys.stderr.write("isedraf: the renderer takes one report format\n")
+        return USAGE_OR_ENGINE
+    problems = reduction_check()
+    if problems:
+        sys.stderr.write("isedraf: ENGINE_NOT_REDUCED: %s; no report was rendered.\n"
+                         % "; ".join(problems))
         return USAGE_OR_ENGINE
     data = sys.stdin.buffer.read(reportunit.FRAME_LIMIT + 1)
     if len(data) > reportunit.FRAME_LIMIT:

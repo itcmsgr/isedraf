@@ -47,7 +47,11 @@ graph TD
     isedraf_authorizedkeys_sources --> isedraf_textbytes
     isedraf_cli --> isedraf
     isedraf_cli --> isedraf_audit
+    isedraf_cli --> isedraf_catalog
+    isedraf_cli --> isedraf_evaluate
+    isedraf_cli --> isedraf_evaluate_run
     isedraf_cli --> isedraf_exitcodes
+    isedraf_cli --> isedraf_explain
     isedraf_cli --> isedraf_identity
     isedraf_cli --> isedraf_inventory
     isedraf_cli --> isedraf_ledger
@@ -58,6 +62,19 @@ graph TD
     isedraf_coverage --> isedraf
     isedraf_coverage --> isedraf_canonical
     isedraf_coverage --> isedraf_status
+    isedraf_evaluate_criteria --> isedraf_status
+    isedraf_evaluate_record --> isedraf
+    isedraf_evaluate_record --> isedraf_canonical
+    isedraf_evaluate_run --> isedraf
+    isedraf_evaluate_run --> isedraf_canonical
+    isedraf_evaluate_run --> isedraf_catalog
+    isedraf_evaluate_run --> isedraf_evaluate
+    isedraf_evaluate_run --> isedraf_evaluate_criteria
+    isedraf_evaluate_run --> isedraf_evaluate_record
+    isedraf_evaluate_run --> isedraf_ledger
+    isedraf_evaluate_run --> isedraf_snapshot
+    isedraf_evaluate_run --> isedraf_stateroot
+    isedraf_evaluate_run --> isedraf_verify
     isedraf_fixedop --> isedraf
     isedraf_fixedop --> isedraf_supervisor
     isedraf_fullaudit --> isedraf
@@ -82,6 +99,16 @@ graph TD
     isedraf_inventory_collectors --> isedraf_inventory
     isedraf_inventory_collectors --> isedraf_inventory_model
     isedraf_inventory_model --> isedraf_status
+    isedraf_launcher_evaluator --> isedraf
+    isedraf_launcher_evaluator --> isedraf_evaluate
+    isedraf_launcher_evaluator --> isedraf_exitcodes
+    isedraf_launcher_evaluator --> isedraf_launcher
+    isedraf_launcher_evaluator --> isedraf_supervisor
+    isedraf_launcher_evalunit --> isedraf
+    isedraf_launcher_evalunit --> isedraf_evaluate
+    isedraf_launcher_evalunit --> isedraf_exitcodes
+    isedraf_launcher_evalunit --> isedraf_launcher
+    isedraf_launcher_evalunit --> isedraf_supervisor
     isedraf_launcher_outer --> isedraf
     isedraf_launcher_outer --> isedraf_exitcodes
     isedraf_launcher_renderer --> isedraf
@@ -160,7 +187,10 @@ graph TD
     isedraf_report_artifact --> isedraf_canonical
     isedraf_report_artifact --> isedraf_ids
     isedraf_report_model --> isedraf
+    isedraf_report_model --> isedraf_catalog
     isedraf_report_model --> isedraf_coverage
+    isedraf_report_model --> isedraf_evaluate
+    isedraf_report_model --> isedraf_evaluate_record
     isedraf_report_model --> isedraf_ids
     isedraf_report_model --> isedraf_inventory
     isedraf_report_model --> isedraf_inventory_model

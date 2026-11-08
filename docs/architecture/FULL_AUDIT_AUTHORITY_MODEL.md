@@ -314,10 +314,12 @@ trusted launcher, in the unit           (root, bounded capability set)
 
 - Under euid 0 or with `SUDO_USER` set, the invocation `isedraf audit` with no further argument enters
   this route on a supported platform (Debian 12, Ubuntu 24.04, Rocky 9, AlmaLinux 9, with systemd).
-  `isedraf report` enters the read-only report route of `AUTH-032`. Every other invocation under
+  `isedraf report` enters the read-only report route of `AUTH-032`, and `isedraf evaluate` with no
+  further argument enters the evaluation route of `AUTH-033` (`D-126`). Every other invocation under
   euid 0 or with `SUDO_USER` set is still refused with exit `70`, as `SCOPE-071` requires, with the
-  message *"Under sudo or root, ISEDRAF runs only `sudo isedraf audit` (Full Audit) and `sudo
-  isedraf report` (its report). Run other ISEDRAF commands as your normal user."*
+  message *"Under sudo or root, ISEDRAF runs only `sudo isedraf audit` (Full Audit), `sudo isedraf
+  report` (its report) and `sudo isedraf evaluate` (its evaluation). Run other ISEDRAF commands as
+  your normal user."*
 - Without systemd, or on an unsupported platform, `sudo isedraf audit` is refused with exit `70` and
   the reason `FULL_AUDIT_UNSUPPORTED`. Nothing degrades to an unsandboxed privileged run (`PRIV-006`).
 - `ISEDRAF_STATE_ROOT` stays refused under euid 0 (`PRIV-004`); the route never writes `DEV` or
@@ -400,6 +402,8 @@ as follows, within the `STORE-025` subset:
 | `ledger/`, each segment | root:root, directory 0700, segments 0600 | launcher | launcher, append only |
 | `tmp/` | root:root 0700 | launcher | launcher |
 | `tmp/<run_id>/`, which becomes the promoted snapshot | root:root; 0777 while the engine writes, 0700 before promotion (`AUTH-027`) | launcher, per run | engine, in its staging only |
+| `evaluations/` (`D-126`) | root:root 0700 | launcher, on the first evaluation | launcher, by evaluation promotion only (`AUTH-033`) |
+| `tmp/<evaluation_id>/`, which becomes `evaluations/<evaluation_id>/` | root:root 0700, files 0600 | launcher, per evaluation | launcher only; the reduced evaluator never writes the store |
 
 Creation by ISEDRAF uses exclusive, no-follow operations. Package scripts neither create nor delete
 `/var/lib/isedraf` and never remove the `isedraf` account.
@@ -429,7 +433,8 @@ promotion route the corpus measured to meet them without an ownership transition
   root-owned through an explicit ownership transition.
 - The engine identity can never reach `snapshots/`, `ledger/` or `.lock`.
 The other `STORE-001` entries are not created. Reading `SYSTEM_PRODUCTION` evidence through ISEDRAF
-under root is the read-only `report` route of `AUTH-032` and nothing else; every other read command
+under root is the read-only `report` route of `AUTH-032` and the evaluation route of `AUTH-033`,
+which reads exactly as `AUTH-032` does, and nothing else; every other read command
 stays refused by `SCOPE-071`, and the artifacts remain inspectable without ISEDRAF.
 
 **AUTH-023 (D-124, OUT-001, PRIV-008) SHALL** Exit codes `66` and `67` each have one meaning, in every
@@ -816,5 +821,61 @@ evidence must not be readable only as root-owned files).
   not re-verified by this route.
 - **What the report says.** The renderer is the existing report renderer: no privileged renderer exists.
   The report states the run mode and the verification result and keeps the collection axes separate;
-  native results, findings, scores and compliance percentages are not part of it (`D-79`, v0.3).
+  scores and compliance percentages are not part of it (`D-79`).
+- **The committed evaluation, shown and never made (`D-126`).** The launcher computes the
+  `EVAL-006` identity of the evaluation that applies to the reported snapshot - from that snapshot's
+  identifier, manifest hash and creation time, the installed engine version and the digest of the
+  installed catalog - and, when `evaluations/<that identity>/` exists and conforms to `AUTH-022`,
+  adds its four declared files to the frame, read as the snapshot's files are. The renderer verifies
+  them as `EVAL-005` requires and shows the native results; it never evaluates. Nothing on the
+  reduced side names the evaluation that is read.
 
+**AUTH-033 (D-126, D-125, AUTH-019, AUTH-020, AUTH-021, AUTH-022, AUTH-028, AUTH-032) SHALL** The
+system-store evaluation route (owner ruling 2026-11-02 on IQ-074). It evaluates committed Full Audit
+evidence; it adds no collector, no privileged rule evaluator and no general privileged writer.
+
+- **One invocation.** Under euid 0 or with `SUDO_USER` set, `isedraf evaluate` with no further
+  argument enters this route on a supported platform. Any argument, `--snapshot` included, is refused
+  with exit `70`: the snapshot is always the latest committed run (`D-50`), never one the caller
+  names. Without systemd or on an unsupported platform the route is refused with exit `70` and
+  `FULL_AUDIT_UNSUPPORTED`.
+- **The same execution model.** The outer entry runs `/usr/bin/systemd-run` with the constant
+  properties of the audit unit (`ReadWritePaths=-/var/lib/isedraf`); the unit name derives from a
+  fresh run id; the transport and interruption rules of `AUTH-020` apply. No daemon, socket, timer or
+  persistent service is created. No capability beyond the `AUTH-028` set is granted, and the set this
+  route needs is measured before it is fixed: a candidate is not a requirement, and a requirement is
+  not a grant. No supervisor runs and no fixed operation is requested.
+- **The read, as `AUTH-032`.** The in-unit launcher validates the store as `AUTH-022` requires (exit
+  `67`), takes the whole-run lock (exit `66`), and reads the ledger and the latest committed
+  snapshot's declared files exactly as `AUTH-032` does, structurally and bounded. It also reads the
+  installed catalog `lib/isedraf/catalog/native_controls.json`, bounded, and computes its digest.
+  Host evidence content is never parsed, interpreted or evaluated on the root side.
+- **The reduced evaluator.** The launcher starts the evaluator through `/usr/bin/setpriv` with the
+  `AUTH-020` engine reduction, a fixed entry and a constant argument vector. It receives the ledger,
+  the snapshot's files and the catalog bytes in one bounded frame on a pipe, and holds no path or
+  descriptor into the store. It verifies the ledger chain, the snapshot manifest hash, every file the
+  manifest lists and the binding of the last ledger record, as `AUTH-032` requires, evaluates as
+  `EVAL-003` to `EVAL-006` require, and writes exactly one bounded frame holding the four `EVAL-005`
+  artifacts on its stdout, and nothing else. It may lay the received bytes out in a 0700 directory in
+  the unit's private temporary space, removed before it exits. It reads no live host file and starts
+  no collector.
+- **Evaluation promotion, a closed contract.** The launcher reads the evaluator's frame up to a fixed
+  bound and refuses (exit `64`, nothing written) unless all of the following hold: it holds exactly
+  `manifest.json`, `results.json`, `findings.json` and `changes.json`, each within its bound; each is
+  canonical JSON; the `evaluation_id` in each equals the identity the launcher computed itself from
+  the snapshot it selected, the installed engine version and the catalog digest it computed
+  (`EVAL-006`), so the evaluator cannot choose a name or a path; each names that snapshot and the
+  `SYSTEM_PRODUCTION` class; and each artifact's digest equals the one the manifest declares. The
+  launcher reads no other field: the results and findings are not interpreted on the root side.
+- **The write.** Under the lock, with the stop signals blocked from the first write to the rename:
+  `evaluations/` is created root:root 0700 when absent, exclusively and without following links, or
+  validated as `AUTH-022` requires (exit `67`); `tmp/<evaluation_id>/` is created exclusively,
+  root:root 0700; each file is written exclusively, no-follow, 0600, and fsynced; the directory is
+  renamed atomically to `evaluations/<evaluation_id>/` and `evaluations/` is fsynced. An existing
+  evaluation with identical bytes is left as it is and the route exits `0`; one that differs is never
+  overwritten and the route exits `64`. A stop before the first write promotes nothing, removes any
+  staging and exits `143`. There is no ledger entry (`STORE-020`). The engine identity never reaches
+  `evaluations/`.
+- **Exit codes** keep their meanings (`OUT-001`, `EVAL-007`): `0` an evaluation is committed or an
+  identical one exists, whatever its results; `64` usage, engine, evidence or frame refusal, nothing
+  written; `66`; `67`; `70`; and the `AUTH-020` interruption statuses.

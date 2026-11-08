@@ -407,6 +407,10 @@
     "Host inventory is not part of the frozen snapshot contract. It is bound to this report by an artifact digest, which is a content digest and not a snapshot hash.",
     "Assessment details identify the person or organization declared in the report metadata. They are declarative and are NOT cryptographically authenticated; this report is not signed."
   ],
+  "native_results": {
+    "reason": "no evaluation was looked up for this rendering. Run `isedraf evaluate` then `isedraf report` for your own store, or `sudo isedraf evaluate` then `sudo isedraf report` for a Full Audit (D-125, D-126)",
+    "status": "NOT_SHOWN"
+  },
   "provenance": {
     "collection_methods": {
       "compute": "/proc/cpuinfo",
@@ -419,17 +423,17 @@
       "storage": "/sys/block + /proc/self/mounts + statvfs(2)",
       "time": "timedatectl show"
     },
-    "engine_version": "0.2.0",
+    "engine_version": "0.3.0",
     "inventory_schema_version": 1,
-    "report_schema_version": 2
+    "report_schema_version": 3
   },
   "report": {
-    "engine_version": "0.2.0",
+    "engine_version": "0.3.0",
     "generated_at": "2026-09-20T17:15:48Z",
     "report_id": "RPT-20260920T171548Z-71072fdd5e6cd97e",
     "status": "COMPLETE"
   },
-  "report_schema_version": 2,
+  "report_schema_version": 3,
   "target": {
     "fqdn": null,
     "fqdn_source": "NOT_AVAILABLE_LOCALLY",

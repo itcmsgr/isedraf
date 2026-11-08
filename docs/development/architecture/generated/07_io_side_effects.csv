@@ -1,17 +1,24 @@
 module,file,function,effect,markers,ambiguous
 isedraf.accounts.acquire,lib/isedraf/accounts/acquire.py,acquire,FS_READ,read_file_lossless,no
 isedraf.authorizedkeys.acquire,lib/isedraf/authorizedkeys/acquire.py,_observe_file,FS_READ,read_file_lossless,no
+isedraf.catalog,lib/isedraf/catalog/__init__.py,load,FS_READ,open read,no
 isedraf.cli,lib/isedraf/cli.py,_commit_run,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,_refused,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,_render,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,_render_inventory,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,cmd_audit,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,cmd_evaluate,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,cmd_explain,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,cmd_inventory,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,cmd_report,FS_WRITE,write,yes
+isedraf.evaluate.record,lib/isedraf/evaluate/record.py,load,FS_READ,open read,no
+isedraf.evaluate.run,lib/isedraf/evaluate/run.py,_read,FS_READ,open read,no
+isedraf.evaluate.run,lib/isedraf/evaluate/run.py,commit,FS_READ,listdir,no
+isedraf.evaluate.run,lib/isedraf/evaluate/run.py,commit,FS_WRITE,makedirs rename,no
 isedraf.fixedop,lib/isedraf/fixedop.py,_read_exact,FS_READ,read,yes
 isedraf.fixedop,lib/isedraf/fixedop.py,request,FS_WRITE,write,yes
+isedraf.fullaudit,lib/isedraf/fullaudit.py,current_reduction_problems,FS_READ,open read read_file,no
 isedraf.fullaudit,lib/isedraf/fullaudit.py,main,SUBPROCESS,run,yes
-isedraf.fullaudit,lib/isedraf/fullaudit.py,run,FS_READ,open read read_file,no
 isedraf.fullaudit,lib/isedraf/fullaudit.py,run,FS_WRITE,write,yes
 isedraf.hostio,lib/isedraf/hostio.py,_read_bytes,FS_READ,fstat open read stat,no
 isedraf.hostio,lib/isedraf/hostio.py,read_lines,FS_READ,read_file,no
@@ -33,6 +40,18 @@ isedraf.inventory.collectors,lib/isedraf/inventory/collectors.py,lines,FS_READ,r
 isedraf.inventory.collectors,lib/isedraf/inventory/collectors.py,selinux_enforcing,FS_READ,read_file,no
 isedraf.launcher.engine,lib/isedraf/launcher/engine.py,clean,SUBPROCESS,run,yes
 isedraf.launcher.engine,lib/isedraf/launcher/engine.py,start,SUBPROCESS,Popen,no
+isedraf.launcher.evaluator,lib/isedraf/launcher/evaluator.py,evaluate,FS_READ,open,no
+isedraf.launcher.evaluator,lib/isedraf/launcher/evaluator.py,evaluate,FS_WRITE,mkdir write,no
+isedraf.launcher.evaluator,lib/isedraf/launcher/evaluator.py,main,FS_READ,read,yes
+isedraf.launcher.evaluator,lib/isedraf/launcher/evaluator.py,main,FS_WRITE,write,yes
+isedraf.launcher.evalunit,lib/isedraf/launcher/evalunit.py,main,FS_WRITE,write,yes
+isedraf.launcher.evalunit,lib/isedraf/launcher/evalunit.py,main,SUBPROCESS,run,yes
+isedraf.launcher.evalunit,lib/isedraf/launcher/evalunit.py,promote,FS_READ,listdir,no
+isedraf.launcher.evalunit,lib/isedraf/launcher/evalunit.py,promote,FS_WRITE,mkdir rename,no
+isedraf.launcher.evalunit,lib/isedraf/launcher/evalunit.py,read_catalog,FS_READ,fstat open read stat,no
+isedraf.launcher.evalunit,lib/isedraf/launcher/evalunit.py,run,FS_READ,read,yes
+isedraf.launcher.evalunit,lib/isedraf/launcher/evalunit.py,run,FS_WRITE,write,yes
+isedraf.launcher.evalunit,lib/isedraf/launcher/evalunit.py,run,SUBPROCESS,Popen,no
 isedraf.launcher.outer,lib/isedraf/launcher/outer.py,_copy,FS_READ,read,yes
 isedraf.launcher.outer,lib/isedraf/launcher/outer.py,_write_all,FS_WRITE,write,yes
 isedraf.launcher.outer,lib/isedraf/launcher/outer.py,main,FS_READ,open read,no
@@ -51,6 +70,8 @@ isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,__enter__,FS_READ
 isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,_directory,FS_READ,lstat stat,no
 isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,_read,FS_READ,fstat open read stat,no
 isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,acquire,FS_READ,listdir,no
+isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,acquire_evaluation,FS_READ,listdir,no
+isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,feed,FS_WRITE,write,yes
 isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,main,FS_WRITE,write,yes
 isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,main,SUBPROCESS,run,yes
 isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,run,FS_WRITE,write,yes
@@ -86,6 +107,7 @@ isedraf.report,lib/isedraf/report/__init__.py,write,FS_READ,open,no
 isedraf.report,lib/isedraf/report/__init__.py,write,FS_WRITE,fsync makedirs write,no
 isedraf.report.model,lib/isedraf/report/model.py,committed_run,FS_READ,listdir open read,no
 isedraf.report.model,lib/isedraf/report/model.py,identity_evidence,FS_READ,open read,no
+isedraf.report.model,lib/isedraf/report/model.py,native_results,FS_READ,open read,no
 isedraf.report.profile,lib/isedraf/report/profile.py,load,FS_READ,open read,no
 isedraf.shared.bounded,lib/isedraf/shared/bounded.py,_entry,FS_READ,stat,yes
 isedraf.shared.bounded,lib/isedraf/shared/bounded.py,_type,FS_READ,stat,yes
@@ -102,6 +124,7 @@ isedraf.snapshot,lib/isedraf/snapshot.py,write_bundle,FS_WRITE,makedirs,no
 isedraf.ssh.acquire,lib/isedraf/ssh/acquire.py,__call__,FS_READ,read_file_lossless,no
 isedraf.stateroot,lib/isedraf/stateroot.py,__enter__,FS_READ,open,no
 isedraf.stateroot,lib/isedraf/stateroot.py,_under_sudo,ENVIRONMENT,environ,no
+isedraf.stateroot,lib/isedraf/stateroot.py,check_unprivileged,ENVIRONMENT,environ,no
 isedraf.stateroot,lib/isedraf/stateroot.py,check_user_root,FS_READ,lstat stat,no
 isedraf.stateroot,lib/isedraf/stateroot.py,fsync_dir,FS_READ,open,no
 isedraf.stateroot,lib/isedraf/stateroot.py,fsync_dir,FS_WRITE,fsync,no
@@ -198,6 +221,7 @@ scripts.compat.probe,scripts/compat/probe.py,read_text,FS_READ,open read,no
 scripts.compat.reboot_pass,scripts/compat/reboot_pass.py,describe,FS_READ,listdir open read,no
 scripts.compat.reboot_pass,scripts/compat/reboot_pass.py,main,ENVIRONMENT,environ,no
 scripts.compat.reboot_pass,scripts/compat/reboot_pass.py,main,FS_WRITE,write,yes
+scripts.docs.criteria_pages,scripts/docs/criteria_pages.py,main,FS_WRITE,mkdir,no
 scripts.docs.current_state,scripts/docs/current_state.py,cli_surfaces,SUBPROCESS,call,yes
 scripts.docs.current_state,scripts/docs/current_state.py,count,SUBPROCESS,check_output,no
 scripts.docs.current_state,scripts/docs/current_state.py,counted,SUBPROCESS,check_output,no

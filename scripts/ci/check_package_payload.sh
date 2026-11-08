@@ -71,6 +71,19 @@ if [ -n "$DEB" ] && [ -n "$RPM" ] && command -v rpm >/dev/null 2>&1; then
         bad "deb and rpm ship DIFFERENT documentation:"
         diff "$D/deb" "$D/rpm" | sed 's/^/          /' >&2
     fi
+    # IQ-073: the same comparison for the runtime payload. The rpm copied the whole
+    # lib/isedraf tree and so shipped two files the deb did not; no gate saw it.
+    ar p "$DEB" data.tar.gz 2>/dev/null | tar tz 2>/dev/null \
+        | sed -n 's|^\./||; s|^usr/lib/isedraf/||p' | grep -v '/$' | grep -v '^$' \
+        | sort -u > "$D/deblib"
+    rpm -qp --qf '[%{FILEMODES:perms} %{FILENAMES}\n]' "$RPM" 2>/dev/null \
+        | sed -n 's|^-[^ ]* /usr/lib/isedraf/||p' | sort -u > "$D/rpmlib"
+    if [ -s "$D/deblib" ] && cmp -s "$D/deblib" "$D/rpmlib"; then
+        ok "deb and rpm ship the same $(wc -l < "$D/deblib" | tr -d ' ') runtime files"
+    else
+        bad "deb and rpm ship DIFFERENT runtime files:"
+        diff "$D/deblib" "$D/rpmlib" | sed 's/^/          /' >&2
+    fi
     rm -rf "$D"
 fi
 
@@ -90,7 +103,7 @@ fi
 # they are absent today and this keeps them absent.
 FORBIDDEN_PAYLOAD_DOCS='(^|/)(CLAUDE|CONTRIBUTING|CODE_OF_CONDUCT|AI_ASSISTED_DEVELOPMENT|CHANGELOG)\.md$'
 FORBIDDEN_PATHS='(^|/)planning/|(^|/)\.git/|GITHUB_CONNECT|isedraf-w1c|\.pyc$|__pycache__|(^|/)usr/isedraf/|(^|/)dist/|id_ed25519|id_rsa|\.ssh/'
-REQUIRED='usr/bin/isedraf usr/lib/isedraf/cli.py usr/lib/isedraf/identity.py usr/lib/isedraf/inventory/collectors.py usr/lib/isedraf/report/model.py'
+REQUIRED='usr/bin/isedraf usr/lib/isedraf/cli.py usr/lib/isedraf/identity.py usr/lib/isedraf/inventory/collectors.py usr/lib/isedraf/report/model.py usr/lib/isedraf/catalog/native_controls.json'
 
 check_listing() {   # check_listing <label> <file-with-one-path-per-line>
     local label="$1" listing="$2" missing=""

@@ -43,8 +43,11 @@
     "isedraf audit": [0, 2, 64, 66, 67, 70],
     "isedraf inventory": [0, 2, 64],
     "isedraf report": [0, 2, 64, 70],
+    "isedraf evaluate": [0, 64, 66, 67, 70],
+    "isedraf explain": [0, 64, 70],
     "isedraf (usage error)": [64],
     "sudo isedraf audit": [0, 2, 64, 66, 67, 70, 129, 130, 143, 255],
-    "sudo isedraf report": [0, 2, 64, 66, 67, 70, 129, 130, 143, 255]
+    "sudo isedraf report": [0, 2, 64, 66, 67, 70, 129, 130, 143, 255],
+    "sudo isedraf evaluate": [0, 64, 66, 67, 70, 129, 130, 143, 255]
   }
 }

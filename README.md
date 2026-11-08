@@ -3,13 +3,13 @@
 **Linux Host Assurance with Approved Baselines, State Delta & Verifiable Evidence**
 
 [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.2.0-lightgrey)](VERSION)
+[![Version](https://img.shields.io/badge/version-0.3.0-lightgrey)](VERSION)
 [![Status](https://img.shields.io/badge/status-general%20availability-green)](docs/CURRENT_STATE.md)
 [![Platforms](https://img.shields.io/badge/platforms-11%20Linux%20distributions%20measured-informational)](docs/reference/PLATFORM_COMPATIBILITY.md)
 [![Governance](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml/badge.svg)](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/itcmsgr/isedraf/badge)](https://scorecard.dev/viewer/?uri=github.com/itcmsgr/isedraf) [![OpenSSF Baseline](https://www.bestpractices.dev/projects/15010/baseline)](https://www.bestpractices.dev/en/projects/15010/baseline-1)
 
-> **Current release: 0.2.0 — General Availability.** ISEDRAF 0.2 adds Full Audit: `sudo isedraf audit` reads, through four fixed operations,
-> evidence your own user cannot see, without the engine ever running as root.
+> **Current release: 0.3.0 — General Availability.** ISEDRAF 0.3 adds native criteria: `isedraf evaluate` checks a committed run against eight
+> ISEDRAF-authored criteria, and `isedraf explain` shows what each one does not establish.
 
 ## What is ISEDRAF?
 
@@ -83,9 +83,12 @@ exists there. It depends only on `python3` and starts no service.
 ```sh
 isedraf audit                  # standard audit, as your own user
 isedraf report --html --save   # render the last run as static HTML
+isedraf evaluate               # evaluate the last run against the native criteria
+isedraf explain ISE-ACCOUNT-001  # what a criterion checks and does not establish
 
 sudo isedraf audit             # Full Audit
 sudo isedraf report            # render the last Full Audit run (read-only)
+sudo isedraf evaluate          # evaluate the last Full Audit run (system store)
 ```
 
 Under `sudo`, ISEDRAF runs only `audit` and `report`; everything else is refused.

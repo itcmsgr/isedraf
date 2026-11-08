@@ -485,11 +485,316 @@ inject "D-111 a production module is named after a framework provider" \
   'cp lib/isedraf/identity.py lib/isedraf/cis_collector.py && git add -f -A' \
   'named after a framework provider|native control catalog gate FAILED'
 
+# D-125: one registry. The former CI-only copy, restored, is a second record.
+inject "D-125 a second native control registry exists" \
+  'python3 scripts/ci/check_native_catalog.py' \
+  'cp lib/isedraf/catalog/native_controls.json scripts/ci/native_controls.json && git add -f -A' \
+  'is a second native control registry'
+
+# D-125 / D-121: the first native criterion. Each injection breaks one guarantee the
+# owner named (evidence authority, result correctness, determinism, separation).
+inject "D-125 an incomplete passwd source yields PASS or FAIL" \
+  'python3 tests/test_evaluate.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/criteria.py"); s = p.read_text()
+old = "    if status != COLLECTED:\n        return (NOT_EVALUATED_RESULT,"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n        return (NOT_EVALUATED_RESULT,", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-125 a compat INCLUDE of an uncollected NIS map is ignored" \
+  'python3 tests/test_evaluate.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/criteria.py"); s = p.read_text()
+old = "    if \"etc/passwd\" in included:"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-125 malformed evidence is turned into a result" \
+  'python3 tests/test_evaluate.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/criteria.py"); s = p.read_text()
+old = "    if status not in STATUSES:\n        raise MalformedEvidence"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if status not in STATUSES:\n        return (NOT_EVALUATED_RESULT, \"X\", \"x\", [], [])\n        raise MalformedEvidence", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-125 a section is used without checking its binding" \
+  'python3 tests/test_evaluate.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/run.py"); s = p.read_text()
+old = "        if snapshot.auxiliary_digest(raw) != bound:"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if False:", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-125 an evaluation artifact carries a wall-clock time" \
+  'python3 tests/test_evaluate.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/run.py"); s = p.read_text()
+old = "    common = {\"schema_version\": record.SCHEMA_VERSION, \"evaluation_id\": evl_id,"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    import time\n    common = {\"evaluated_at\": time.time_ns(), \"schema_version\": record.SCHEMA_VERSION, \"evaluation_id\": evl_id,", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-121 a PASS produces a finding" \
+  'python3 tests/test_evaluate.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/run.py"); s = p.read_text()
+old = "        if result == \"FAIL\":\n            findings.append("
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if result in (\"FAIL\", \"PASS\"):\n            findings.append(", 1))
+PYX' \
+  'FAILED|Error'
+
+# D-126 / AUTH-033: the system-store evaluation route. Each breaks one boundary of the
+# closed promotion contract or of the invocation.
+# IQ-076: every reduced component proves its own reduction before it reads.
+inject "IQ-076 the report renderer runs without checking its own reduction" \
+  'python3 tests/test_report_route.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/renderer.py"); s = p.read_text()
+old = "    problems = reduction_check()\n    if problems:\n        sys.stderr.write(\"isedraf: ENGINE_NOT_REDUCED: %s; no report was rendered."
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    problems = []\n    if problems:\n        sys.stderr.write(\"isedraf: ENGINE_NOT_REDUCED: %s; no report was rendered.", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-033 the evaluator runs without checking its own reduction" \
+  'python3 tests/test_evaluate_route.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/evaluator.py"); s = p.read_text()
+old = "    problems = reduction_check()\n    if problems:\n        sys.stderr.write(\"isedraf: ENGINE_NOT_REDUCED"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    problems = []\n    if problems:\n        sys.stderr.write(\"isedraf: ENGINE_NOT_REDUCED", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-033 promotion accepts the identity the evaluator chose" \
+  'python3 tests/test_evaluate_route.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/evalunit.py"); s = p.read_text()
+old = "        if (obj.get(\"evaluation_id\") != evl_id or obj.get(\"snapshot_id\") != sid"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        if (False or obj.get(\"snapshot_id\") != sid", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-033 promotion accepts a set of artifacts other than the four" \
+  'python3 tests/test_evaluate_route.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/evalunit.py"); s = p.read_text()
+old = "    if sorted(out) != sorted(ARTIFACTS):"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if not out:", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-033 a different evaluation is overwritten" \
+  'python3 tests/test_evaluate_route.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/evalunit.py"); s = p.read_text()
+old = "            if not same:\n                raise Refused("
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "            if False:\n                raise Refused(", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-033 the outer entry admits evaluate with an argument" \
+  'python3 tests/test_launcher_route.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/outer.py"); s = p.read_text()
+old = "                             and tuple(argv) != EVALUATE_INVOCATION):"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "                             and tuple(argv[:1]) != EVALUATE_INVOCATION):", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "AUTH-033 the report renderer accepts any name under evaluations/" \
+  'python3 tests/test_evaluate_route.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/renderer.py"); s = p.read_text()
+old = "        elif _EVALUATION_NAME.match(name):"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        elif name.startswith(\"evaluations/\"):", 1))
+PYX' \
+  'FAILED|Error'
+
+# Owner ruling 2026-11-04: the second batch of native criteria, one injection per decision boundary.
+inject "ISE-ACCOUNT-002 a locked shadow field is counted as empty" \
+  'python3 tests/test_criteria_batch1.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/criteria.py"); s = p.read_text()
+old = "    empty = [r for r in rows if r[4] is not None and r[4][\"content\"] == \"EMPTY\"\n             and r[4][\"lock_prefix\"] == \"LOCK_PREFIX_ABSENT\"]"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    empty = [r for r in rows if r[4] is not None and r[4][\"content\"] in (\"EMPTY\", \"DISABLED_TOKEN\")]", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "ISE-ACCOUNT-002 an account without a shadow record is passed" \
+  'python3 tests/test_criteria_batch1.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/criteria.py"); s = p.read_text()
+old = "    absent = [r for r in rows if r[3] == \"ABSENT_FROM_COLLECTED_SOURCE\"]\n    if absent:"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    absent = [r for r in rows if r[3] == \"ABSENT_FROM_COLLECTED_SOURCE\"]\n    if False:", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "ISE-ACCOUNT-003 ambiguity is decided before a proven collision" \
+  'python3 tests/test_criteria_batch1.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/criteria.py"); s = p.read_text()
+old = "    if collisions:\n        return (\"FAIL\", \"UID_SHARED_BY_NAMES\""
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if collisions and not ambiguous:\n        return (\"FAIL\", \"UID_SHARED_BY_NAMES\"", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "ISE-ACCOUNT-004 an unclassified password field passes" \
+  'python3 tests/test_criteria_batch1.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/criteria.py"); s = p.read_text()
+old = "    if unclassified:\n        return (NE, \"UNCLASSIFIED_PASSWORD_FIELD\""
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n        return (NE, \"UNCLASSIFIED_PASSWORD_FIELD\"", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "ISE-SSH-001 a resolved dimension that was not collected is evaluated" \
+  'python3 tests/test_criteria_batch1.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/criteria.py"); s = p.read_text()
+old = "    if cstatus != COLLECTED:\n        return (NE, \"SOURCE_\" + cstatus"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n        return (NE, \"SOURCE_\" + cstatus", 1))
+PYX' \
+  'FAILED|Error'
+
+# Owner ruling 2026-11-05: the third batch of native criteria, one injection per decision boundary.
+inject "ISE-ACCOUNT-005 ambiguity is decided before a proven GID collision" \
+  'python3 tests/test_criteria_batch2.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/criteria.py"); s = p.read_text()
+old = "if shared:\n        return (\"FAIL\", \"GID_SHARED_BY_NAMES\""
+assert s.count(old) == 1, "mutation anchor miss"
+p.write_text(s.replace(old, "if shared and not several:\n        return (\"FAIL\", \"GID_SHARED_BY_NAMES\"", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "ISE-ACCOUNT-005 an incomplete group source is evaluated" \
+  'python3 tests/test_criteria_batch2.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/criteria.py"); s = p.read_text()
+old = "    if group_status != COLLECTED:\n"
+assert s.count(old) == 1, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "ISE-AUTH-001 YESCRYPT or BCRYPT passes without platform evidence" \
+  'python3 tests/test_criteria_batch2.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/criteria.py"); s = p.read_text()
+old = "NON_LEGACY_METHODS = (\"SHA256\", \"SHA512\")"
+assert s.count(old) == 1, "mutation anchor miss"
+p.write_text(s.replace(old, "NON_LEGACY_METHODS = (\"SHA256\", \"SHA512\", \"YESCRYPT\", \"BCRYPT\")", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "ISE-AUTH-001 a differently spelled value is read as a known method" \
+  'python3 tests/test_criteria_batch2.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/criteria.py"); s = p.read_text()
+old = "    if value in NON_LEGACY_METHODS:\n"
+assert s.count(old) == 1, "mutation anchor miss"
+p.write_text(s.replace(old, "    if value.upper() in NON_LEGACY_METHODS:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "ISE-AUTH-001 a repeated declaration is evaluated" \
+  'python3 tests/test_criteria_batch2.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/criteria.py"); s = p.read_text()
+old = "    if len(found) > 1:\n        return (NE, \"ENCRYPT_METHOD_DECLARED_MORE_THAN_ONCE\""
+assert s.count(old) == 1, "mutation anchor miss"
+p.write_text(s.replace(old, "    if len(found) > 1:\n        found = found[-1:]\n    if False:\n        return (NE, \"ENCRYPT_METHOD_DECLARED_MORE_THAN_ONCE\"", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "ISE-AUTH-001 an incomplete login.defs source is evaluated" \
+  'python3 tests/test_criteria_batch2.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/criteria.py"); s = p.read_text()
+old = "    if unseen:\n"
+assert s.count(old) == 1, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "ISE-SSH-002 a resolved dimension that was not collected is evaluated" \
+  'python3 tests/test_criteria_batch2.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/criteria.py"); s = p.read_text()
+old = "    if entry_status != COLLECTED:\n"
+assert s.count(old) == 1, "mutation anchor miss"
+p.write_text(s.replace(old, "    if False:\n", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "ISE-SSH-002 StrictModes no is passed" \
+  'python3 tests/test_criteria_batch2.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/criteria.py"); s = p.read_text()
+old = "    if setting == \"yes\":\n"
+assert s.count(old) == 1, "mutation anchor miss"
+p.write_text(s.replace(old, "    if setting in (\"yes\", \"no\"):\n", 1))
+PYX' \
+  'FAILED|Error'
+
+# EVAL-009: the generated page is the record, rendered; a hand edit is refused.
+inject "D-125 a generated criterion page is edited by hand" \
+  'python3 scripts/ci/check_native_catalog.py' \
+  'printf "\\nA hand-written note.\\n" >> docs/reference/criteria/ISE-ACCOUNT-001.md' \
+  'is stale'
+
 inject "D-111 the namespace and the catalog document disagree" \
   'python3 scripts/ci/check_native_catalog.py' \
   'python3 - <<'"'"'PYX'"'"'
 import json, pathlib
-p = pathlib.Path("scripts/ci/native_controls.json"); d = json.loads(p.read_text())
+p = pathlib.Path("lib/isedraf/catalog/native_controls.json"); d = json.loads(p.read_text())
 d["families"]["ISE-GHOST"] = "a family the catalog document has never heard of"
 p.write_text(json.dumps(d, indent=2))
 PYX' \
@@ -499,13 +804,50 @@ inject "D-111 a native criterion is derived from a framework" \
   'python3 scripts/ci/check_native_catalog.py' \
   'python3 - <<'"'"'PYX'"'"'
 import json, pathlib
-p = pathlib.Path("scripts/ci/native_controls.json"); d = json.loads(p.read_text())
+p = pathlib.Path("lib/isedraf/catalog/native_controls.json"); d = json.loads(p.read_text())
 d["criteria"].append({f: "x" for f in d["required_criterion_fields"]})
 d["criteria"][0]["criterion_id"] = "ISE-SSH-001"
 d["criteria"][0]["purpose"] = "Implements CIS Controls safeguard 4.1"
 p.write_text(json.dumps(d, indent=2))
 PYX' \
   'names CIS in the criterion itself|native control catalog gate FAILED'
+
+# D-111 extended (2026-10-14): check types, retirement and the documented field set.
+inject "D-111 a criterion names a check type its family does not declare" \
+  'python3 scripts/ci/check_native_catalog.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import json, pathlib
+p = pathlib.Path("lib/isedraf/catalog/native_controls.json"); d = json.loads(p.read_text())
+c = {f: "x" for f in d["required_criterion_fields"]}
+c.update(criterion_id="ISE-SSH-001", check_type="an undeclared group", version=1)
+d["criteria"].append(c)
+p.write_text(json.dumps(d, indent=2))
+PYX' \
+  'not declared for ISE-SSH in check_types'
+
+inject "D-111 a retired criterion ID is reused" \
+  'python3 scripts/ci/check_native_catalog.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import json, pathlib
+p = pathlib.Path("lib/isedraf/catalog/native_controls.json"); d = json.loads(p.read_text())
+d["check_types"]["ISE-SSH"] = ["authentication settings"]
+c = {f: "x" for f in d["required_criterion_fields"]}
+c.update(criterion_id="ISE-SSH-001", check_type="authentication settings", version=1)
+d["criteria"].append(c)
+d["retired_criteria"].append({"criterion_id": "ISE-SSH-001", "last_version": 1, "retired_on": "2026-10-14"})
+p.write_text(json.dumps(d, indent=2))
+PYX' \
+  'a retired ID is never reused'
+
+inject "D-111 a required criterion field is missing from the catalog document" \
+  'python3 scripts/ci/check_native_catalog.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import json, pathlib
+p = pathlib.Path("lib/isedraf/catalog/native_controls.json"); d = json.loads(p.read_text())
+d["required_criterion_fields"].append("undocumented_field")
+p.write_text(json.dumps(d, indent=2))
+PYX' \
+  'undocumented_field is in the registry and not named in the catalog document'
 
 # D-122. The Evidence Limits Manifest schema is frozen; these prove its gate refuses a
 # vocabulary that drifted from the code, a fixture that manufactures evaluation semantics or
@@ -686,7 +1028,7 @@ inject "D-84 a tracked file carries no licence statement at all" \
 # checked them, so they aged while everything around them was gated.
 inject "D-88 the README version badge disagrees with VERSION" \
   'python3 scripts/ci/check_public_claims.py' \
-  'sed -i "s|badge/version-0.2.0-lightgrey|badge/version-9.9.9-lightgrey|" README.md' \
+  'sed -i "s|badge/version-0.3.0-lightgrey|badge/version-9.9.9-lightgrey|" README.md' \
   'version badge says|public claims gate FAILED'
 
 # OpenSSF Baseline Level 2 (2026-09-29): the repository's security configuration and policy
@@ -3978,6 +4320,19 @@ head, sep, tail = s.partition(old)
 p.write_text(head + tail.split("\n", 1)[1].split("\n", 1)[1])
 PYX' \
   'ship DIFFERENT documentation'
+
+# IQ-073: the rpm copied the whole lib/isedraf tree and shipped two files the deb did not.
+# Going back to the whole-tree copy must be caught by the runtime payload comparison.
+inject "IQ-073 the rpm ships runtime files the deb does not" \
+  'git add -A >/dev/null 2>&1; git -c user.name=falsifiable -c user.email=falsifiable@invalid commit -qm mutation >/dev/null 2>&1; bash packaging/build.sh 2>&1; bash scripts/ci/check_package_payload.sh' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("packaging/rpm/isedraf.spec.in"); s = p.read_text()
+old = "install -D -m 0644 lib/isedraf/catalog/native_controls.json \\\n"
+assert s.count(old) == 1, "mutation anchor miss"
+p.write_text(s.replace(old, "cp -a lib/isedraf/. %{buildroot}%{_prefix}/lib/isedraf/\ninstall -D -m 0644 lib/isedraf/catalog/native_controls.json \\\n", 1))
+PYX' \
+  'ship DIFFERENT runtime files'
 
 # The comparison was by basename until the guides moved into docs/ (0.1.0, 2026-09-29): it
 # failed identical payloads, and it could never see a guide installed in the wrong

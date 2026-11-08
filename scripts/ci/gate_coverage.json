@@ -229,7 +229,7 @@
       "implements": "D-78, D-79, D-84, D-111",
       "falsification": "D-111 a production module is named after a framework provider",
       "eligible": [
-        "scripts/ci/native_controls.json",
+        "lib/isedraf/catalog/native_controls.json",
         "docs/architecture/NATIVE_CONTROL_CATALOG.md"
       ]
     },

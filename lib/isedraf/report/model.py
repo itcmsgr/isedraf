@@ -27,13 +27,14 @@ import hashlib
 import json
 import os
 
-from .. import ENGINE_VERSION, coverage, ids, ledger, verify
+from .. import ENGINE_VERSION, catalog, coverage, ids, ledger, verify
+from ..evaluate import record as evaluation_record
 from ..inventory import model as inventory_model
 from . import artifact as artifact_module
 from . import sections as section_summaries
 from .profile import IDENTITY_DISCLAIMER
 
-REPORT_SCHEMA_VERSION = 2          # 2: evidence_limitations (IQ-042 (3))
+REPORT_SCHEMA_VERSION = 3          # 2: evidence_limitations (IQ-042 (3)); 3: native_results (D-125)
 
 # Plain words on the report itself (GA v0.1 public docs review): the two blocks stay
 # distinct, because host identity is part of host state and inventory is not.
@@ -310,9 +311,51 @@ def evidence_limitations(manifest):
             "items": items}
 
 
+# D-125 (EVAL-001, EVAL-005): the report SHOWS a committed evaluation; it never evaluates.
+# The one evaluation that applies is found by its derived identity (EVAL-006) - this
+# snapshot, this engine, this catalog - so nothing is chosen among several.
+NATIVE_NOT_LOOKED_UP = ("no evaluation was looked up for this rendering. Run `isedraf evaluate` "
+                        "then `isedraf report` for your own store, or `sudo isedraf evaluate` "
+                        "then `sudo isedraf report` for a Full Audit (D-125, D-126)")
+
+
+_NATIVE_FIELDS = ("criterion_id", "criterion_version", "result", "reason_code", "reason",
+                  "scope", "limitations", "observations")
+
+
+def native_results(root, snapshot_id, engine_version=ENGINE_VERSION):
+    """The committed evaluation of `snapshot_id`, verified, or why there is none."""
+    try:
+        with open(os.path.join(root, "snapshots", snapshot_id, "manifest.json"), "rb") as fh:
+            envelope = json.loads(fh.read().decode("utf-8"))
+        _registry, raw = catalog.load()
+    except (OSError, ValueError, KeyError) as exc:
+        return {"status": "UNAVAILABLE", "reason": "the evaluation cannot be located: %s" % exc}
+    the_key = evaluation_record.key(snapshot_id, envelope.get("manifest_hash"), engine_version,
+                                    catalog.digest(raw))
+    evl_id = evaluation_record.evaluation_id(envelope["manifest_core"]["created_at"], the_key)
+    loaded = evaluation_record.load(root, evl_id)
+    if loaded is None:
+        return {"status": "NO_EVALUATION", "evaluation_id": evl_id,
+                "reason": "this run has not been evaluated by this engine and catalog; "
+                          "run `isedraf evaluate` (a report never evaluates)"}
+    manifest, objects, problems = loaded
+    if problems:
+        return {"status": "DOES_NOT_VERIFY", "evaluation_id": evl_id, "problems": problems}
+    severity = dict((f["criterion_id"], f["severity"])
+                    for f in objects["findings.json"]["findings"])
+    return {"status": "EVALUATED", "evaluation_id": evl_id,
+            "state_root": manifest.get("state_root"),
+            "result_counts": manifest.get("result_counts"),
+            "finding_counts": manifest.get("finding_counts"),
+            "results": [dict([(k, r[k]) for k in _NATIVE_FIELDS],
+                             finding_severity=severity.get(r["criterion_id"]))
+                        for r in objects["results.json"]["results"]]}
+
+
 def build(root, inventory, assessment=None, generated_at=None, report_id=None,
           inventory_artifact=None, coverage_manifest=None, audit_sections=None,
-          audit_digests=None):
+          audit_digests=None, snapshot_id=None):
     """The whole model. Assessment metadata is presentation and touches no evidence."""
     generated_at = generated_at or ids.now_utc()
     report_id = report_id or ids.new_id("RPT", generated_at)
@@ -377,6 +420,9 @@ def build(root, inventory, assessment=None, generated_at=None, report_id=None,
         # renderer does not collect. Absent when the caller supplied none, so that
         # "no manifest" and "an empty manifest" stay distinguishable (NORM-034).
         "evidence_limits": coverage_manifest,
+        # D-125: kept apart from collection status, with its own counters (CMP-001).
+        "native_results": (native_results(root, snapshot_id) if snapshot_id is not None
+                           else {"status": "NOT_SHOWN", "reason": NATIVE_NOT_LOOKED_UP}),
         "evidence_limitations": evidence_limitations(coverage_manifest),
         "limitations": (_limitations(inventory) + _coverage_limitations(coverage_manifest)
                         + ([FULL_AUDIT_KEYS_LIMITATION]

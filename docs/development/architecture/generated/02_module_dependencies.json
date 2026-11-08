@@ -95,10 +95,14 @@
       "isedraf.textbytes"
     ],
     "isedraf.canonical": [],
+    "isedraf.catalog": [],
     "isedraf.cli": [
       "isedraf",
       "isedraf.ENGINE_VERSION",
       "isedraf.audit",
+      "isedraf.catalog",
+      "isedraf.evaluate",
+      "isedraf.evaluate.run",
       "isedraf.exitcodes",
       "isedraf.exitcodes.INCOMPLETE",
       "isedraf.exitcodes.OK",
@@ -106,6 +110,7 @@
       "isedraf.exitcodes.RUN_IN_PROGRESS",
       "isedraf.exitcodes.STATE_ROOT_UNUSABLE",
       "isedraf.exitcodes.USAGE_OR_ENGINE",
+      "isedraf.explain",
       "isedraf.identity",
       "isedraf.inventory",
       "isedraf.ledger",
@@ -123,7 +128,32 @@
       "isedraf.status.NOT_TESTED",
       "isedraf.status.PARTIAL"
     ],
+    "isedraf.evaluate": [],
+    "isedraf.evaluate.criteria": [
+      "isedraf.status",
+      "isedraf.status.COLLECTED",
+      "isedraf.status.ERROR",
+      "isedraf.status.NOT_TESTED",
+      "isedraf.status.PARTIAL"
+    ],
+    "isedraf.evaluate.record": [
+      "isedraf",
+      "isedraf.canonical"
+    ],
+    "isedraf.evaluate.run": [
+      "isedraf",
+      "isedraf.canonical",
+      "isedraf.catalog",
+      "isedraf.evaluate",
+      "isedraf.evaluate.criteria",
+      "isedraf.evaluate.record",
+      "isedraf.ledger",
+      "isedraf.snapshot",
+      "isedraf.stateroot",
+      "isedraf.verify"
+    ],
     "isedraf.exitcodes": [],
+    "isedraf.explain": [],
     "isedraf.fixedop": [
       "isedraf",
       "isedraf.supervisor"
@@ -202,6 +232,20 @@
     ],
     "isedraf.launcher": [],
     "isedraf.launcher.engine": [],
+    "isedraf.launcher.evaluator": [
+      "isedraf",
+      "isedraf.evaluate",
+      "isedraf.exitcodes",
+      "isedraf.launcher",
+      "isedraf.supervisor"
+    ],
+    "isedraf.launcher.evalunit": [
+      "isedraf",
+      "isedraf.evaluate",
+      "isedraf.exitcodes",
+      "isedraf.launcher",
+      "isedraf.supervisor"
+    ],
     "isedraf.launcher.outer": [
       "isedraf",
       "isedraf.exitcodes"
@@ -356,7 +400,10 @@
     "isedraf.report.model": [
       "isedraf",
       "isedraf.ENGINE_VERSION",
+      "isedraf.catalog",
       "isedraf.coverage",
+      "isedraf.evaluate",
+      "isedraf.evaluate.record",
       "isedraf.ids",
       "isedraf.inventory",
       "isedraf.inventory.model",

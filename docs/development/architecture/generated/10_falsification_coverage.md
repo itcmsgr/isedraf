@@ -20,9 +20,9 @@ GENERATED from `scripts/ci/falsifiable.sh`. A large total is not coverage if mos
 | S5 enumeration | 5 |
 | architecture | 7 |
 | privacy / disclosure | 30 |
-| licensing / framework | 21 |
+| licensing / framework | 24 |
 | packaging / release | 10 |
 | governance / gates | 9 |
 | docs truth | 7 |
-| other / cross-cutting | 350 |
-| **total** | **517** |
+| other / cross-cutting | 379 |
+| **total** | **549** |
