@@ -43,6 +43,60 @@ def _row(out, label, value):
     out.append("%-20s %s" % (label, "—" if value in (None, "") else value))
 
 
+NATIVE_FRAMING = ("Native criterion results are separate from collection status. Each one "
+                  "is the result of one ISEDRAF criterion over the evidence that criterion "
+                  "names, and only that; it is not a verdict on the host. "
+                  "`isedraf explain <criterion>` says what a result does not establish.")
+
+
+def _scalar(value):
+    if isinstance(value, list):
+        return "[" + "; ".join(observation_text(v) if isinstance(v, dict) else _scalar(v)
+                               for v in value) + "]"
+    return "none" if value is None else "%s" % (value,)
+
+
+def observation_text(o):
+    """One observation as text, whatever criterion made it: every field, in a fixed order.
+
+    Observations differ per criterion (an account line, a UID shared by names, a Match
+    declaration), so nothing here assumes one shape; a name with no decodable text is shown
+    by its exact bytes. Used by the report and by `isedraf evaluate`."""
+    if not isinstance(o, dict):
+        return _scalar(o)
+    fields = dict(o)
+    if "name" in fields and fields["name"] is None and fields.get("name_bytes_hex"):
+        fields["name"] = "hex:" + fields["name_bytes_hex"]
+    fields.pop("name_bytes_hex", None)
+    return ", ".join("%s=%s" % (k, _scalar(fields[k])) for k in sorted(fields))
+
+
+def _observed(o):
+    return observation_text(o)
+
+
+def _native_markdown(native):
+    out = ["## Native criteria", "", "*%s*" % NATIVE_FRAMING, ""]
+    status = native.get("status")
+    if status != "EVALUATED":
+        out += ["Not shown: %s (%s)." % ((native.get("reason") or "; ".join(
+            native.get("problems") or [])).replace("|", "\\|"), status), ""]
+        return out
+    out.append("Evaluation `%s`" % native.get("evaluation_id"))
+    out += ["", "| Criterion | Result | Severity | Reason |", "|---|---|---|---|"]
+    for r in native.get("results") or []:
+        out.append("| %s v%s | %s | %s | %s |" % (
+            r["criterion_id"], r["criterion_version"], r["result"],
+            r.get("finding_severity") or "—", r["reason"].replace("|", "\\|")))
+    out.append("")
+    for r in native.get("results") or []:
+        for o in r.get("observations") or []:
+            out.append("- %s observed %s" % (r["criterion_id"], _observed(o)))
+        out.append("- %s scope: %s" % (r["criterion_id"], r.get("scope")))
+    out.append("")
+    return out
+
+
 def to_markdown(report):
     out = []
     r, target = report["report"], report["target"]
@@ -350,6 +404,8 @@ def to_markdown(report):
                    "(`isedraf report --html`) shows each area's facts and evidence "
                    "reference.*")
         out.append("")
+    out.extend(_native_markdown(report.get("native_results") or {"status": "NOT_SHOWN",
+                                                                  "reason": "no native results"}))
     limits = report.get("evidence_limitations") or {"recorded": False, "items": [],
                                                     "note": None}
     out.append("## Evidence limitations")
@@ -400,6 +456,8 @@ th{font-weight:600;color:#4a5264;width:34%}
 .status{display:inline-block;padding:1px 8px;border-radius:10px;font-size:.85rem;font-weight:600}
 .COLLECTED{background:#e3f4e8;color:#17602f}.PARTIAL{background:#fff3d6;color:#7a5200}
 .NOT_TESTED{background:#e9ecf2;color:#39414f}.ERROR{background:#fde2e2;color:#8a1c1c}
+.PASS{background:#e3f4e8;color:#17602f}.FAIL{background:#fde2e2;color:#8a1c1c}
+.NOT_EVALUATED{background:#e9ecf2;color:#39414f}
 .reason{color:#4a5264;font-size:.92rem}.ref{font-family:ui-monospace,monospace;
 font-size:.8rem;color:#4a5264;overflow-wrap:anywhere}
 """
@@ -488,6 +546,25 @@ def to_html(report):
         ref = s.get("evidence_ref") or {}
         w('<p class="ref">evidence: %s &middot; %s</p>\n</section>\n'
           % (_esc(ref.get("path")), _esc(ref.get("digest") or "unbound")))
+
+    native = report.get("native_results") or {"status": "NOT_SHOWN", "reason": "no native results"}
+    w('<div class="panel"><h2>Native criteria</h2>\n<p class="reason">%s</p>\n'
+      % _esc(NATIVE_FRAMING))
+    if native.get("status") != "EVALUATED":
+        w("<p>Not shown: %s (%s).</p>\n" % (_esc(native.get("reason") or "; ".join(
+            native.get("problems") or [])), _esc(native.get("status"))))
+    else:
+        w('<p class="ref">evaluation: %s</p>\n<table>\n' % _esc(native.get("evaluation_id")))
+        for r in native.get("results") or []:
+            w("<tr><th>%s v%s</th><td>%s %s</td><td>%s</td></tr>\n" % (
+                _esc(r["criterion_id"]), _esc(r["criterion_version"]), _status(r["result"]),
+                _esc(r.get("finding_severity") or ""), _esc(r["reason"])))
+            for o in r.get("observations") or []:
+                w("<tr><th></th><td colspan=\"2\">observed %s</td></tr>\n" % _esc(_observed(o)))
+            w('<tr><th></th><td colspan="2" class="reason">scope: %s</td></tr>\n'
+              % _esc(r.get("scope")))
+        w("</table>\n")
+    w("</div>\n")
 
     limits = report.get("evidence_limitations") or {"recorded": False, "items": [],
                                                     "note": None}

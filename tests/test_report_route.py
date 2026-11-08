@@ -25,6 +25,7 @@ import io
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -45,6 +46,38 @@ HOST = {"etc/machine-id": "3f9a1c0b7d2e4a68b5c6d7e8f9a0b1c2\n",
 UID, GID = os.getuid(), os.getgid()
 
 
+def private_catalog(testcase):
+    """The root side reads the catalog only from a root-owned file that is not group- or
+    world-writable. A checkout made under umask 002 is group-writable, so the tests hand the
+    root side a 0644 copy of the same bytes rather than depend on the developer's umask."""
+    from isedraf import catalog
+    from isedraf.launcher import evalunit
+    base = tempfile.mkdtemp()
+    testcase.addCleanup(shutil.rmtree, base, True)
+    copy = os.path.join(base, "native_controls.json")
+    shutil.copyfile(catalog.REGISTRY, copy)
+    os.chmod(copy, 0o644)
+    real = evalunit.read_catalog
+    patch = mock.patch.object(evalunit, "read_catalog", lambda path=None: real(copy))
+    patch.start()
+    testcase.addCleanup(patch.stop)
+
+
+class NoLeakedPipe(object):
+    """Mixin: a route whose child exits early must not leak the pipe it was fed through."""
+
+    def assertNoResourceWarning(self, call):
+        import gc
+        import warnings
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always", ResourceWarning)
+            result = call()
+            gc.collect()
+        leaks = [w for w in caught if issubclass(w.category, ResourceWarning)]
+        self.assertEqual(leaks, [], [str(w.message) for w in leaks])
+        return result
+
+
 def fingerprint(root):
     out = []
     for base, dirs, files in os.walk(root):
@@ -60,7 +93,7 @@ def fingerprint(root):
     return out
 
 
-class ReportRoute(unittest.TestCase):
+class ReportRoute(NoLeakedPipe, unittest.TestCase):
 
     def setUp(self):
         base = tempfile.mkdtemp()
@@ -80,6 +113,7 @@ class ReportRoute(unittest.TestCase):
                       mock.patch.object(store, "OWNER_GID", GID)):
             patch.start()
             self.addCleanup(patch.stop)
+        private_catalog(self)
 
     def snapshot_id(self):
         return ledger.read_records(self.root)[-1]["record_core"]["snapshot_id"]
@@ -231,8 +265,9 @@ class ReportRoute(unittest.TestCase):
         self.assertEqual(leftover, [])
 
     def test_the_whole_route_hands_the_frame_to_the_renderer_and_returns_its_code(self):
-        entry = ("import sys; sys.path.insert(0, %r); from isedraf.launcher.renderer import main; "
-                 "sys.exit(main(sys.argv[1:]))" % os.path.abspath(LIB))
+        entry = ("import sys; sys.path.insert(0, %r); from isedraf.launcher import renderer; "
+                 "renderer.reduction_check = lambda: []; "
+                 "sys.exit(renderer.main(sys.argv[1:]))" % os.path.abspath(LIB))
         out_path = os.path.join(tempfile.mkdtemp(), "out")
         self.addCleanup(shutil.rmtree, os.path.dirname(out_path), True)
         saved = os.dup(1)
@@ -249,6 +284,29 @@ class ReportRoute(unittest.TestCase):
         self.assertIn(code, (0, 2))
         with open(out_path) as fh:
             self.assertIn("Verification scope", fh.read())
+
+    def test_a_renderer_that_is_not_reduced_renders_nothing(self):
+        # IQ-076: the real check, unpatched. The test user is not the isedraf account with
+        # every capability set empty, so the renderer must refuse before reading the frame.
+        entry = ("import sys; sys.path.insert(0, %r); from isedraf.launcher.renderer import main; "
+                 "sys.exit(main(sys.argv[1:]))" % os.path.abspath(LIB))
+        done = subprocess.run([sys.executable, "-IB", "-c", entry, "markdown"],
+                              input=frame.encode(self.items()), stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE)
+        self.assertEqual(done.returncode, 64)
+        self.assertEqual(done.stdout, b"")
+        self.assertIn(b"ENGINE_NOT_REDUCED", done.stderr)
+
+    def test_a_renderer_that_exits_early_leaves_no_open_pipe(self):
+        # Regression (2026-11-05): the write meets a closed pipe; the launcher closes its
+        # end and returns the child's code.
+        # A 1 MiB frame: larger than any pipe buffer, so the child's early exit is met.
+        with mock.patch.object(reportunit, "render_argv",
+                               lambda fmt: [sys.executable, "-c", "import sys; sys.exit(64)"]), \
+                mock.patch.object(reportunit.frame, "encode", lambda items: b"x" * (1 << 20)):
+            code = self.assertNoResourceWarning(
+                lambda: reportunit.run("markdown", self.root, io.StringIO(), engine_uid=UID))
+        self.assertEqual(code, 64)
 
 
 if __name__ == "__main__":

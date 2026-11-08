@@ -18,7 +18,7 @@ version drifted until it announced that no product code existed while three comm
 | | |
 |---|---|
 | Project stage | **GENERAL_AVAILABILITY** |
-| Public release | **0.1.2, published 2026-10-08; 0.2.0 awaiting owner authorization** |
+| Public release | **0.2.0, published 2026-10-19; 0.3.0 awaiting owner authorization** |
 | Production Python floor | 3.6 |
 | Tooling Python floor | 3.9 |
 | Execution model | unprivileged by default (`isedraf audit`, user evidence store); Full Audit (`sudo isedraf audit`) from 0.2.0 |
@@ -32,7 +32,8 @@ Engineering status is not a release: an item marked NOT RELEASED is in no publis
 |---|---|
 | 0.1.0 | PUBLISHED 2026-09-28 - general availability, unprivileged |
 | 0.1.1 | PUBLISHED 2026-10-06 - correction release (authorized_keys evidence) |
-| 0.1.2 | PUBLISHED 2026-10-08 - correction release (evidence truth, evidence limits); latest |
+| 0.1.2 | PUBLISHED 2026-10-08 - correction release (evidence truth, evidence limits) |
+| 0.2.0 | PUBLISHED 2026-10-19 - Full Audit (sudo isedraf audit, sudo isedraf report); latest |
 | v0.2 P0 authority model | DONE (D-122, D-123) |
 | v0.2 P1 truth fixes | DONE - released in 0.1.1 and 0.1.2 |
 | v0.2 P2 registry truth | DONE - released in 0.1.2 |
@@ -48,7 +49,9 @@ Engineering status is not a release: an item marked NOT RELEASED is in no publis
 | Full Audit mounts and storage | engine reads PID 1's mount table with no added privilege (IQ-055); space only where the device matches; four-platform lab proof PASSED 2026-10-09 |
 | Full Audit time on SELinux-enforcing EL9 | chronyc not executed; recorded as MAC_DOMAIN_TRANSITION_UNAVAILABLE |
 | Deferred past v0.2 (owner decision 2026-10-10) | inspect_mount_namespaces_v1 (PLANNED) and read_authorized_keys_v1 (DESIGN_OPEN) - post-v0.2 candidates, not v0.2 scope; Full Audit does not collect other users' authorized_keys |
-| v0.2 release | 0.2.0 prepared; release acceptance PASSED 2026-10-12 (Debian 12, Ubuntu 24.04, Rocky 9.7, AlmaLinux 9.7 Full Audit; AlmaLinux 8.10 standard audit); publication awaits owner authorization |
+| 0.3.0 | PREPARED, NOT YET PUBLISHED - native criteria: isedraf evaluate and sudo isedraf evaluate (eight ISEDRAF-authored criteria, EXPERIMENTAL), isedraf explain |
+| v0.3 release | 0.3.0 prepared; upgrade and release-candidate acceptance of 0.3.0-rc1 PASSED 2026-11-08 (in-place upgrade from 0.2.0 on existing stores: Debian 12, Ubuntu 24.04, Rocky 9.7, AlmaLinux 9.7 Full Audit; AlmaLinux 8.10 standard audit); publication awaits owner authorization |
+| v0.2 release | 0.2.0 prepared; release acceptance PASSED 2026-10-12 (Debian 12, Ubuntu 24.04, Rocky 9.7, AlmaLinux 9.7 Full Audit; AlmaLinux 8.10 standard audit); published 2026-10-19 as 0.2.0 (final smoke of the tag-build packages on the same five platforms 2026-10-19) |
 
 ## Implemented
 
@@ -64,6 +67,7 @@ What exists and runs today. Nothing else on this page does.
 | `clean_public_export` | `scripts/ci/release_export.sh` | — |
 | `code_scanning` | `.github/workflows/codeql.yml` | — |
 | `consolidated_product_model` | `docs/architecture/ISEDRAF_PRODUCT_HLD.md` | `make check-public-claims` |
+| `criterion_explanation` | `lib/isedraf/explain.py` | `isedraf explain <criterion_id>` |
 | `framework_neutral_core` | `docs/licensing/FRAMEWORK_MAPPING_POLICY.md` | — |
 | `framework_source_registry` | `scripts/ci/framework_sources.json` | `make check-licensing` |
 | `hostname_state` | `lib/isedraf/hostname/` | `isedraf audit` |
@@ -73,6 +77,8 @@ What exists and runs today. Nothing else on this page does.
 | `ledger` | `lib/isedraf/ledger.py` | — |
 | `login_policy` | `lib/isedraf/loginpolicy/` | `isedraf audit` |
 | `mounts` | `lib/isedraf/mounts/` | `isedraf audit` |
+| `native_control_catalog` | `lib/isedraf/catalog/native_controls.json` | — |
+| `native_evaluation` | `tests/test_evaluate.py` | `isedraf evaluate` |
 | `nss_configuration` | `lib/isedraf/nss/` | `isedraf audit` |
 | `package_deb` | `packaging/deb/control.in` | — |
 | `package_lifecycle_verified` | `scripts/compat/package_lifecycle.sh` | — |
@@ -105,7 +111,6 @@ Designed, not built. No part of this runs.
 - `journald_recording`
 - `mode_b_open_mapping` — optional mapping to an external authority whose exact reuse rights were validated first. NIST is the candidate and its rights are NOT yet verified - 'government' and 'open source' are where everyone assumes and nobody checks (design: `docs/architecture/ISEDRAF_PRODUCT_HLD.md`)
 - `mode_c_licensed_byol` — provider-authorized pack plus the customer's own provider entitlement, only after a written agreement. Zero providers approached, zero agreements, and the architecture being ready is not a provider having agreed (design: `docs/architecture/ISEDRAF_PRODUCT_HLD.md`)
-- `native_control_catalog` — D-111 freezes the invariant and the ISE-* namespace: 14 families, ISE-IDENT reserved and not in use. NO native criterion is authored yet - they arrive in W1-D. make check-native-catalog enforces that the registry and the catalog document agree, that criteria hold to the namespace, that no criterion is derived from a framework, and that no production module is named after a provider (design: `docs/architecture/NATIVE_CONTROL_CATALOG.md`)
 - `report_pdf`
 - `services`
 - `signing`
@@ -139,10 +144,10 @@ Not asserted. Each number is counted at generation time.
 | | |
 |---|---|
 | Gates | 33 |
-| Falsification injections | 518 |
+| Falsification injections | 550 |
 | Golden vector cases | 15 |
 | Frozen artifacts | 7 |
-| Test files | 49 |
+| Test files | 53 |
 
 ## Release blockers
 

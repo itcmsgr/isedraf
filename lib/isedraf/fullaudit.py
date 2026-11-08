@@ -74,13 +74,23 @@ def reduction_problems(status_text, passwd_text, account=ENGINE_ACCOUNT):
     return problems
 
 
-def run(out=None, err=None, channel=None):
-    out = sys.stdout if out is None else out
-    err = sys.stderr if err is None else err
+def current_reduction_problems():
+    """Why THIS process is not the reduced identity of AUTH-020; empty when it is.
+
+    One implementation for every reduced component: the Full Audit engine, the AUTH-033
+    evaluator and the AUTH-032 report renderer (IQ-076). Each refuses before it reads,
+    evaluates or renders anything unless this is empty.
+    """
     with open(STATUS) as fh:
         status_text = fh.read()
     passwd = hostio.read_file(PASSWD)
-    problems = reduction_problems(status_text, passwd.value if passwd.ok else "")
+    return reduction_problems(status_text, passwd.value if passwd.ok else "")
+
+
+def run(out=None, err=None, channel=None):
+    out = sys.stdout if out is None else out
+    err = sys.stderr if err is None else err
+    problems = current_reduction_problems()
     if problems:
         err.write("isedraf: ENGINE_NOT_REDUCED: %s\n" % "; ".join(problems))
         return USAGE_OR_ENGINE

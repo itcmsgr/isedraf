@@ -12,6 +12,46 @@ Semantic Versioning once a release exists. `VERSION` is the single source of the
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-08
+
+ISEDRAF 0.3: native criteria. `isedraf evaluate` reads one committed, verified run and
+evaluates it against eight ISEDRAF-authored criteria; it never collects. Each result is PASS,
+FAIL, MANUAL_REVIEW or NOT_EVALUATED, with the evidence it rests on, and is committed as a
+regenerable evaluation beside the run. `isedraf explain <criterion>` shows what a criterion
+checks and what it does not establish. The criteria are EXPERIMENTAL and are not a
+compliance verdict.
+
+### Added
+- `isedraf evaluate` (user store) and `sudo isedraf evaluate` (the Full Audit store; the
+  evaluation itself runs unprivileged).
+- `isedraf explain <criterion>`, and a page per criterion in `docs/reference/criteria/`.
+- Eight criteria: ISE-ACCOUNT-001 (UID 0 only for root), ISE-ACCOUNT-002 (empty shadow
+  password fields), ISE-ACCOUNT-003 (duplicate UIDs), ISE-ACCOUNT-004 (MD5 password
+  hashes), ISE-ACCOUNT-005 (duplicate GIDs), ISE-AUTH-001 (declared login.defs hashing
+  method), ISE-SSH-001 (global PermitEmptyPasswords), ISE-SSH-002 (global StrictModes).
+  Criteria that need /etc/shadow or `sshd -T` give NOT_EVALUATED on a standard audit.
+- The report shows the committed evaluation of the reported run, if there is one.
+
+### Changed
+- `sudo isedraf report` checks that its renderer runs reduced, as the Full Audit engine
+  does, and refuses otherwise.
+- The rpm ships the same runtime files as the deb; it no longer installs `exitcodes.json`
+  and `runtime-imports.allow`, which nothing at runtime reads.
+
+### Upgrading
+- The package upgrades 0.2.0 in place; existing runs are kept and still verify. A run
+  made by 0.2.0 can be evaluated by 0.3.0.
+
+### Tested
+- The release candidate was installed over 0.2.0 by the package manager (`dpkg -i`,
+  `rpm -Uvh`) on hosts with existing evidence stores, on Debian 12, Ubuntu 24.04, Rocky
+  Linux 9.7 and AlmaLinux 9.7 (Full Audit, SELinux enforcing on the last two) and on
+  AlmaLinux 8.10 (standard audit; Full Audit refused as unsupported), all on x86_64. The
+  upgrade changed no stored file; every earlier run still verified; runs made by 0.2.0
+  were evaluated, and evaluating them again gave identical results; new runs were audited,
+  evaluated and reported.
+- Not tested: ARM64, and upgrades from 0.1.x directly to 0.3.0.
+
 ## [0.2.0] - 2026-10-12
 
 ISEDRAF 0.2: Full Audit. `sudo isedraf audit` collects, in a sandboxed systemd

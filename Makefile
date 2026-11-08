@@ -363,6 +363,18 @@ check-tests:
 	@out=$$(python3 tests/test_report.py 2>&1); rc=$$?; \
 	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
 	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_evaluate.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_criteria_batch1.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_criteria_batch2.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_evaluate_route.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
 
 ## check-docs    C-01..C-13: claims, framing, status labels, stubs, links, wiki
 check-docs:

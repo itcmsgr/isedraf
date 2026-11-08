@@ -131,7 +131,7 @@ says why.
 
 | Message says | Exit | What to do |
 |---|---|---|
-| Under sudo or root, ISEDRAF runs only `sudo isedraf audit` ... and `sudo isedraf report` | 70 | run other commands as your normal user |
+| Under sudo or root, ISEDRAF runs only `sudo isedraf audit`, `sudo isedraf report` and `sudo isedraf evaluate` | 70 | run other commands as your normal user |
 | FULL_AUDIT_UNSUPPORTED | 70 | Full Audit needs systemd and one of the four platforms above |
 | ENGINE_IDENTITY_MISSING | 70 | reinstall the package, which declares the `isedraf` account |
 | ENGINE_UNSAFE_INSTALL | 64 | `/usr/lib/isedraf` must be root-owned and not writable by others |

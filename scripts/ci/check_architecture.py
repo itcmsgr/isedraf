@@ -60,7 +60,9 @@ LAYERS = [
               "isedraf.textbytes", "isedraf.exitcodes",
               # v0.2 P4: the supervisor imports nothing from the engine (AUTH-006), so it
               # sits at the bottom; fixedop is the engine's side of the same boundary.
-              "isedraf.supervisor", "isedraf.fixedop")),
+              "isedraf.supervisor", "isedraf.fixedop",
+              # D-125 EVAL-002: the installed native control registry, data plus checks.
+              "isedraf.catalog")),
     ("shared", ("isedraf.shared",)),
     ("domain", ("isedraf.accounts", "isedraf.inventory", "isedraf.identity",
                 "isedraf.snapshot", "isedraf.ledger", "isedraf.verify",
@@ -69,8 +71,12 @@ LAYERS = [
                 "isedraf.mounts", "isedraf.nss", "isedraf.hostname",
                 # GA track: orchestrates the domain collectors for one audit run; it
                 # collects, never renders, so it sits below presentation.
-                "isedraf.audit")),
-    ("presentation", ("isedraf.report",)),
+                "isedraf.audit",
+                # D-125: native evaluation of committed evidence. It reads and verifies
+                # the store and never collects; the report may read an evaluation
+                # (evaluate.record) and may never create one (evaluate.run, rule 8).
+                "isedraf.evaluate")),
+    ("presentation", ("isedraf.report", "isedraf.explain")),
     # v0.2 P5b: the Full Audit launcher orchestrates the store and the engine as the CLI
     # does; it sits beside it, above every layer it composes.
     ("entrypoint", ("isedraf.cli", "isedraf.launcher", "isedraf.fullaudit")),
@@ -87,7 +93,12 @@ PURE = ("isedraf.shared.keyvalue", "isedraf.shared.compare", "isedraf.shared.res
         "isedraf.mounts.sources", "isedraf.mounts.model",
         "isedraf.nss.sources", "isedraf.nss.model",
         "isedraf.hostname.sources", "isedraf.hostname.model",
-        "isedraf.supervisor.protocol", "isedraf.supervisor.contracts")
+        "isedraf.supervisor.protocol", "isedraf.supervisor.contracts",
+        "isedraf.evaluate.criteria", "isedraf.explain")
+
+# D-125 EVAL-001: the report and `explain` render; they never evaluate. Importing the
+# module that creates an evaluation would let a rendering produce a result.
+EVALUATION_WRITERS = ("isedraf.evaluate.run",)
 
 IO_MARKERS = ("open", "listdir", "lstat", "scandir", "readlink", "Popen",
               "check_output", "system", "execv", "socket", "urlopen")
@@ -213,6 +224,13 @@ def check(paths):
                     bad("%s imports %s: a renderer must describe committed evidence, "
                         "never collect new evidence" % (module, target))
 
+        # --- 8. presentation does not evaluate (D-125, EVAL-001) --------------------
+        if module.startswith(("isedraf.report", "isedraf.explain")):
+            for target in targets:
+                if target in EVALUATION_WRITERS:
+                    bad("%s imports %s: a renderer shows a committed evaluation and never "
+                        "creates one" % (module, target))
+
     # --- 7. every production module is placed in a layer ----------------------------
     # An unlisted module must be a failure, not an exemption. See LAYERS.
     for relative in paths:
@@ -252,6 +270,8 @@ def self_test():
          "isedraf/shared/y.py", "import socket\ndef f():\n    return socket.socket()\n"),
         ("a renderer acquiring",
          "isedraf/report/z.py", "from .. import hostio\n"),
+        ("a renderer evaluating",
+         "isedraf/report/w.py", "from ..evaluate.run import build\n"),
         ("a module belonging to no layer",
          "isedraf/brandnew/thing.py", "VALUE = 1\n"),
     ]

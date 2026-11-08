@@ -74,6 +74,10 @@ for f in $(git ls-files 'lib/isedraf/*.py' 'lib/isedraf/**/*.py'); do
     # then did nothing.
     install -D -m 0644 "$f" "$STAGE/usr/$f" || die "staging $f"
 done
+# D-125: the native control catalog is data the runtime reads (evaluate, explain, report), so
+# it ships with the code. The loop above stages Python only; the RPM copies the whole tree.
+install -D -m 0644 lib/isedraf/catalog/native_controls.json \
+    "$STAGE/usr/lib/isedraf/catalog/native_controls.json" || die "staging the native control catalog"
 find "$STAGE/usr/lib/isedraf" -name '__pycache__' -prune -exec rm -rf {} + 2>/dev/null
 find "$STAGE" -name '*.pyc' -delete 2>/dev/null
 install -m 0644 LICENSE "$STAGE/usr/share/doc/isedraf/LICENSE" 2>/dev/null || true

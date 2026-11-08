@@ -35,7 +35,7 @@
       "scripts/ci/public_licensing_policy.json",
       "scripts/ci/check_licensing.py",
       "scripts/ci/check_native_catalog.py",
-      "scripts/ci/native_controls.json",
+      "lib/isedraf/catalog/native_controls.json",
       "scripts/ci/falsifiable.sh",
       "docs/licensing/FRAMEWORK_MAPPING_POLICY.md",
       "docs/licensing/FRAMEWORK_SOURCE_REGISTRY.md",

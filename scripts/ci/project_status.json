@@ -1,7 +1,7 @@
 {
   "$comment": "THE single authoritative status registry. docs/CURRENT_STATE.md is GENERATED from this file, and check_docs_truth.py validates documentation claims against it. One source, so a generated page and a gate cannot disagree \u2014 which is exactly how CURRENT_STATE.md came to announce that no product code existed while three commands worked.",
   "project_stage": "GENERAL_AVAILABILITY",
-  "public_release": "0.1.2, published 2026-10-08; 0.2.0 awaiting owner authorization",
+  "public_release": "0.2.0, published 2026-10-19; 0.3.0 awaiting owner authorization",
   "identity": {
     "$comment": "THE canonical identity strings. Five surfaces described the same product five different ways - file headers, README, package metadata, CLI help and the GitHub About field - and nothing compared them. They legitimately differ in LENGTH and CASE, because a banner, a subtitle, a one-line package Summary and a 131-character About field are different formats. They must not differ in SUBSTANCE. Each form is declared here and check-public-claims holds its surface to it.",
     "name": "ISEDRAF",
@@ -381,10 +381,30 @@
       "authority": "NOT_APPLICABLE",
       "full_audit_gain": "NOT_APPLICABLE"
     },
+    "native_evaluation": {
+      "status": "IMPLEMENTED",
+      "evidence": "tests/test_evaluate.py",
+      "command": "isedraf evaluate",
+      "note": "isedraf evaluate (D-125, EVAL-001..008): verifies one committed snapshot, evaluates the admitted native criteria from that evidence only and commits one regenerable evaluation under evaluations/EVL-*; never collects. Eight criteria, EXPERIMENTAL, each scoped to the evidence it names. sudo isedraf evaluate (D-126, AUTH-033) evaluates the Full Audit system store: the root side reads and promotes, a reduced evaluator evaluates",
+      "reachable_from": ["evaluate"],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NONE"
+    },
+    "criterion_explanation": {
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/explain.py",
+      "command": "isedraf explain <criterion_id>",
+      "note": "isedraf explain <criterion_id> (D-125, EVAL-009): renders the registry record; reads no evidence and no state root. The generated pages under docs/reference/criteria/ render the same record",
+      "reachable_from": ["explain"],
+      "audit_section": null,
+      "authority": "NOT_APPLICABLE",
+      "full_audit_gain": "NONE"
+    },
     "native_control_catalog": {
-      "status": "PLANNED",
-      "design": "docs/architecture/NATIVE_CONTROL_CATALOG.md",
-      "note": "D-111 freezes the invariant and the ISE-* namespace: 14 families, ISE-IDENT reserved and not in use. NO native criterion is authored yet - they arrive in W1-D. make check-native-catalog enforces that the registry and the catalog document agree, that criteria hold to the namespace, that no criterion is derived from a framework, and that no production module is named after a provider",
+      "status": "IMPLEMENTED",
+      "evidence": "lib/isedraf/catalog/native_controls.json",
+      "note": "D-111 freezes the invariant and the ISE-* namespace: 14 families, ISE-IDENT reserved and not in use. Eight criteria are admitted and evaluated (ISE-ACCOUNT-001 to -005, ISE-AUTH-001, ISE-SSH-001, ISE-SSH-002), from the one installed registry lib/isedraf/catalog/native_controls.json (D-125). make check-native-catalog enforces that the registry and the catalog document agree, that criteria hold to the namespace, that no criterion is derived from a framework, and that no production module is named after a provider",
       "reachable_from": [],
       "audit_section": null,
       "authority": "NOT_APPLICABLE",
@@ -546,7 +566,8 @@
   "release_line": [
     ["0.1.0", "PUBLISHED 2026-09-28 - general availability, unprivileged"],
     ["0.1.1", "PUBLISHED 2026-10-06 - correction release (authorized_keys evidence)"],
-    ["0.1.2", "PUBLISHED 2026-10-08 - correction release (evidence truth, evidence limits); latest"],
+    ["0.1.2", "PUBLISHED 2026-10-08 - correction release (evidence truth, evidence limits)"],
+    ["0.2.0", "PUBLISHED 2026-10-19 - Full Audit (sudo isedraf audit, sudo isedraf report); latest"],
     ["v0.2 P0 authority model", "DONE (D-122, D-123)"],
     ["v0.2 P1 truth fixes", "DONE - released in 0.1.1 and 0.1.2"],
     ["v0.2 P2 registry truth", "DONE - released in 0.1.2"],
@@ -562,7 +583,9 @@
     ["Full Audit mounts and storage", "engine reads PID 1's mount table with no added privilege (IQ-055); space only where the device matches; four-platform lab proof PASSED 2026-10-09"],
     ["Full Audit time on SELinux-enforcing EL9", "chronyc not executed; recorded as MAC_DOMAIN_TRANSITION_UNAVAILABLE"],
     ["Deferred past v0.2 (owner decision 2026-10-10)", "inspect_mount_namespaces_v1 (PLANNED) and read_authorized_keys_v1 (DESIGN_OPEN) - post-v0.2 candidates, not v0.2 scope; Full Audit does not collect other users' authorized_keys"],
-    ["v0.2 release", "0.2.0 prepared; release acceptance PASSED 2026-10-12 (Debian 12, Ubuntu 24.04, Rocky 9.7, AlmaLinux 9.7 Full Audit; AlmaLinux 8.10 standard audit); publication awaits owner authorization"]
+    ["0.3.0", "PREPARED, NOT YET PUBLISHED - native criteria: isedraf evaluate and sudo isedraf evaluate (eight ISEDRAF-authored criteria, EXPERIMENTAL), isedraf explain"],
+    ["v0.3 release", "0.3.0 prepared; upgrade and release-candidate acceptance of 0.3.0-rc1 PASSED 2026-11-08 (in-place upgrade from 0.2.0 on existing stores: Debian 12, Ubuntu 24.04, Rocky 9.7, AlmaLinux 9.7 Full Audit; AlmaLinux 8.10 standard audit); publication awaits owner authorization"],
+    ["v0.2 release", "0.2.0 prepared; release acceptance PASSED 2026-10-12 (Debian 12, Ubuntu 24.04, Rocky 9.7, AlmaLinux 9.7 Full Audit; AlmaLinux 8.10 standard audit); published 2026-10-19 as 0.2.0 (final smoke of the tag-build packages on the same five platforms 2026-10-19)"]
   ],
   "$release_line_comment": "PUBLIC-SAFE ONLY, like release_blockers. Where each published release and the unreleased engineering line stand, one row per item, rendered into docs/CURRENT_STATE.md. Engineering status is not a release: an item marked NOT RELEASED is in no published package.",
   "release_blockers": [],

@@ -63,7 +63,14 @@ install -m 0755 bin/isedraf %{buildroot}%{_bindir}/isedraf
 # repairs it - and is created in %post only when nothing exists at the path.
 # D-60 as amended by AUTH-012: one sysusers file.
 install -D -m 0644 packaging/sysusers/isedraf.conf %{buildroot}%{_prefix}/lib/sysusers.d/isedraf.conf
-cp -a lib/isedraf/. %{buildroot}%{_prefix}/lib/isedraf/
+# IQ-073: the runtime payload is the same set packaging/build.sh stages for the deb - every
+# .py under lib/isedraf and the native control catalog - not the whole tree. Copying the tree
+# shipped exitcodes.json and runtime-imports.allow, which only the repository gates read.
+(cd lib/isedraf && find . -name '*.py' -type f ! -path '*/__pycache__/*') | sort | while read -r f; do
+    install -D -m 0644 "lib/isedraf/$f" "%{buildroot}%{_prefix}/lib/isedraf/$f"
+done
+install -D -m 0644 lib/isedraf/catalog/native_controls.json \
+    %{buildroot}%{_prefix}/lib/isedraf/catalog/native_controls.json
 find %{buildroot}%{_prefix}/lib/isedraf -name '__pycache__' -prune -exec rm -rf {} + || :
 find %{buildroot} -name '*.pyc' -delete || :
 install -d -m 0755 %{buildroot}%{_docdir}/isedraf
@@ -99,7 +106,18 @@ if [ ! -e /var/lib/isedraf ] && [ ! -L /var/lib/isedraf ]; then mkdir -m 0700 /v
 %doc %{_docdir}/isedraf
 
 %changelog
-* Mon Oct 12 2026 Antonios Voulvoulis <contact@itcms.gr> - @VERSION@-@RELEASE@
+* Sun Nov 08 2026 Antonios Voulvoulis <contact@itcms.gr> - @VERSION@-@RELEASE@
+- 0.3.0: native criteria. isedraf evaluate and sudo isedraf evaluate evaluate a committed
+  run against eight ISEDRAF-authored criteria; isedraf explain shows what each one checks
+  and does not establish. The rpm ships the same runtime files as the deb.
+
+* Sun Nov 08 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.3.0-0.rc1
+- 0.3.0 release candidate: native criteria. isedraf evaluate and sudo isedraf evaluate
+  evaluate a committed run against eight ISEDRAF-authored criteria; isedraf explain shows
+  what each one checks and does not establish. The rpm now ships the same runtime files as
+  the deb.
+
+* Mon Oct 12 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.2.0-1
 - 0.2.0: Full Audit (sudo isedraf audit) collects evidence a standard audit cannot read
   through four fixed privileged operations, with the engine unprivileged; sudo isedraf
   report renders it read-only.

@@ -71,11 +71,14 @@ EXEC_ENVIRONMENT = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL": "C"}
 # AUTH-019: the supported platforms, by os-release ID and the major part of VERSION_ID.
 SUPPORTED = {("debian", "12"), ("ubuntu", "24.04"), ("rocky", "9"), ("almalinux", "9")}
 
-REFUSAL = ("Under sudo or root, ISEDRAF runs only `sudo isedraf audit` (Full Audit) and "
-           "`sudo isedraf report` (its report). Run other ISEDRAF commands as your normal user.")
+REFUSAL = ("Under sudo or root, ISEDRAF runs only `sudo isedraf audit` (Full Audit), "
+           "`sudo isedraf report` (its report) and `sudo isedraf evaluate` (its evaluation). "
+           "Run other ISEDRAF commands as your normal user.")
 # AUTH-032: the read-only report route - the invocations it admits and the format each names.
 REPORT_INVOCATIONS = {("report",): "markdown", ("report", "--json"): "json",
                       ("report", "--html"): "html"}
+# AUTH-033: the evaluation route - exactly one invocation, no argument (D-126).
+EVALUATE_INVOCATION = ("evaluate",)
 
 # AUTH-020, AUTH-026, AUTH-027, EXEC-001, EXEC-002, PRIV-007, PRIV-009: constants of the
 # package. The bounding set is the measured candidate set (AUTH-027); the ambient set is
@@ -109,6 +112,8 @@ UNIT_ENTRY = ("import sys; sys.path.insert(0, %r); from isedraf.launcher.unit im
               "sys.exit(main(sys.argv[1:]))" % INSTALL_ROOT)
 REPORT_ENTRY = ("import sys; sys.path.insert(0, %r); from isedraf.launcher.reportunit import "
                 "main; sys.exit(main(sys.argv[1:]))" % INSTALL_ROOT)
+EVALUATE_ENTRY = ("import sys; sys.path.insert(0, %r); from isedraf.launcher.evalunit import "
+                  "main; sys.exit(main(sys.argv[1:]))" % INSTALL_ROOT)
 # AUTH-032: the audit unit's constant properties without write access to the store, which
 # ProtectSystem=strict then leaves read-only.
 REPORT_PROPERTIES = tuple(p for p in PROPERTIES if not p.startswith("ReadWritePaths="))
@@ -130,6 +135,14 @@ def report_unit_argv(run_id, fmt):
         raise ValueError("not a report format: %r" % (fmt,))
     return _systemd_run("isedraf-report-", run_id, REPORT_PROPERTIES) + [
         PYTHON, "-IB", "-c", REPORT_ENTRY, run_id, fmt]
+
+
+def evaluate_unit_argv(run_id):
+    """AUTH-033: the evaluation unit - the audit unit's properties. Only the run id varies."""
+    if not ids.ID_RE.match(run_id or "") or not run_id.startswith("RUN-"):
+        raise ValueError("not a run identifier: %r" % (run_id,))
+    return _systemd_run("isedraf-evaluate-", run_id, PROPERTIES) + [
+        PYTHON, "-IB", "-c", EVALUATE_ENTRY, run_id]
 
 
 def _systemd_run(prefix, run_id, properties):
@@ -309,8 +322,8 @@ def refuse(code, text, err):
 
 def main(argv, err=None):
     err = sys.stderr if err is None else err
-    if os.geteuid() != 0 or (list(argv) != ["audit"]
-                             and tuple(argv) not in REPORT_INVOCATIONS):
+    if os.geteuid() != 0 or (list(argv) != ["audit"] and tuple(argv) not in REPORT_INVOCATIONS
+                             and tuple(argv) != EVALUATE_INVOCATION):
         return refuse(PRIVILEGE_REFUSED, REFUSAL, err)
     problem = unsafe_install()
     if problem:
@@ -335,5 +348,8 @@ def main(argv, err=None):
         return relay(report_unit_argv(run_id, REPORT_INVOCATIONS[tuple(argv)]),
                      dict(EXEC_ENVIRONMENT), 1, 2,
                      stop=lambda _proc: stop_unit(run_id, "isedraf-report-"))
+    if tuple(argv) == EVALUATE_INVOCATION:
+        return relay(evaluate_unit_argv(run_id), dict(EXEC_ENVIRONMENT), 1, 2,
+                     stop=lambda _proc: stop_unit(run_id, "isedraf-evaluate-"))
     return relay(unit_argv(run_id), dict(EXEC_ENVIRONMENT), 1, 2,
                  stop=lambda _proc: stop_unit(run_id))

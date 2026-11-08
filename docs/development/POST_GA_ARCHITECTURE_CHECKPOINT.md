@@ -55,7 +55,7 @@ is a FROZEN REQUIREMENT unless it is marked otherwise.
 
 | Entity | Frozen definition | Code at GA | Status | Built in |
 |---|---|---|---|---|
-| Control | native criterion, `^ISE-[A-Z]+-[0-9]{3}$`, 14 families, JSON data, never executed (D-15, D-111); EXPERIMENTAL lifecycle (D-80, HLD-063) | `scripts/ci/native_controls.json`, read only by CI; `criteria` is empty | IMPLICIT | v0.3 |
+| Control | native criterion, `^ISE-[A-Z]+-[0-9]{3}$`, 14 families, JSON data, never executed (D-15, D-111); EXPERIMENTAL lifecycle (D-80, HLD-063) | `scripts/ci/native_controls.json` (at GA; moved by D-125, that path does not exist any more), read only by CI; `criteria` is empty | IMPLICIT | v0.3 |
 | Control version | required `version` field; evaluation records the rules version (SNAP-013) | CI JSON only | MISSING | v0.3 |
 | Check specification | `facts_required`, `dimensions`, `evaluation_semantics`, `applicability`, `limitations`, `evidence_pointers` (`NATIVE_CONTROL_CATALOG.md`) | none; `lib/isedraf/shared/compare.py` compares two sources against each other, not against an expected value | MISSING | v0.3 |
 | Run | `run_id`, `snapshot_id` (SNAP-019); collect each domain once (D-117) | `lib/isedraf/audit.py` `collect()`; the run status is printed but never stored | PARTIAL | v0.2 |
@@ -111,8 +111,8 @@ Each v0.2 guarantee should extend a structure that already exists, not run besid
 **Duplication risks to avoid in v0.2 and v0.3.** These are places where a second model could
 appear beside the first one:
 
-1. A runtime control catalog separate from `scripts/ci/native_controls.json`, which `make
-   check-native-catalog` would not see.
+1. A runtime control catalog separate from the one registry `make check-native-catalog` reads
+   (`D-125` moved it, as the only copy, to `lib/isedraf/catalog/native_controls.json`).
 2. A new result enumeration added before IQ-040 picks one of the three that already exist.
 3. A capability registry separate from `audit.COLLECTORS` and `SECTION_NAMES`.
 4. A fifth copy of the field-class constants.

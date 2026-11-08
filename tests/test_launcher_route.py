@@ -98,11 +98,15 @@ class OuterEntry(unittest.TestCase):
             for argv in ([], ["audit", "--root", "/tmp"], ["identity"], ["audit", "audit"],
                          ["report", "--save"], ["report", "--profile", "/tmp/p.json"],
                          ["report", "--json", "--html"], ["report", "/var/lib/isedraf"],
-                         ["report", "--json", "--save"], ["inventory"]):
+                         ["report", "--json", "--save"], ["inventory"],
+                         # AUTH-033 (D-126): evaluate takes no argument - never a snapshot or path.
+                         ["evaluate", "--snapshot", "SDS-20261101T000000Z-0123456789abcdef"],
+                         ["evaluate", "/var/lib/isedraf"], ["evaluate", "evaluate"],
+                         ["explain", "ISE-ACCOUNT-001"]):
                 code, err = self.call(argv)
                 self.assertEqual(code, 70, argv)
-                self.assertIn("runs only `sudo isedraf audit` (Full Audit) and `sudo isedraf "
-                              "report`", err)
+                self.assertIn("runs only `sudo isedraf audit` (Full Audit), `sudo isedraf "
+                              "report` (its report) and `sudo isedraf evaluate`", err)
 
     def test_a_report_invocation_runs_the_read_only_report_unit(self):
         self.environment()

@@ -431,8 +431,9 @@ be emitted.
 **SNAP-011 (D-41) SHALL NOT** A snapshot directory SHALL NEVER contain `changes.json`, `findings.json`, or
 any evaluated result.
 
-**SNAP-012 (D-41) SHALL** `evaluations/EVL-*/` contains `changes.json`, `findings.json` and a manifest. It
-is **derived and regenerable**, keyed by `snapshot_id` + `baseline_revision` + `engine_version` +
+**SNAP-012 (D-41, D-125) SHALL** `evaluations/EVL-*/` contains `results.json`, `changes.json`,
+`findings.json` and a manifest. `results.json` holds one result per evaluated criterion; a finding is
+justified by a result and is never a `PASS` (`D-121`). It is **derived and regenerable**, keyed by `snapshot_id` + `baseline_revision` + `engine_version` +
 rules/profile version.
 
 **SNAP-013 (D-42, A19) SHALL** Every evaluation manifest records: snapshot manifest hash, baseline

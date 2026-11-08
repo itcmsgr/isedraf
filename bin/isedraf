@@ -36,7 +36,7 @@ if [ "$(/usr/bin/id -u)" = "0" ] || [ -n "${SUDO_USER:-}" ]; then
         exit 70
     fi
     if [ ! -x /usr/bin/python3 ] || [ ! -f /usr/lib/isedraf/launcher/outer.py ]; then
-        echo "isedraf: Under sudo or root, ISEDRAF runs only \`sudo isedraf audit\` (Full Audit), which needs /usr/bin/python3 and the installed package. Run other ISEDRAF commands as your normal user." >&2
+        echo "isedraf: Under sudo or root, ISEDRAF runs only \`sudo isedraf audit\`, \`sudo isedraf report\` and \`sudo isedraf evaluate\`, which need /usr/bin/python3 and the installed package. Run other ISEDRAF commands as your normal user." >&2
         exit 70
     fi
     exec /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin LC_ALL=C \

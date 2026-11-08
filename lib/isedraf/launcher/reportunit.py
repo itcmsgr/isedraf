@@ -47,6 +47,8 @@ FORMATS = ("markdown", "json", "html")
 LEDGER_BOUND = 64 * 1024 * 1024
 FRAME_LIMIT = 160 * 1024 * 1024
 FRAME_ITEMS = 1 + len(store.BUNDLE_FILES)
+# AUTH-032 as extended by D-126: plus the committed evaluation's four artifacts, if any.
+REPORT_FRAME_ITEMS = FRAME_ITEMS + 4
 LEDGER_NAME = stateroot.LEDGER_SEGMENT
 RENDER_ENTRY = ("import sys; sys.path.insert(0, %r); from isedraf.launcher.renderer import main; "
                 "sys.exit(main(sys.argv[1:]))" % engine.INSTALL_ROOT)
@@ -67,6 +69,25 @@ def render_argv(fmt):
     if fmt not in FORMATS:
         raise ValueError("not a report format: %r" % (fmt,))
     return list(engine.ARGV[:9]) + ["-IB", "-c", RENDER_ENTRY, fmt]
+
+
+def feed(proc, data):
+    """Hand one frame to the reduced child and ALWAYS close the pipe.
+
+    A child that refuses early (bad frame, ENGINE_NOT_REDUCED) closes its end: the write
+    then raises BrokenPipeError, and closing our buffered end can raise it again while
+    flushing. Both are expected and the child's exit code says why; leaving the pipe open
+    instead leaked a descriptor (ResourceWarning in the route tests, 2026-11-05).
+    """
+    try:
+        proc.stdin.write(data)
+    except OSError:
+        pass        # the child ended early; its exit code says why
+    finally:
+        try:
+            proc.stdin.close()
+        except OSError:
+            pass
 
 
 def _read(path, bound, uid, gid, mode):
@@ -153,6 +174,35 @@ def acquire(root, engine_uid):
     return items
 
 
+def acquire_evaluation(root, items):
+    """AUTH-032 as extended by D-126: the committed evaluation of the reported snapshot.
+
+    Its identity is computed here, from the ledger, the snapshot's manifest header, the
+    installed engine version and the installed catalog (EVAL-006); nothing from the reduced
+    side names it. Absent is not an error: the report then says the run is not evaluated.
+    """
+    from isedraf.launcher import evalunit
+    try:
+        sid, _key, evl_id = evalunit.expected_identity(items, evalunit.read_catalog())
+    except evalunit.Refused as exc:
+        raise Refused(str(exc))
+    base = os.path.join(root, "evaluations", evl_id)
+    if not os.path.lexists(base):
+        return []
+    _directory(os.path.join(root, "evaluations"), store.OWNER_UID, store.OWNER_GID)
+    _directory(base, store.OWNER_UID, store.OWNER_GID)
+    names = sorted(os.listdir(base))
+    if names != sorted(evalunit.ARTIFACTS):
+        raise Refused("evaluation %s does not hold exactly its four artifacts" % evl_id)
+    out = []
+    for name in names:
+        data, meta = _read(os.path.join(base, name), evalunit.ARTIFACT_BOUND, store.OWNER_UID,
+                           store.OWNER_GID, 0o600)
+        out.append(frame.item(frame.ENTRY, ("evaluations/%s/%s" % (evl_id, name)).encode("ascii"),
+                              frame.READ_OK, meta, data))
+    return out
+
+
 class _ReadOnlyLock(object):
     """The whole-run lock on a read-only descriptor: never created, never written."""
 
@@ -187,6 +237,7 @@ def run(fmt, root=None, err=None, engine_uid=None):
         check_store(root)
         with _ReadOnlyLock(root):
             items = acquire(root, engine_uid if engine_uid is not None else _engine_uid())
+            items += acquire_evaluation(root, items)
     except store.Unusable as exc:
         err.write("isedraf: STATE_ROOT_UNUSABLE: %s\n" % exc)
         return STATE_ROOT_UNUSABLE
@@ -199,6 +250,7 @@ def run(fmt, root=None, err=None, engine_uid=None):
         return USAGE_OR_ENGINE
     except (Refused, OSError, frame.FrameError) as exc:
         err.write("isedraf: REPORT_REFUSED: %s; no report was rendered.\n" % exc)
+
         return USAGE_OR_ENGINE
     data = frame.encode(items)
     if len(data) > FRAME_LIMIT:
@@ -207,11 +259,7 @@ def run(fmt, root=None, err=None, engine_uid=None):
         return USAGE_OR_ENGINE
     proc = subprocess.Popen(render_argv(fmt), cwd="/", env=dict(engine.ENVIRONMENT),
                             stdin=subprocess.PIPE, close_fds=True, shell=False)
-    try:
-        proc.stdin.write(data)
-        proc.stdin.close()
-    except OSError:
-        pass        # the renderer ended early; its exit code says why
+    feed(proc, data)
     return proc.wait()
 
 

@@ -81,6 +81,13 @@ precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
 SPDX-License-Identifier = "MPL-2.0"
 
+# D-125: the native control catalog, strict JSON, the one registry, installed with the package.
+[[annotations]]
+path = ["lib/isedraf/catalog/native_controls.json"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
+SPDX-License-Identifier = "MPL-2.0"
+
 # OUT-001: the exit-code source, strict JSON read by check_exitcodes.py.
 [[annotations]]
 path = ["lib/isedraf/exitcodes.json"]
