@@ -71,7 +71,10 @@ jobs:
     # against the SAME committed golden output, so agreement across lanes is transitive
     # and automated - no result is ever copied from one interpreter to the other.
     name: W1-A vectors (python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to 26.04, for which actions/setup-python has no Python 3.9
+    # build (2026-11-08), so the release-blocking 3.9 lane could not start. 24.04 has 3.9.25
+    # and 3.12; the requirement (both lanes, same golden output) is unchanged.
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
