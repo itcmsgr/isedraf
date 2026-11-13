@@ -100,7 +100,8 @@ Everything from Phase 1 onward is `PLANNED` or `FUTURE`. Nothing below Phase 0 i
 | 9 | Mode C — provider-authorized BYOL | `FUTURE` | a written provider agreement; the core stays MPL-2.0 |
 
 The phases map onto the releases after GA like this: Phases 3 and 4 are v0.3, Phase 5 is v0.4, and
-Phases 7 to 9 begin in v0.5. v0.2 adds the evidence authority that Phases 3 to 5 depend on. Phase 6
+Phases 7 to 9 begin in v0.8 (D-129), after operator experience (v0.5), native audit coverage (v0.6)
+and the audit of ISEDRAF itself (v0.7). v0.2 adds the evidence authority that Phases 3 to 5 depend on. Phase 6
 runs in parallel and is tied to no release.
 
 ### The alpha goal, stated plainly
@@ -391,12 +392,13 @@ and therefore the most valuable failure).
 Alpine is worth singling out: it is the candidate most likely to *fail*, which is exactly why it is
 worth running. A campaign that only ever confirms what was expected is not measuring anything.
 
-## Framework mapping views — FUTURE, v0.5
+## Framework mapping views — FUTURE, v0.8
 
 Framework mapping **views over existing evidence**, all `PROPOSED`, with explicit coverage classes
 (`HOST_TECHNICAL`, `HOST_SUPPORTING_EVIDENCE`, `MANUAL_ORGANIZATIONAL`, `NOT_HOST_ASSESSABLE`). Mappings
 never change collection, and ISEDRAF never converts host technical evidence into a claim of organizational
-compliance. D-120 places these views in v0.5.
+compliance. D-129 places the first framework in v0.8 and one framework per release after it; the
+text-rights gate (OD-08) applies before any mapping pack ships.
 
 ## Later — FUTURE
 
@@ -460,16 +462,49 @@ v0.3  Assurance Semantics - native assurance core
       come from domains that are already collected (ISE-ACCOUNT, ISE-PRIV, ISE-SSH,
       ISE-AUTH, ISE-STORAGE), so they exercise different evidence types: roughly 25
       criteria, each with fixtures for every result it can produce.
+      Delivered in 0.3.0 (published 2026-11-09): eight criteria. The catalog grows only
+      where committed evidence supports a result (owner ruling 2026-11-08), not toward
+      a number.
 
 v0.4  Historical Assurance - approved baseline and classified delta
       approval only of snapshots that meet the authority requirement (BASE-003 stays as it
       is), run-to-run delta, change classification; the unchanged-runs and engine-upgrade
       acceptance tests.
+      Planned in two steps (owner ruling 2026-11-11): a development (DEV) slice proves
+      the engine on complete fixtures; the production baseline workflow then follows
+      through Full Audit, which must itself meet the profile's completeness. Both are
+      v0.4 scope. The `check` journey and its exit codes come later.
+      Delivered in 0.4.0 (prepared 2026-11-13, not yet published): the DEV slice and the
+      production workflow, built and lab-tested; one baseline per store; accepting a
+      change, re-approval, tracking and `check` come after 0.4.
 
-v0.5  Framework Intelligence - mapping overlays
-      mappings, coverage, overlap and gaps over native results; Modes A, B and C (D-112)
-      govern licensing and redistribution. Mappings never change collection, criteria,
-      results, snapshots, ledger, baseline or delta.
+v0.5  Operator experience (D-129), PLANNED
+      help: root --version/--help/help, isedraf help, a grouped help --all, per-command
+      examples, effects, privileges and exits; bash completion of commands, options and
+      criterion IDs from installed definitions; a common compact header, readable errors,
+      coverage counts and complete next commands; discovering and explicitly saving reports,
+      with absolute paths and an explanation of private storage; the free-space preflight
+      (STORE-016/022, frozen, not yet implemented) with a named refusal and guidance; one /docs
+      tree aligned as each feature lands, with a bounded documentation check; completion and
+      offline documentation in the DEB and RPM, installation and upgrade verified.
+
+v0.6  Native audit coverage
+      ISE-* collectors and criteria chosen against a finite coverage matrix (D-111).
+
+v0.7  Audit of ISEDRAF itself
+      security boundaries, evidence correctness, privileges, CLI, packaging, upgrades, and the
+      comprehensive alignment of every documentation surface with verified behaviour.
+
+v0.8  First framework - mapping overlays
+      one explicitly chosen framework: mappings, coverage, overlap and gaps over native results;
+      Modes A, B and C (D-112) govern licensing and redistribution; the OD-08 rights gate first.
+      Mappings never change collection, criteria, results, snapshots, ledger, baseline or delta.
+
+v0.9  Second framework, separately scoped.
+
+later pruning, retention and checkpoints (STORE-012/014/018, deferred and registered);
+      delegated reporting (an operator group reading exported reports); APT/DNF package
+      repositories. Report delivery stays export-only.
 
 later compiled acquisition core, when measurement justifies it
       the same IPC contract and authority classes, no engine redesign.

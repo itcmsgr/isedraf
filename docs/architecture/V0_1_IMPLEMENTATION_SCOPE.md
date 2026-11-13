@@ -350,6 +350,20 @@ First approval is therefore decidable with no circularity:
 
 Baseline approval is **W1-B** and is out of the W1-A freeze set entirely.
 
+**Amended for v0.4 by D-127.** The release ships one default profile in the same object shape, and
+`prototype-host-identity-v1` above stays as frozen for W1:
+
+```json
+{"optional_sections":[],"profile_id":"v0.4-default-1","profile_version":1,
+"required_sections":["accounts","host_identity","loginpolicy","ssh"],
+"tracked_sections":["accounts","host_identity","loginpolicy","ssh"]}
+```
+
+It is immutable data in the installed engine. There is still no `--profile`, no profile editor and no
+untracking. Its `profile_hash`, one `BL-000001` and the `DELTA-007` section state objects ship as golden
+vectors (`NORM-039`) in `test-vectors/v04/v1/`, computed by a reference that does not import the engine;
+the classification tables are the one input read from the domain models.
+
 **SCOPE-074 (owner directive, U-06) SHALL** The W1 baseline revision is the minimal form:
 
 ```text

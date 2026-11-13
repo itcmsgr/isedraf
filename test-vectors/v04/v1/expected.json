@@ -1,0 +1,28 @@
+{
+ "baseline": {
+  "manifest_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "revision_hash": "sha256:36d107a4327ea61f51d249658ba1a9290996be984891130910246229352d5a4f"
+ },
+ "profile_canonical": "{\"optional_sections\":[],\"profile_id\":\"v0.4-default-1\",\"profile_version\":1,\"required_sections\":[\"accounts\",\"host_identity\",\"loginpolicy\",\"ssh\"],\"tracked_sections\":[\"accounts\",\"host_identity\",\"loginpolicy\",\"ssh\"]}\n",
+ "profile_hash": "sha256:1fc4116e85d7198934f0e2f5ed0a01f2f39925fca000cc458475656a84ec7b8b",
+ "sections": [
+  {
+   "case": "accounts-null-shadow-object-shadow-duplicate-name-group",
+   "method_fingerprint": "sha256:8a08185b0815b1e2123dff93b48a00963e70cc9cc5749e9a8636c4f4498954da",
+   "projection_canonical": "{\"lists\":{\"local_accounts\":[{\"home\":\"/root\",\"name\":\"root\",\"name_bytes_hex\":\"726f6f74\",\"nss_source\":\"files\",\"primary_gid\":0,\"shadow.expire_days\":null,\"shadow.inactive_days\":null,\"shadow.last_change_days\":19000,\"shadow.max_days\":99999,\"shadow.min_days\":0,\"shadow.password_state.content\":\"LOCKED_MARKER\",\"shadow.password_state.hash_scheme\":null,\"shadow.password_state.lock_prefix\":false,\"shadow.warn_days\":7,\"shell\":\"/bin/sh\",\"uid\":0},{\"home\":\"/home/alice\",\"name\":\"alice\",\"name_bytes_hex\":\"616c696365\",\"nss_source\":\"files\",\"primary_gid\":1000,\"shadow\":null,\"shell\":\"/bin/sh\",\"uid\":1000},{\"home\":\"/home/alice\",\"name\":\"alice\",\"name_bytes_hex\":\"616c696365\",\"nss_source\":\"files\",\"primary_gid\":1000,\"shadow\":null,\"shell\":\"/bin/sh\",\"uid\":1000}],\"local_groups\":[{\"group.explicit_members\":[\"bob\",\"alice\"],\"group.gid\":10,\"group.name\":\"wheel\",\"group.name_bytes_hex\":\"776865656c\",\"group.nss_source\":\"files\"}]},\"projection_version\":1,\"section\":\"accounts\"}\n",
+   "state_hash": "sha256:1f54871e839f486c05edccda7da8396088a3b9250a5d2f9e3462f71322248882"
+  },
+  {
+   "case": "ssh-declared-match-unsupported-resolved-duplicate",
+   "method_fingerprint": "sha256:0e2a05f125e32772d16098b5989cc90bb7977f70786a909dad385c3fff4c9f7c",
+   "projection_canonical": "{\"lists\":{\"records\":[{\"keyword\":\"permitrootlogin\",\"keyword_raw\":\"PermitRootLogin\",\"kind\":\"DIRECTIVE\",\"match_criteria\":null,\"match_index\":null,\"scope\":\"GLOBAL\",\"value\":\"no\"},{\"keyword\":\"permitrootlogin\",\"keyword_raw\":\"PermitRootLogin\",\"kind\":\"DIRECTIVE\",\"match_criteria\":null,\"match_index\":null,\"scope\":\"GLOBAL\",\"value\":\"yes\"},{\"criteria\":[{\"keyword\":\"user\",\"negated\":false,\"values\":[\"alice\"]}],\"kind\":\"MATCH\",\"match_index\":0},{\"keyword\":\"x11forwarding\",\"keyword_raw\":\"X11Forwarding\",\"kind\":\"DIRECTIVE\",\"match_criteria\":[{\"keyword\":\"user\",\"negated\":false,\"values\":[\"alice\"]}],\"match_index\":0,\"scope\":\"MATCH\",\"value\":\"no\"},{\"kind\":\"UNSUPPORTED\",\"raw_digest\":\"sha256:2222222222222222222222222222222222222222222222222222222222222222\"},{\"keyword\":\"permitrootlogin\",\"kind\":\"RESOLVED_SETTING\",\"occurrence\":0,\"value\":\"no\"}]},\"projection_version\":1,\"section\":\"ssh\"}\n",
+   "state_hash": "sha256:faf8d91828c060869791a5b3f2b9ae41b6346c3568595b146194193b24d3a7bd"
+  },
+  {
+   "case": "loginpolicy-duplicate-entity",
+   "method_fingerprint": "sha256:8cf348f88cdab2507256988c65f2e4261e992e5082c5b208f29021f84d63cb33",
+   "projection_canonical": "{\"lists\":{\"records\":[{\"key\":\"PASS_MAX_DAYS\",\"key_raw\":\"PASS_MAX_DAYS\",\"value\":\"90\"},{\"key\":\"PASS_MAX_DAYS\",\"key_raw\":\"PASS_MAX_DAYS\",\"value\":\"90\"}]},\"projection_version\":1,\"section\":\"loginpolicy\"}\n",
+   "state_hash": "sha256:0925927d0d5eaeac12bafaeb31a24cf057cf9ae7139c97f2a8c836fe1c92c49d"
+  }
+ ]
+}

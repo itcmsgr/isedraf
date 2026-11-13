@@ -1,12 +1,18 @@
 module,file,function,effect,markers,ambiguous
 isedraf.accounts.acquire,lib/isedraf/accounts/acquire.py,acquire,FS_READ,read_file_lossless,no
 isedraf.authorizedkeys.acquire,lib/isedraf/authorizedkeys/acquire.py,_observe_file,FS_READ,read_file_lossless,no
+isedraf.baseline.approve,lib/isedraf/baseline/approve.py,_stage,FS_WRITE,unlink,no
+isedraf.baseline.approve,lib/isedraf/baseline/approve.py,_write_current,FS_WRITE,rename,no
+isedraf.baseline.approve,lib/isedraf/baseline/approve.py,commit,FS_WRITE,makedirs unlink,no
+isedraf.baseline.revision,lib/isedraf/baseline/revision.py,_read,FS_READ,open read,no
 isedraf.catalog,lib/isedraf/catalog/__init__.py,load,FS_READ,open read,no
 isedraf.cli,lib/isedraf/cli.py,_commit_run,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,_refused,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,_render,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,_render_changes,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,_render_inventory,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,cmd_audit,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,cmd_baseline_approve,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,cmd_evaluate,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,cmd_explain,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,cmd_inventory,FS_WRITE,write,yes
@@ -38,6 +44,14 @@ isedraf.inventory.collectors,lib/isedraf/inventory/collectors.py,collect_time,SU
 isedraf.inventory.collectors,lib/isedraf/inventory/collectors.py,file,FS_READ,read_file,no
 isedraf.inventory.collectors,lib/isedraf/inventory/collectors.py,lines,FS_READ,read_lines,no
 isedraf.inventory.collectors,lib/isedraf/inventory/collectors.py,selinux_enforcing,FS_READ,read_file,no
+isedraf.launcher.approver,lib/isedraf/launcher/approver.py,decide,FS_WRITE,mkdir write,no
+isedraf.launcher.approver,lib/isedraf/launcher/approver.py,main,FS_READ,read,yes
+isedraf.launcher.approver,lib/isedraf/launcher/approver.py,main,FS_WRITE,write,yes
+isedraf.launcher.baselineunit,lib/isedraf/launcher/baselineunit.py,main,FS_WRITE,write,yes
+isedraf.launcher.baselineunit,lib/isedraf/launcher/baselineunit.py,main,SUBPROCESS,run,yes
+isedraf.launcher.baselineunit,lib/isedraf/launcher/baselineunit.py,run,FS_READ,read,yes
+isedraf.launcher.baselineunit,lib/isedraf/launcher/baselineunit.py,run,FS_WRITE,write,yes
+isedraf.launcher.baselineunit,lib/isedraf/launcher/baselineunit.py,run,SUBPROCESS,Popen,no
 isedraf.launcher.engine,lib/isedraf/launcher/engine.py,clean,SUBPROCESS,run,yes
 isedraf.launcher.engine,lib/isedraf/launcher/engine.py,start,SUBPROCESS,Popen,no
 isedraf.launcher.evaluator,lib/isedraf/launcher/evaluator.py,evaluate,FS_READ,open,no
@@ -61,7 +75,7 @@ isedraf.launcher.outer,lib/isedraf/launcher/outer.py,relay,SUBPROCESS,Popen,no
 isedraf.launcher.outer,lib/isedraf/launcher/outer.py,stop_unit,SUBPROCESS,run,yes
 isedraf.launcher.outer,lib/isedraf/launcher/outer.py,unsafe_install,FS_READ,lstat stat,no
 isedraf.launcher.renderer,lib/isedraf/launcher/renderer.py,bound_to_ledger,FS_READ,open read,no
-isedraf.launcher.renderer,lib/isedraf/launcher/renderer.py,layout,FS_READ,open,no
+isedraf.launcher.renderer,lib/isedraf/launcher/renderer.py,layout,FS_READ,open read,no
 isedraf.launcher.renderer,lib/isedraf/launcher/renderer.py,layout,FS_WRITE,makedirs write,no
 isedraf.launcher.renderer,lib/isedraf/launcher/renderer.py,main,FS_READ,read,yes
 isedraf.launcher.renderer,lib/isedraf/launcher/renderer.py,main,FS_WRITE,write,yes
@@ -69,13 +83,13 @@ isedraf.launcher.renderer,lib/isedraf/launcher/renderer.py,render,FS_WRITE,mkdir
 isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,__enter__,FS_READ,open,no
 isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,_directory,FS_READ,lstat stat,no
 isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,_read,FS_READ,fstat open read stat,no
-isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,acquire,FS_READ,listdir,no
 isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,acquire_evaluation,FS_READ,listdir,no
 isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,feed,FS_WRITE,write,yes
 isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,main,FS_WRITE,write,yes
 isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,main,SUBPROCESS,run,yes
 isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,run,FS_WRITE,write,yes
 isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,run,SUBPROCESS,Popen,no
+isedraf.launcher.reportunit,lib/isedraf/launcher/reportunit.py,snapshot_items,FS_READ,listdir,no
 isedraf.launcher.store,lib/isedraf/launcher/store.py,_conforms,FS_READ,lstat stat,no
 isedraf.launcher.store,lib/isedraf/launcher/store.py,_entry,FS_READ,lstat stat,no
 isedraf.launcher.store,lib/isedraf/launcher/store.py,check_staged,FS_READ,listdir lstat open read stat,no

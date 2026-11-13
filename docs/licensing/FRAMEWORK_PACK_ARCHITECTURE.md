@@ -98,8 +98,8 @@ Provider-specific activation is not designed until an agreement defines what it 
 
 ## Behaviour without a pack — which is today
 
-Identity, inventory, native criteria, evidence, delta and reports all work. Framework-specific output
-simply does not exist. Reports say:
+Identity, inventory, native criteria, evidence and reports work without any pack; baseline and delta
+(v0.4, planned) will too. Framework-specific output simply does not exist. Reports say:
 
 ```text
 Framework mappings:
@@ -159,4 +159,4 @@ Open questions:
 host's runtime. The preferred direction is that source material goes to an off-host importer and
 converter, which produces a normalized signed pack that the mapping engine reads. That keeps document
 parsing and licensing-sensitive source material outside the assurance runtime. Questions 2 and 8 stay
-open until the v0.5 design.
+open until the design of the first framework release (v0.8, D-129).

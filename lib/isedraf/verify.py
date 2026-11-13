@@ -5,7 +5,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
 #
 # Purpose: Re-verify committed evidence from the bytes on disk.
-# Implements: NORM-038, SNAP-020, SNAP-021, SNAP-022, SNAP-023, STORE-024
+# Implements: NORM-038, SNAP-020, SNAP-021, SNAP-022, SNAP-023, STORE-024, BASE-007
 #
 # Recomputes every hash from the stored preimages rather than trusting any rendered
 # value. It is deliberately NOT the golden-vector verifier: that one certifies the
@@ -205,6 +205,15 @@ def verify_ledger(root):
         if core.get("state_root") not in stateroot.STATE_ROOT_CLASSES:
             problems.append("ledger record %d: state_root %r is not an artifact class "
                             "(STORE-026)" % (index, core.get("state_root")))
+        # D-127: two event types, each with exactly its own fields. A record of an unknown
+        # event, or with a field missing or added, is refused rather than read loosely.
+        fields = ledger.FIELDS.get(core.get("event"))
+        if fields is None:
+            problems.append("ledger record %d: event %r is not a ledger event this version "
+                            "writes" % (index, core.get("event")))
+        elif set(core) != fields:
+            problems.append("ledger record %d: the %s record does not have exactly its "
+                            "fields" % (index, core.get("event")))
         previous = row.get("record_hash")
     return problems
 

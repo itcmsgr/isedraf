@@ -5,7 +5,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
 #
 # Purpose: `sudo isedraf evaluate`, the in-unit launcher: read, frame, promote (AUTH-033).
-# Implements: AUTH-033, AUTH-022, AUTH-032, EVAL-005, EVAL-006, EVAL-007, STORE-020
+# Implements: AUTH-033, AUTH-022, AUTH-032, EVAL-005, EVAL-006, EVAL-007, STORE-020, D-128
 #
 # Root, inside the audit unit's sandbox, with the AUTH-028 set. This launcher does only
 # this: validate the store (AUTH-022), take the whole-run lock, read the ledger and the
@@ -43,7 +43,7 @@ CATALOG_BOUND = 4 * 1024 * 1024
 ARTIFACT_BOUND = 16 * 1024 * 1024
 ARTIFACTS = ("manifest.json",) + record.ARTIFACTS
 OUT_LIMIT = 4 * (ARTIFACT_BOUND + 4096)
-FRAME_ITEMS = reportunit.FRAME_ITEMS + 1
+FRAME_ITEMS = reportunit.BASELINE_FRAME_ITEMS + 1     # D-128: plus the baseline state
 EVALUATE_ENTRY = ("import sys; sys.path.insert(0, %r); from isedraf.launcher.evaluator import "
                   "main; sys.exit(main(sys.argv[1:]))" % engine.INSTALL_ROOT)
 INTERRUPTED = reportunit.INTERRUPTED
@@ -80,9 +80,13 @@ def expected_identity(items, catalog_bytes, engine_version=ENGINE_VERSION):
     """(snapshot_id, key, evaluation_id) from ISEDRAF's own integrity metadata only:
     the last ledger record, the selected snapshot's manifest header and the catalog digest."""
     by_name = dict((i["name"].decode("ascii"), i["content"]) for i in items)
-    lines = [l for l in by_name[reportunit.LEDGER_NAME].split(b"\n") if l.strip()]
     try:
-        sid = json.loads(lines[-1].decode("utf-8"))["record_core"]["snapshot_id"]
+        cores = reportunit.ledger_cores(by_name[reportunit.LEDGER_NAME])
+        sid, _hash = reportunit.latest_snapshot(cores)
+        record_in_force = reportunit.baseline_record(cores)
+    except (reportunit.Refused, reportunit.NoCommittedRun) as exc:
+        raise Refused(str(exc))
+    try:
         envelope = json.loads(by_name["snapshots/%s/manifest.json" % sid].decode("utf-8"))
         manifest_hash = envelope["manifest_hash"]
         created_at = envelope["manifest_core"]["created_at"]
@@ -90,7 +94,12 @@ def expected_identity(items, catalog_bytes, engine_version=ENGINE_VERSION):
         raise Refused("the latest committed snapshot has no readable manifest header")
     if not isinstance(created_at, str) or not ids.TS_RE.match(created_at):
         raise Refused("the snapshot manifest carries no valid creation time")
-    the_key = record.key(sid, manifest_hash, engine_version, catalog.digest(catalog_bytes))
+    # D-128: the baseline in force enters the key (EVAL-006), named from the ledger record
+    # and the packaged profile only. The reduced evaluator verifies the revision (BASE-011)
+    # and refuses with exit 5 when it does not match them.
+    key_revision, key_profile = record.baseline_key(record_in_force)
+    the_key = record.key(sid, manifest_hash, engine_version, catalog.digest(catalog_bytes),
+                         key_revision, key_profile)
     try:
         return sid, the_key, record.evaluation_id(created_at, the_key)
     except ValueError as exc:
@@ -195,8 +204,8 @@ def run(root=None, err=None, out=None, engine_uid=None, argv=None, catalog_path=
     try:
         reportunit.check_store(root)
         with reportunit._ReadOnlyLock(root):
-            items = reportunit.acquire(root, engine_uid if engine_uid is not None
-                                       else reportunit._engine_uid())
+            uid = engine_uid if engine_uid is not None else reportunit._engine_uid()
+            items = reportunit.acquire_baseline(root, reportunit.acquire(root, uid), uid)
             catalog_bytes = read_catalog(catalog_path)
             sid, the_key, evl_id = expected_identity(items, catalog_bytes)
             items.append(frame.item(frame.ENTRY, CATALOG_NAME.encode("ascii"), frame.READ_OK,

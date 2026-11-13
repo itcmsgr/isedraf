@@ -5,7 +5,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
 #
 # Purpose: The report launcher inside the read-only report unit: read, frame, hand off.
-# Implements: AUTH-032, AUTH-022, AUTH-021, AUTH-023, D-50
+# Implements: AUTH-032, AUTH-022, AUTH-021, AUTH-023, D-50, D-128
 #
 # `sudo isedraf report` (AUTH-032). The store is read-only in this unit (ProtectSystem=
 # strict, no ReadWritePaths=). This launcher, root with the AUTH-028 set, does only this:
@@ -49,6 +49,13 @@ FRAME_LIMIT = 160 * 1024 * 1024
 FRAME_ITEMS = 1 + len(store.BUNDLE_FILES)
 # AUTH-032 as extended by D-126: plus the committed evaluation's four artifacts, if any.
 REPORT_FRAME_ITEMS = FRAME_ITEMS + 4
+# D-128: the baseline state - the revision artifact, the pointer, and the approved snapshot
+# when it is not the latest run.
+BASELINE_NAMES = ("baselines/BL-000001.json", "baselines/current")
+BASELINE_BOUND = 1024 * 1024
+BASELINE_FRAME_ITEMS = FRAME_ITEMS + len(store.BUNDLE_FILES) + len(BASELINE_NAMES)
+SNAPSHOT_COMMITTED = "snapshot_committed"
+BASELINE_APPROVED = "baseline_approved"
 LEDGER_NAME = stateroot.LEDGER_SEGMENT
 RENDER_ENTRY = ("import sys; sys.path.insert(0, %r); from isedraf.launcher.renderer import main; "
                 "sys.exit(main(sys.argv[1:]))" % engine.INSTALL_ROOT)
@@ -136,6 +143,47 @@ def check_store(root):
         raise NoCommittedRun("%s has no lock file" % root)
 
 
+def ledger_cores(ledger_bytes):
+    """record_core of every ledger record, in order. ISEDRAF metadata only, never evidence."""
+    out = []
+    for line in [l for l in ledger_bytes.split(b"\n") if l.strip()]:
+        try:
+            core = json.loads(line.decode("utf-8"))["record_core"]
+        except (ValueError, KeyError, TypeError, UnicodeDecodeError):
+            raise Refused("a ledger line is not a ledger record")
+        if not isinstance(core, dict):
+            raise Refused("a ledger line is not a ledger record")
+        out.append(core)
+    return out
+
+
+def _snapshot_id(core, what):
+    sid = core.get("snapshot_id")
+    if not isinstance(sid, str) or not ids.ID_RE.match(sid) or not sid.startswith("SDS-"):
+        raise Refused("the %s names no snapshot identifier" % what)
+    return sid
+
+
+def latest_snapshot(cores):
+    """(snapshot_id, manifest_hash) of the last snapshot_committed record - the latest run.
+
+    D-128: since v0.4 the ledger also carries baseline_approved records, which name the
+    snapshot they approve, not a run; "the last record" is no longer "the latest run".
+    """
+    runs = [c for c in cores if c.get("event") == SNAPSHOT_COMMITTED]
+    if not runs:
+        raise NoCommittedRun("the ledger records no committed run")
+    return _snapshot_id(runs[-1], "last snapshot record"), runs[-1].get("manifest_hash")
+
+
+def baseline_record(cores):
+    """The baseline_approved record in force, or None. More than one is refused."""
+    found = [c for c in cores if c.get("event") == BASELINE_APPROVED]
+    if len(found) > 1:
+        raise Refused("the ledger records %d baseline approvals" % len(found))
+    return found[0] if found else None
+
+
 def acquire(root, engine_uid):
     """The ledger and the latest committed snapshot, as frame items. Under the lock."""
     ledger_path = os.path.join(root, LEDGER_NAME)
@@ -143,17 +191,18 @@ def acquire(root, engine_uid):
         raise NoCommittedRun("the ledger is empty")
     ledger_bytes, ledger_meta = _read(ledger_path, LEDGER_BOUND, store.OWNER_UID,
                                       store.OWNER_GID, 0o600)
-    lines = [l for l in ledger_bytes.split(b"\n") if l.strip()]
-    if not lines:
+    cores = ledger_cores(ledger_bytes)
+    if not cores:
         raise NoCommittedRun("the ledger is empty")
-    try:
-        sid = json.loads(lines[-1].decode("utf-8"))["record_core"]["snapshot_id"]
-    except (ValueError, KeyError, TypeError):
-        raise Refused("the last ledger record is not a ledger record")
-    if not isinstance(sid, str) or not ids.ID_RE.match(sid) or not sid.startswith("SDS-"):
-        raise Refused("the last ledger record names no snapshot identifier")
+    sid, _hash = latest_snapshot(cores)
     items = [frame.item(frame.ENTRY, LEDGER_NAME.encode("ascii"), frame.READ_OK, ledger_meta,
                         ledger_bytes)]
+    return items + snapshot_items(root, sid, engine_uid)
+
+
+def snapshot_items(root, sid, engine_uid):
+    """One committed snapshot's declared files, as frame items. Under the lock."""
+    items = []
     base = os.path.join(root, "snapshots", sid)
     _directory(base, store.OWNER_UID, store.OWNER_GID)
     for name in sorted(os.listdir(base)):
@@ -171,6 +220,50 @@ def acquire(root, engine_uid):
             data, meta = _read(os.path.join(base, rel), bound, engine_uid, None, 0o600)
             items.append(frame.item(frame.ENTRY, ("snapshots/%s/%s" % (sid, rel)).encode("ascii"),
                                     frame.READ_OK, meta, data))
+    return items
+
+
+def baseline_state(root):
+    """(artifact bytes or None, pointer bytes or None): the system store's baselines/.
+
+    Root-owned 0600 files in a root-owned 0700 directory (AUTH-022 as amended by D-128),
+    read no-follow and bounded; anything else is refused (67), never repaired.
+    """
+    directory = os.path.join(root, "baselines")
+    if store._conforms(directory, True, 0o700, store.OWNER_UID, store.OWNER_GID) is None:
+        return None, None
+    out = []
+    for name in BASELINE_NAMES:
+        path = os.path.join(root, name)
+        if store._conforms(path, False, 0o600, store.OWNER_UID, store.OWNER_GID) is None:
+            out.append(None)
+            continue
+        data, _meta = _read(path, BASELINE_BOUND, store.OWNER_UID, store.OWNER_GID, 0o600)
+        out.append(data)
+    return out[0], out[1]
+
+
+def acquire_baseline(root, items, engine_uid):
+    """D-128: add the baseline state to an evidence frame. Under the lock.
+
+    The revision artifact and the pointer when present, and the approved snapshot's files
+    when it is not the latest run. Which snapshot that is comes from the ledger record,
+    never from the reduced side or the caller.
+    """
+    ledger_bytes = [i["content"] for i in items if i["name"] == LEDGER_NAME.encode("ascii")][0]
+    cores = ledger_cores(ledger_bytes)
+    latest, _hash = latest_snapshot(cores)
+    record = baseline_record(cores)
+    artifact, pointer = baseline_state(root)
+    for name, data in zip(BASELINE_NAMES, (artifact, pointer)):
+        if data is not None:
+            items.append(frame.item(frame.ENTRY, name.encode("ascii"), frame.READ_OK,
+                                    {"mode": 0o100600, "uid": store.OWNER_UID,
+                                     "gid": store.OWNER_GID, "size": len(data)}, data))
+    if record is not None:
+        approved = _snapshot_id(record, "baseline record")
+        if approved != latest:
+            items.extend(snapshot_items(root, approved, engine_uid))
     return items
 
 

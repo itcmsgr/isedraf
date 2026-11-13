@@ -102,11 +102,14 @@ class OuterEntry(unittest.TestCase):
                          # AUTH-033 (D-126): evaluate takes no argument - never a snapshot or path.
                          ["evaluate", "--snapshot", "SDS-20261101T000000Z-0123456789abcdef"],
                          ["evaluate", "/var/lib/isedraf"], ["evaluate", "evaluate"],
-                         ["explain", "ISE-ACCOUNT-001"]):
+                         ["explain", "ISE-ACCOUNT-001"],
+                         # AUTH-034 (D-128): baseline approve names no snapshot.
+                         ["baseline"], ["baseline", "approve", "SDS-20261111T000000Z-0123456789abcdef"]):
                 code, err = self.call(argv)
                 self.assertEqual(code, 70, argv)
                 self.assertIn("runs only `sudo isedraf audit` (Full Audit), `sudo isedraf "
-                              "report` (its report) and `sudo isedraf evaluate`", err)
+                              "report` (its report), `sudo isedraf evaluate` (its evaluation) "
+                              "and `sudo isedraf baseline approve`", err)
 
     def test_a_report_invocation_runs_the_read_only_report_unit(self):
         self.environment()

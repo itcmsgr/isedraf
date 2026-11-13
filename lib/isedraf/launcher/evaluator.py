@@ -5,7 +5,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
 #
 # Purpose: The reduced evaluator of `sudo isedraf evaluate` (AUTH-033).
-# Implements: AUTH-033, AUTH-020, EVAL-001, EVAL-003, EVAL-004, EVAL-005, EVAL-006
+# Implements: D-128, AUTH-033, AUTH-020, EVAL-001, EVAL-003, EVAL-004, EVAL-005, EVAL-006
 #
 # Runs as the isedraf account with every capability set empty and no-new-privileges (the
 # AUTH-020 reduction). It receives one frame on stdin - the ledger, the latest committed
@@ -30,8 +30,9 @@ import shutil
 import sys
 
 from isedraf import ENGINE_VERSION, fullaudit, verify
+from isedraf.baseline import revision as baseline_revision
 from isedraf.evaluate import run as evaluate_run
-from isedraf.exitcodes import OK, USAGE_OR_ENGINE
+from isedraf.exitcodes import OK, TOOL_INTEGRITY_FAILURE, USAGE_OR_ENGINE
 from isedraf.launcher import evalunit, renderer, reportunit
 from isedraf.supervisor import frame
 
@@ -82,6 +83,10 @@ def evaluate(data, out, err, state_root_class=None):
         except evaluate_run.EvaluationRefused as exc:
             err.write("isedraf: EVALUATION_REFUSED: %s; nothing was written.\n" % exc)
             return USAGE_OR_ENGINE
+        except baseline_revision.IntegrityFailure as exc:
+            # D-128, BASE-008/011: the system store's baseline does not verify (exit 5).
+            err.write("isedraf: BASELINE_INTEGRITY_FAILURE: %s; nothing was written.\n" % exc)
+            return TOOL_INTEGRITY_FAILURE
         answer = frame.encode([frame.item(frame.ENTRY, name.encode("ascii"), frame.READ_OK,
                                           {"mode": 0o100600, "uid": os.getuid(),
                                            "gid": os.getgid(), "size": len(raw[name])},

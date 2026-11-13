@@ -12,6 +12,55 @@ Semantic Versioning once a release exists. `VERSION` is the single source of the
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-13
+
+ISEDRAF 0.4: approved baselines. `sudo isedraf baseline approve` approves the latest
+complete Full Audit run as the baseline of the system store; each later evaluation records,
+section by section, whether the host's recorded state is unchanged, MODIFIED (to review)
+or NOT_COMPARABLE, and the report shows it. Approved means accepted, not secure.
+
+### Added
+- `isedraf baseline approve <SDS-id>` (v0.4, development stores only for now): explicitly
+  approves one complete committed run as baseline `BL-000001` against the packaged profile
+  `v0.4-default-1` (host identity, accounts, SSH, login policy). An incomplete run, or a run of
+  any other store, is refused with exit 65 and a named reason; nothing is written.
+- `isedraf evaluate` compares against the approved baseline when one is in force, after
+  verifying it (exit 5 when it does not verify): one MODIFIED row per changed section,
+  interpreted REVIEW_REQUIRED, or NOT_COMPARABLE with a reason. Its other exit codes are
+  unchanged. With no baseline, its output is unchanged.
+- `sudo isedraf baseline approve`: approves the latest complete Full Audit run as the
+  production baseline of the system store. It names no snapshot; an incomplete run is
+  refused with exit 65. `sudo isedraf evaluate` then compares against it.
+- The report's "Baseline comparison" part (Markdown, HTML, and `baseline_comparison` in
+  JSON; report schema 4): the comparison exactly as the evaluation recorded it.
+
+### Changed
+- Exit codes 5 (the baseline does not verify) and 65 (approval refused) are now reachable.
+- Under sudo, ISEDRAF runs `audit`, `report`, `evaluate` and `baseline approve`; the
+  refusal message for anything else names all four.
+- An evaluation of a store with a baseline names the baseline in its identity, so it is a
+  different evaluation from one made before the approval.
+
+### Upgrading
+- Existing runs, the ledger and earlier evaluations are kept and still verify. A store
+  without a baseline evaluates exactly as before. Nothing is approved automatically.
+
+### Fixed
+- In 0.4.0-rc1, reports showed the run's host identifier, collection time, run identifier
+  and run mode as empty while still reporting the evidence as verified; they now show the
+  values of the reported run.
+
+### Tested
+- The release candidate was installed over the published 0.3.0 by the package manager on
+  hosts with existing evidence stores, on Debian 12, Ubuntu 24.04, Rocky Linux 9.7 and
+  AlmaLinux 9.7 (Full Audit, SELinux enforcing on the last two) and on AlmaLinux 8.10
+  (standard audit; Full Audit refused as unsupported), all on x86_64. The upgrade changed
+  no stored file; every earlier run still verified. On the four Full Audit platforms a
+  complete run was approved, an unchanged run gave no change, a controlled change gave one
+  section to review, and a run made incomplete on purpose was refused with the blocking
+  section named. The report fix was checked on Debian 12 and Rocky Linux 9.7.
+- Not tested: ARM64, and upgrades from 0.1.x or 0.2.x directly to 0.4.0.
+
 ## [0.3.0] - 2026-11-08
 
 ISEDRAF 0.3: native criteria. `isedraf evaluate` reads one committed, verified run and

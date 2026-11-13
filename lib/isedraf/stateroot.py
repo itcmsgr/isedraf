@@ -46,7 +46,9 @@ SUITABLE_FILESYSTEMS = ("ext2", "ext3", "ext4", "xfs", "btrfs", "f2fs", "zfs", "
                         "tmpfs", "overlay")
 
 # STORE-025: W1-A creates ONLY these. baselines/, evaluations/, acceptances/, reports/,
-# exports/ and host/anchor.key belong to later freeze sets and are not created.
+# exports/ and host/anchor.key belong to later freeze sets and are not created here.
+# D-127 (v0.4) admits baselines/: only `isedraf baseline approve` creates it
+# (baseline/approve.py), never a run that merely prepares the root.
 W1A_DIRECTORIES = ("snapshots", "tmp", "ledger")
 LOCK_NAME = ".lock"
 LEDGER_SEGMENT = os.path.join("ledger", "segment-000001.jsonl")

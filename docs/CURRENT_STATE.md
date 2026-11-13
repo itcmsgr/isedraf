@@ -18,7 +18,7 @@ version drifted until it announced that no product code existed while three comm
 | | |
 |---|---|
 | Project stage | **GENERAL_AVAILABILITY** |
-| Public release | **0.2.0, published 2026-10-19; 0.3.0 awaiting owner authorization** |
+| Public release | **0.3.0, published 2026-11-09; 0.4.0 awaiting owner authorization** |
 | Production Python floor | 3.6 |
 | Tooling Python floor | 3.9 |
 | Execution model | unprivileged by default (`isedraf audit`, user evidence store); Full Audit (`sudo isedraf audit`) from 0.2.0 |
@@ -33,7 +33,7 @@ Engineering status is not a release: an item marked NOT RELEASED is in no publis
 | 0.1.0 | PUBLISHED 2026-09-28 - general availability, unprivileged |
 | 0.1.1 | PUBLISHED 2026-10-06 - correction release (authorized_keys evidence) |
 | 0.1.2 | PUBLISHED 2026-10-08 - correction release (evidence truth, evidence limits) |
-| 0.2.0 | PUBLISHED 2026-10-19 - Full Audit (sudo isedraf audit, sudo isedraf report); latest |
+| 0.2.0 | PUBLISHED 2026-10-19 - Full Audit (sudo isedraf audit, sudo isedraf report) |
 | v0.2 P0 authority model | DONE (D-122, D-123) |
 | v0.2 P1 truth fixes | DONE - released in 0.1.1 and 0.1.2 |
 | v0.2 P2 registry truth | DONE - released in 0.1.2 |
@@ -49,8 +49,12 @@ Engineering status is not a release: an item marked NOT RELEASED is in no publis
 | Full Audit mounts and storage | engine reads PID 1's mount table with no added privilege (IQ-055); space only where the device matches; four-platform lab proof PASSED 2026-10-09 |
 | Full Audit time on SELinux-enforcing EL9 | chronyc not executed; recorded as MAC_DOMAIN_TRANSITION_UNAVAILABLE |
 | Deferred past v0.2 (owner decision 2026-10-10) | inspect_mount_namespaces_v1 (PLANNED) and read_authorized_keys_v1 (DESIGN_OPEN) - post-v0.2 candidates, not v0.2 scope; Full Audit does not collect other users' authorized_keys |
-| 0.3.0 | PREPARED, NOT YET PUBLISHED - native criteria: isedraf evaluate and sudo isedraf evaluate (eight ISEDRAF-authored criteria, EXPERIMENTAL), isedraf explain |
-| v0.3 release | 0.3.0 prepared; upgrade and release-candidate acceptance of 0.3.0-rc1 PASSED 2026-11-08 (in-place upgrade from 0.2.0 on existing stores: Debian 12, Ubuntu 24.04, Rocky 9.7, AlmaLinux 9.7 Full Audit; AlmaLinux 8.10 standard audit); publication awaits owner authorization |
+| 0.3.0 | PUBLISHED 2026-11-09 - native criteria: isedraf evaluate and sudo isedraf evaluate (eight ISEDRAF-authored criteria, EXPERIMENTAL), isedraf explain; latest |
+| v0.4 slice 1 | NOT RELEASED - in engineering: DEV baseline approval and comparison inside evaluate (D-127) |
+| v0.4 slice 2 | NOT RELEASED - in engineering: production baselines through Full Audit, sudo isedraf baseline approve (D-128) |
+| 0.4.0 | PREPARED, NOT YET PUBLISHED - approved baselines: sudo isedraf baseline approve, comparison in isedraf evaluate and sudo isedraf evaluate, Baseline comparison in the report |
+| v0.4 release | 0.4.0 prepared; release-candidate acceptance of 0.4.0-rc1 PASSED 2026-11-12 (upgrade from 0.3.0 on existing stores: Debian 12, Ubuntu 24.04, Rocky 9.7, AlmaLinux 9.7 Full Audit; AlmaLinux 8.10 standard audit); a report regression found in review was fixed and checked on Debian 12 and Rocky 9.7; publication awaits owner authorization |
+| v0.3 release | 0.3.0 prepared; upgrade and release-candidate acceptance of 0.3.0-rc1 PASSED 2026-11-08 (in-place upgrade from 0.2.0 on existing stores: Debian 12, Ubuntu 24.04, Rocky 9.7, AlmaLinux 9.7 Full Audit; AlmaLinux 8.10 standard audit); published 2026-11-09 as 0.3.0 (smoke of the tag-build packages on Debian 12 and Rocky 9.7 the same day) |
 | v0.2 release | 0.2.0 prepared; release acceptance PASSED 2026-10-12 (Debian 12, Ubuntu 24.04, Rocky 9.7, AlmaLinux 9.7 Full Audit; AlmaLinux 8.10 standard audit); published 2026-10-19 as 0.2.0 (final smoke of the tag-build packages on the same five platforms 2026-10-19) |
 
 ## Implemented
@@ -63,11 +67,13 @@ What exists and runs today. Nothing else on this page does.
 | `artifact_attestation` | `.github/workflows/release-candidate.yml` | — |
 | `audit_command` | `lib/isedraf/audit.py` | `isedraf audit` |
 | `authorized_keys` | `lib/isedraf/authorizedkeys/` | `isedraf audit` |
+| `baseline_approval` | `tests/test_baseline.py` | `isedraf baseline approve <SDS-id>; sudo isedraf baseline approve` |
 | `block_storage_observation_model` | `lib/isedraf/inventory/collectors.py` | — |
 | `clean_public_export` | `scripts/ci/release_export.sh` | — |
 | `code_scanning` | `.github/workflows/codeql.yml` | — |
 | `consolidated_product_model` | `docs/architecture/ISEDRAF_PRODUCT_HLD.md` | `make check-public-claims` |
 | `criterion_explanation` | `lib/isedraf/explain.py` | `isedraf explain <criterion_id>` |
+| `delta_comparison` | `tests/test_baseline.py` | `isedraf evaluate` |
 | `framework_neutral_core` | `docs/licensing/FRAMEWORK_MAPPING_POLICY.md` | — |
 | `framework_source_registry` | `scripts/ci/framework_sources.json` | `make check-licensing` |
 | `hostname_state` | `lib/isedraf/hostname/` | `isedraf audit` |
@@ -103,8 +109,6 @@ What exists and runs today. Nothing else on this page does.
 Designed, not built. No part of this runs.
 
 - `audit_subsystem`
-- `baseline_approval`
-- `delta_comparison`
 - `export`
 - `framework_entitlement` — intended boundary recorded (signed pack plus signed local entitlement file, verified offline); no cryptography and no licensing server is implemented or designed, because a protocol written before its legal constraints are known is one that will be rewritten (design: `docs/licensing/FRAMEWORK_PACK_ARCHITECTURE.md`)
 - `framework_mapping_packs` — design only - no pack loader, no manifest reader, no entitlement mechanism and no signing exists; no third-party mapping is licensed, reviewed or bundled (design: `docs/licensing/FRAMEWORK_PACK_ARCHITECTURE.md`)
@@ -144,10 +148,10 @@ Not asserted. Each number is counted at generation time.
 | | |
 |---|---|
 | Gates | 33 |
-| Falsification injections | 550 |
+| Falsification injections | 570 |
 | Golden vector cases | 15 |
 | Frozen artifacts | 7 |
-| Test files | 53 |
+| Test files | 56 |
 
 ## Release blockers
 

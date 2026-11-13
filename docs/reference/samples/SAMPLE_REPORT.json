@@ -1,6 +1,10 @@
 {
   "assessment": null,
   "audit_sections": null,
+  "baseline_comparison": {
+    "reason": "the run has not been evaluated, so no comparison was recorded; run `isedraf evaluate` (a report never compares)",
+    "status": "NOT_EVALUATED"
+  },
   "collection_summary": [
     {
       "collection_status": "COLLECTED",
@@ -423,17 +427,17 @@
       "storage": "/sys/block + /proc/self/mounts + statvfs(2)",
       "time": "timedatectl show"
     },
-    "engine_version": "0.3.0",
+    "engine_version": "0.4.0",
     "inventory_schema_version": 1,
-    "report_schema_version": 3
+    "report_schema_version": 4
   },
   "report": {
-    "engine_version": "0.3.0",
+    "engine_version": "0.4.0",
     "generated_at": "2026-09-20T17:15:48Z",
     "report_id": "RPT-20260920T171548Z-71072fdd5e6cd97e",
     "status": "COMPLETE"
   },
-  "report_schema_version": 3,
+  "report_schema_version": 4,
   "target": {
     "fqdn": null,
     "fqdn_source": "NOT_AVAILABLE_LOCALLY",

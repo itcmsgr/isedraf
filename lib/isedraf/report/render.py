@@ -97,6 +97,52 @@ def _native_markdown(native):
     return out
 
 
+COMPARISON_FRAMING = ("The comparison with the approved baseline, as the evaluation recorded it. "
+                      "Approved means accepted, not secure. MODIFIED means a section's recorded "
+                      "state differs from the approved one; it is REVIEW_REQUIRED, never a "
+                      "regression or an improvement by itself. NOT_COMPARABLE is not a change.")
+HOW_TO_APPROVE = ("`isedraf baseline approve <SDS-id>` approves a development (DEV) run; "
+                  "`sudo isedraf baseline approve` approves the latest complete Full Audit run")
+
+
+def _comparison_markdown(cmp_):
+    out = ["## Baseline comparison", "", "*%s*" % COMPARISON_FRAMING, ""]
+    status = cmp_.get("status")
+    if status == "NOT_EVALUATED":
+        return out + ["Not shown: %s." % cmp_.get("reason"), ""]
+    if status == "NO_BASELINE":
+        out.append("No approved baseline: nothing was compared. %s." % HOW_TO_APPROVE)
+        if cmp_.get("unledgered_revision"):
+            out.append("")
+            out.append("%s exists without its ledger record (an interrupted approval) and was "
+                       "not used." % cmp_["unledgered_revision"])
+        return out + [""]
+    out.append("Baseline `%s`, approved from `%s` · profile `%s` · %s" % (
+        cmp_.get("baseline_revision"), cmp_.get("approved_snapshot_id"),
+        (cmp_.get("profile") or {}).get("profile_id"), cmp_.get("applicability")))
+    if cmp_.get("reason"):
+        out += ["", cmp_["reason"].replace("|", "\\|")]
+    if cmp_.get("sections"):
+        out += ["", "| Section | Result | Collection method changed |", "|---|---|---|"]
+        for name, s in sorted(cmp_["sections"].items()):
+            out.append("| %s | %s | %s |" % (name, s.get("result"),
+                                              {True: "yes", False: "no"}.get(
+                                                  s.get("method_changed"), "—")))
+    rows = cmp_.get("changes") or []
+    out.append("")
+    if not rows:
+        out.append("No change rows: no tracked section's state differs from the approved one.")
+    for r in rows:
+        if r.get("primitive") == "MODIFIED":
+            out.append("- %s MODIFIED, %s (state %s → %s)" % (
+                r["section"], r.get("interpretation"), r.get("before_state_hash"),
+                r.get("after_state_hash")))
+        else:
+            out.append("- %s %s: %s" % (r["section"], r.get("primitive"),
+                                        (r.get("reason") or "").replace("|", "\\|")))
+    return out + [""]
+
+
 def to_markdown(report):
     out = []
     r, target = report["report"], report["target"]
@@ -406,6 +452,8 @@ def to_markdown(report):
         out.append("")
     out.extend(_native_markdown(report.get("native_results") or {"status": "NOT_SHOWN",
                                                                   "reason": "no native results"}))
+    out.extend(_comparison_markdown(report.get("baseline_comparison") or {
+        "status": "NOT_EVALUATED", "reason": "no comparison in this report"}))
     limits = report.get("evidence_limitations") or {"recorded": False, "items": [],
                                                     "note": None}
     out.append("## Evidence limitations")
@@ -564,6 +612,45 @@ def to_html(report):
             w('<tr><th></th><td colspan="2" class="reason">scope: %s</td></tr>\n'
               % _esc(r.get("scope")))
         w("</table>\n")
+    w("</div>\n")
+
+    cmp_ = report.get("baseline_comparison") or {"status": "NOT_EVALUATED",
+                                                 "reason": "no comparison in this report"}
+    w('<div class="panel"><h2>Baseline comparison</h2>\n<p class="reason">%s</p>\n'
+      % _esc(COMPARISON_FRAMING))
+    if cmp_.get("status") == "NOT_EVALUATED":
+        w("<p>Not shown: %s.</p>\n" % _esc(cmp_.get("reason")))
+    elif cmp_.get("status") == "NO_BASELINE":
+        w("<p>No approved baseline: nothing was compared. %s.</p>\n" % _esc(HOW_TO_APPROVE))
+        if cmp_.get("unledgered_revision"):
+            w("<p>%s exists without its ledger record (an interrupted approval) and was not "
+              "used.</p>\n" % _esc(cmp_["unledgered_revision"]))
+    else:
+        w('<p class="ref">baseline %s, approved from %s &middot; profile %s &middot; %s</p>\n'
+          % (_esc(cmp_.get("baseline_revision")), _esc(cmp_.get("approved_snapshot_id")),
+             _esc((cmp_.get("profile") or {}).get("profile_id")),
+             _esc(cmp_.get("applicability"))))
+        if cmp_.get("reason"):
+            w('<p class="reason">%s</p>\n' % _esc(cmp_["reason"]))
+        if cmp_.get("sections"):
+            w("<table>\n<tr><th>Section</th><th>Result</th><th>Collection method changed</th>"
+              "</tr>\n")
+            for name, s in sorted(cmp_["sections"].items()):
+                w("<tr><th>%s</th><td>%s</td><td>%s</td></tr>\n" % (
+                    _esc(name), _esc(s.get("result")),
+                    {True: "yes", False: "no"}.get(s.get("method_changed"), "")))
+            w("</table>\n")
+        rows = cmp_.get("changes") or []
+        if not rows:
+            w("<p>No change rows: no tracked section's state differs from the approved one."
+              "</p>\n")
+        for r in rows:
+            if r.get("primitive") == "MODIFIED":
+                w("<p>%s MODIFIED, %s</p>\n" % (_esc(r["section"]),
+                                                 _esc(r.get("interpretation"))))
+            else:
+                w("<p>%s %s: %s</p>\n" % (_esc(r["section"]), _esc(r.get("primitive")),
+                                         _esc(r.get("reason"))))
     w("</div>\n")
 
     limits = report.get("evidence_limitations") or {"recorded": False, "items": [],
