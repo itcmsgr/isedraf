@@ -239,6 +239,12 @@ product; 4-6 increase the value of evidence that already exists.
 
 ## Current state
 
-Mode A is partially built — identity, inventory and reporting work; the native control catalog is
-frozen and **empty**, and W1-D authors it. Mode B and Mode C are **design only**. Zero mappings, zero
+Mode A is built in part. Identity, inventory, the audit sections, reporting and native evaluation
+work; 0.3.0 (published 2026-11-09) evaluates eight ISEDRAF-authored criteria, EXPERIMENTAL. Baseline
+and delta are v0.4, in progress (`D-127` development baselines, `D-128` production baselines through
+Full Audit); v0.4 completes with release integration. Release sequence after v0.4 (`D-129`): operator
+experience (v0.5), native audit coverage (v0.6), the audit of ISEDRAF itself with full documentation
+alignment (v0.7), then one framework per release (v0.8, v0.9); the roadmap is its single authority.
+The live status is `docs/CURRENT_STATE.md`, generated from
+the status registry. Mode B and Mode C are **design only**. Zero mappings, zero
 licensed packs, zero provider agreements, zero bundled framework content.

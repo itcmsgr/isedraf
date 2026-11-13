@@ -106,7 +106,17 @@ if [ ! -e /var/lib/isedraf ] && [ ! -L /var/lib/isedraf ]; then mkdir -m 0700 /v
 %doc %{_docdir}/isedraf
 
 %changelog
-* Sun Nov 08 2026 Antonios Voulvoulis <contact@itcms.gr> - @VERSION@-@RELEASE@
+* Fri Nov 13 2026 Antonios Voulvoulis <contact@itcms.gr> - @VERSION@-@RELEASE@
+- 0.4.0: approved baselines. sudo isedraf baseline approve approves the latest complete
+  Full Audit run; isedraf evaluate and sudo isedraf evaluate then record, per section, what
+  changed since, and the report shows it.
+
+* Thu Nov 12 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.4.0-0.rc1
+- 0.4.0 release candidate: approved baselines. sudo isedraf baseline approve approves the
+  latest complete Full Audit run; isedraf evaluate and sudo isedraf evaluate then record,
+  per section, what changed since, and the report shows it.
+
+* Sun Nov 08 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.3.0-1
 - 0.3.0: native criteria. isedraf evaluate and sudo isedraf evaluate evaluate a committed
   run against eight ISEDRAF-authored criteria; isedraf explain shows what each one checks
   and does not establish. The rpm ships the same runtime files as the deb.

@@ -6,7 +6,11 @@
 #
 # Purpose: `isedraf evaluate` - verify one committed snapshot, evaluate, commit one EVL.
 # Implements: SNAP-011, SNAP-012, SNAP-013, STORE-020, D-121, D-125, EVAL-001,
-#             EVAL-003, EVAL-004, EVAL-005, EVAL-006
+#             EVAL-003, EVAL-004, EVAL-005, EVAL-006, BASE-008, CMP-030, DELTA-010
+#
+# D-127 (v0.4): when a baseline is in force, it is verified first (BASE-008; a failure is
+# baseline.revision.IntegrityFailure, exit 5, nothing written) and changes.json then holds
+# the comparison. With no baseline at all, changes.json is byte-for-byte what v0.3 wrote.
 #
 # The order is the snapshot's (CLAUDE.md section 4): private temporary directory ->
 # write -> fsync -> atomic rename, under the whole-run lock the caller holds. There is no
@@ -31,6 +35,7 @@ import os
 import shutil
 
 from .. import canonical, catalog, ledger, snapshot, stateroot, verify
+from ..baseline import revision as baseline_revision
 from . import criteria, record
 
 RESULTS = ("PASS", "FAIL", "NOT_APPLICABLE", "MANUAL_REVIEW", "NOT_EVALUATED")
@@ -50,7 +55,7 @@ def _select(root, snapshot_id):
     problems = verify.verify_ledger(root)
     if problems:
         raise EvaluationRefused("the ledger does not verify: " + "; ".join(problems))
-    records = [r["record_core"] for r in ledger.read_records(root)]
+    records = ledger.snapshot_records(root)
     if not records:
         raise EvaluationRefused("there is no committed run to evaluate; run `isedraf audit`")
     if snapshot_id is None:
@@ -88,6 +93,12 @@ def _verified_snapshot(root, snapshot_id, ledgered_hash):
     return core, envelope["manifest_hash"], data
 
 
+def verified_run(root, snapshot_id):
+    """(core, manifest_hash, data) of one ledgered snapshot that verifies. EvaluationRefused."""
+    sid, ledgered_hash = _select(root, snapshot_id)
+    return _verified_snapshot(root, sid, ledgered_hash)
+
+
 def _section_methods(core, data):
     """SNAP-013: collector and parser version per section, as the snapshot recorded them."""
     out = {}
@@ -119,7 +130,15 @@ def build(root, state_root_class, engine_version, snapshot_id=None,
     except catalog.CatalogError as exc:
         raise EvaluationRefused(str(exc))
     catalog_digest = catalog.digest(raw_registry)
-    the_key = record.key(snapshot_id, manifest_hash, engine_version, catalog_digest)
+    # BASE-008: the baseline in force, verified before anything is compared or written.
+    in_force, info = baseline_revision.verify(
+        root, state_root_class, lambda sid: verified_run(root, sid))
+    # The same derivation the report and the system route use (record.baseline_key); the
+    # revision just verified carries exactly these values (BASE-011).
+    key_revision, key_profile = record.baseline_key(
+        ledger.baseline_records(root)[-1] if in_force is not None else None)
+    the_key = record.key(snapshot_id, manifest_hash, engine_version, catalog_digest,
+                         key_revision, key_profile)
     evl_id = record.evaluation_id(core["created_at"], the_key)
     digests = dict((p, core["auxiliary_artifacts"][p]) for p in data if p != "manifest.json")
     digests["manifest.json"] = manifest_hash
@@ -171,10 +190,7 @@ def build(root, state_root_class, engine_version, snapshot_id=None,
     artifacts = {
         "results.json": dict(common, results=results),
         "findings.json": dict(common, findings=findings),
-        # EVAL-005: no change record before v0.4, and none is manufactured.
-        "changes.json": dict(common, comparison_performed=False,
-                             reason="NO_BASELINE: baseline and delta are v0.4 (D-120)",
-                             baseline_revision=None, changes=[]),
+        "changes.json": _changes(common, in_force, info, core, data),
     }
     raw = dict((n, canonical.canonical_bytes(o)) for n, o in artifacts.items())
     counts = dict((r, sum(1 for x in results if x["result"] == r)) for r in RESULTS)
@@ -183,7 +199,8 @@ def build(root, state_root_class, engine_version, snapshot_id=None,
         "snapshot": {"snapshot_id": snapshot_id, "manifest_hash": manifest_hash,
                      "created_at": core["created_at"], "state_root": core.get("state_root"),
                      "run_mode": core.get("run_mode"), "schema_version": core.get("schema_version")},
-        "baseline_revision": None, "profile": None, "engine_version": engine_version,
+        "baseline_revision": key_revision, "profile": key_profile,
+        "engine_version": engine_version,
         "catalog": {"path": "lib/isedraf/catalog/native_controls.json",
                     "catalog_version": registry.get("catalog_version"), "digest": catalog_digest,
                     "criteria": dict((c["criterion_id"], c["version"]) for c in registry["criteria"])},
@@ -197,6 +214,20 @@ def build(root, state_root_class, engine_version, snapshot_id=None,
     })
     raw["manifest.json"] = canonical.canonical_bytes(manifest)
     return evl_id, raw, results
+
+
+def _changes(common, in_force, info, core, data):
+    """EVAL-005 as amended by D-127. No baseline: exactly the v0.3 record. A change is
+    never manufactured: rows come only from the comparison of two verified snapshots."""
+    if in_force is None:
+        out = dict(common, comparison_performed=False,
+                   reason="NO_BASELINE: baseline and delta are v0.4 (D-120)",
+                   baseline_revision=None, changes=[])
+        if info and info.get("unledgered_revision"):
+            # Interrupted before its ledger record: reported, never used (D-127).
+            out["unledgered_revision"] = info["unledgered_revision"]
+        return out
+    return dict(common, **baseline_revision.compare(in_force, info["approved"], core, data))
 
 
 def commit(root, evl_id, raw):

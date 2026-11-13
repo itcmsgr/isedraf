@@ -5,7 +5,8 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
 #
 # Purpose: The isedraf command line — `isedraf identity`.
-# Implements: SCOPE-070, SCOPE-071, SCOPE-077, SNAP-014, SNAP-018, IDENT-001, EXPL-002
+# Implements: SCOPE-070, SCOPE-071, SCOPE-077, SNAP-014, SNAP-018, IDENT-001, EXPL-002,
+#             BASE-002, BASE-007, BASE-008
 #
 # The renderer is the LAST stage and never feeds anything back: no rendered string is
 # hashed, stored or compared. Canonical state is produced upstream and read-only here.
@@ -28,9 +29,11 @@ from . import (ENGINE_VERSION, identity, inventory, ledger, report, snapshot,
                stateroot, verify)
 from . import audit as audit_mod
 from . import catalog, explain as explain_mod
+from .baseline import approve as baseline_approve
+from .baseline import revision as baseline_revision
 from .evaluate import run as evaluate_run
-from .exitcodes import (INCOMPLETE, OK, PRIVILEGE_REFUSED, RUN_IN_PROGRESS,
-                        STATE_ROOT_UNUSABLE, USAGE_OR_ENGINE)
+from .exitcodes import (APPROVAL_REFUSED, INCOMPLETE, OK, PRIVILEGE_REFUSED, RUN_IN_PROGRESS,
+                        STATE_ROOT_UNUSABLE, TOOL_INTEGRITY_FAILURE, USAGE_OR_ENGINE)
 
 # SNAP-022's vocabulary, rendered for an operator. The token is the evidence; this text
 # is only the explanation, and it never becomes state.
@@ -236,6 +239,10 @@ def cmd_evaluate(args, out=None, err=None):
     except evaluate_run.EvaluationRefused as exc:
         err.write("isedraf: evaluation refused, nothing was written: %s\n" % exc)
         return USAGE_OR_ENGINE
+    except baseline_revision.IntegrityFailure as exc:
+        # BASE-008 (D-127): the baseline in force does not verify. Never re-read silently.
+        err.write("isedraf: baseline integrity failure, nothing was written: %s\n" % exc)
+        return TOOL_INTEGRITY_FAILURE
     except stateroot.StateRootError as exc:
         err.write("isedraf: %s\n" % exc)
         return STATE_ROOT_UNUSABLE
@@ -255,8 +262,97 @@ def cmd_evaluate(args, out=None, err=None):
         out.write("                      %s\n" % r["reason"])
         for o in r["observations"]:
             out.write("                      observed: %s\n" % report.render.observation_text(o))
+    _render_changes(json.loads(raw["changes.json"]), out)
     out.write("\nScope: each result covers only the evidence its criterion names;\n")
     out.write("run `isedraf explain <criterion>` for what a result does not establish.\n")
+    return OK
+
+
+def _render_changes(changes, out):
+    """The comparison, as committed in changes.json. Rendering only; nothing is decided here."""
+    if changes.get("baseline_revision") is None:
+        if changes.get("unledgered_revision"):
+            out.write("  baseline          : none in force; %s has no ledger record (an "
+                      "interrupted approval) and is not used\n" % changes["unledgered_revision"])
+        return
+    out.write("  baseline          : %s (approved %s), %s\n"
+              % (changes["baseline_revision"], changes["approved_snapshot_id"],
+                 changes["applicability"]))
+    if changes.get("reason"):
+        out.write("                      %s\n" % changes["reason"])
+    for name, summary in sorted(changes.get("sections", {}).items()):
+        out.write("  %-17s : %s%s\n" % (name, summary["result"],
+                                          " (collection method changed)"
+                                          if summary.get("method_changed") else ""))
+    for row in changes.get("changes", []):
+        if row["primitive"] == baseline_revision.MODIFIED:
+            out.write("  change            : %s MODIFIED, %s\n"
+                      % (row["section"], row["interpretation"]))
+        else:
+            out.write("  not comparable    : %s - %s\n" % (row["section"], row["reason"]))
+
+
+def cmd_baseline_approve(args, out=None, err=None):
+    """BASE-002/007 (D-127): approve one committed DEV snapshot as BL-000001. Explicit only.
+
+    Exit 0 approved (or an interrupted approval of the same snapshot completed); 65 refused
+    with a named reason, nothing written; 5 when completing an interrupted approval whose
+    recorded baseline does not verify; 64 usage or evidence that does not verify; 66 lock
+    held; 67 state root unusable; 70 root or sudo.
+    """
+    out = sys.stdout if out is None else out
+    err = sys.stderr if err is None else err
+    try:
+        root, state_root_class = stateroot.resolve()
+    except stateroot.PrivilegeRefused as exc:
+        _refused(exc, err)
+        return PRIVILEGE_REFUSED
+    except stateroot.StateRootError as exc:
+        err.write("isedraf: %s\n" % exc)
+        return USAGE_OR_ENGINE
+    if state_root_class == stateroot.USER_PRODUCTION:
+        try:
+            stateroot.check_user_root(root, os.geteuid())
+        except stateroot.StateRootError as exc:
+            err.write("isedraf: %s\n" % exc)
+            return STATE_ROOT_UNUSABLE
+    if not os.path.isdir(os.path.join(root, "ledger")):
+        err.write("isedraf: there is no committed run in %s; run `isedraf audit` first\n"
+                  % root)
+        return USAGE_OR_ENGINE
+    try:
+        with stateroot.RunLock(root):
+            outcome, obj = baseline_approve.approve(
+                root, state_root_class, args.snapshot_id,
+                lambda sid: evaluate_run.verified_run(root, sid))
+    except stateroot.RunInProgress as exc:
+        err.write("isedraf: %s\n" % exc)
+        return RUN_IN_PROGRESS
+    except baseline_revision.ApprovalRefused as exc:
+        err.write("isedraf: approval refused, nothing was written: %s\n" % exc)
+        return APPROVAL_REFUSED
+    except evaluate_run.EvaluationRefused as exc:
+        err.write("isedraf: approval refused, nothing was written: %s\n" % exc)
+        return USAGE_OR_ENGINE
+    except baseline_revision.IntegrityFailure as exc:
+        err.write("isedraf: baseline integrity failure, nothing was written: %s\n" % exc)
+        return TOOL_INTEGRITY_FAILURE
+    except stateroot.StateRootError as exc:
+        err.write("isedraf: %s\n" % exc)
+        return STATE_ROOT_UNUSABLE
+    except Exception as exc:                          # pragma: no cover - engine failure
+        err.write("isedraf: engine error: %s\n" % exc)
+        return USAGE_OR_ENGINE
+    out.write("ISEDRAF baseline\n")
+    out.write("  revision          : %s%s\n" % (obj["revision_id"], "" if outcome ==
+              baseline_approve.APPROVED else " (an interrupted approval was completed)"))
+    out.write("  approved snapshot : %s\n" % obj["snapshot_id"])
+    out.write("  profile           : %s\n" % obj["profile"]["object"]["profile_id"])
+    out.write("  sections          : %s\n" % ", ".join(obj["tracked_sections"]))
+    out.write("  evidence root     : %s (%s)\n" % (root, state_root_class))
+    out.write("  note              : a DEV baseline; it is not a production baseline and\n")
+    out.write("                      is never exported as evidence. Approved means\n")
+    out.write("                      accepted, not secure.\n")
     return OK
 
 
@@ -508,6 +604,13 @@ def main(argv=None):
     p_evaluate.add_argument("--snapshot", default=None,
                             help="a committed snapshot ID (default: the latest committed run)")
     p_evaluate.set_defaults(func=cmd_evaluate)
+    p_baseline = sub.add_parser("baseline", help="approve a committed DEV run as the baseline; "
+                                                 "a Full Audit run is approved with "
+                                                 "`sudo isedraf baseline approve`")
+    b_sub = p_baseline.add_subparsers(dest="baseline_command")
+    p_approve = b_sub.add_parser("approve", help="approve one committed snapshot, explicitly")
+    p_approve.add_argument("snapshot_id", help="the SDS-... identifier to approve")
+    p_approve.set_defaults(func=cmd_baseline_approve)
     p_explain = sub.add_parser("explain", help="explain a native criterion (reads no evidence)")
     p_explain.add_argument("criterion_id", help="for example ISE-ACCOUNT-001")
     p_explain.set_defaults(func=cmd_explain)

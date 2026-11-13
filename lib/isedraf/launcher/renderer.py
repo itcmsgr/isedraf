@@ -5,7 +5,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
 #
 # Purpose: The reduced renderer of `sudo isedraf report`: verify the frame, then render.
-# Implements: AUTH-032, AUTH-020, D-50, STORE-024
+# Implements: AUTH-032, AUTH-020, D-50, STORE-024, D-128
 #
 # Runs as the isedraf identity with no capability and no-new-privileges (the engine
 # reduction). Its whole input is one frame on stdin: the ledger and the files of one
@@ -53,9 +53,14 @@ class FrameRefused(Exception):
 
 
 def layout(items, base):
-    """Write the accepted items under `base` as a store would hold them. Returns the snapshot id."""
+    """Write the accepted items under `base` as a store would hold them.
+
+    Returns the id of the latest committed run, as the ledger says (D-128). At most two
+    snapshots are accepted - the latest run and the approved baseline's snapshot - and the
+    two baseline files; every snapshot written must have its manifest.
+    """
     ledger_name = reportunit.LEDGER_NAME
-    sid, seen = None, set()
+    sids, seen = set(), set()
     for it in items:
         if it["kind"] != frame.ENTRY or it["acquisition_outcome"] != frame.READ_OK:
             raise FrameRefused("an item that is not a completed read")
@@ -68,36 +73,48 @@ def layout(items, base):
         seen.add(name)
         if name == ledger_name:
             rel = name
-        elif _EVALUATION_NAME.match(name):
-            rel = name                  # checked by its manifest digests when it is shown
+        elif _EVALUATION_NAME.match(name) or name in reportunit.BASELINE_NAMES:
+            rel = name                  # checked by its manifest digests or BASE-011
         else:
             match = _SNAPSHOT_NAME.match(name)
             if not match or match.group(2) not in store.BUNDLE_FILES or not ids.ID_RE.match(
-                    match.group(1)) or (sid is not None and match.group(1) != sid):
+                    match.group(1)) or (match.group(1) not in sids and len(sids) == 2):
                 raise FrameRefused("an item %r that AUTH-032 does not read" % name)
-            sid, rel = match.group(1), name
+            sids.add(match.group(1))
+            rel = name
         path = os.path.join(base, rel)
         os.makedirs(os.path.dirname(path), mode=0o700, exist_ok=True)
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
         with os.fdopen(fd, "wb") as fh:
             fh.write(it["content"])
-    if ledger_name not in seen or sid is None or "snapshots/%s/manifest.json" % sid not in seen:
-        raise FrameRefused("the frame lacks the ledger or the snapshot manifest")
+    if ledger_name not in seen or not sids or any(
+            "snapshots/%s/manifest.json" % s not in seen for s in sids):
+        raise FrameRefused("the frame lacks the ledger or a snapshot manifest")
+    with open(os.path.join(base, ledger_name), "rb") as fh:
+        try:
+            sid, _hash = reportunit.latest_snapshot(reportunit.ledger_cores(fh.read()))
+        except (reportunit.Refused, reportunit.NoCommittedRun) as exc:
+            raise FrameRefused(str(exc))
+    if sid not in sids:
+        raise FrameRefused("the frame does not carry the latest committed run")
     return sid
 
 
 def bound_to_ledger(base, sid):
-    """The last ledger record names this snapshot and its manifest hash (D-50)."""
+    """The last snapshot_committed record names this snapshot and its manifest hash (D-50).
+
+    D-128: not the last record - a baseline_approved record may follow it."""
     with open(os.path.join(base, reportunit.LEDGER_NAME), "rb") as fh:
-        lines = [l for l in fh.read().split(b"\n") if l.strip()]
-    core = json.loads(lines[-1].decode("utf-8"))["record_core"]
+        cores = reportunit.ledger_cores(fh.read())
+    runs = [c for c in cores if c.get("event") == reportunit.SNAPSHOT_COMMITTED]
+    core = runs[-1] if runs else {}
     with open(os.path.join(base, "snapshots", sid, "manifest.json"), "rb") as fh:
         envelope = json.loads(fh.read().decode("utf-8"))
     problems = []
     if core.get("snapshot_id") != sid:
-        problems.append("the last ledger record names another snapshot")
+        problems.append("the last snapshot record names another snapshot")
     if core.get("manifest_hash") != envelope.get("manifest_hash"):
-        problems.append("the last ledger record does not bind this manifest")
+        problems.append("the last snapshot record does not bind this manifest")
     return problems
 
 

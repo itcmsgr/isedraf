@@ -30,6 +30,10 @@ DOMAIN_LEDGER_RECORD = "ISEDRAF:LEDGER-RECORD:V1"
 DOMAIN_AUXILIARY_ARTIFACT = "ISEDRAF:AUXILIARY-ARTIFACT:V1"
 # D-115. Separate from DOMAIN_STATE so an auxiliary digest can never be mistaken
 # for a state hash, and so NORM-038 keeps the two domains un-confusable.
+# D-127 (v0.4): the profile and baseline-revision domains of SCOPE-073 and SCOPE-074,
+# frozen with their component lists. Neither prefixes nor is prefixed by any other.
+DOMAIN_PROFILE = "ISEDRAF:PROFILE:V1"
+DOMAIN_BASELINE = "ISEDRAF:BASELINE:V1"
 
 _SHORT = {0x08: "\\b", 0x09: "\\t", 0x0A: "\\n", 0x0C: "\\f", 0x0D: "\\r"}
 _INT64_MIN = -(2 ** 63)

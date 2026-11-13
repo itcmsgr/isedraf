@@ -45,8 +45,32 @@ graph TD
     isedraf_authorizedkeys_sources --> isedraf_authorizedkeys_model
     isedraf_authorizedkeys_sources --> isedraf_shared_result
     isedraf_authorizedkeys_sources --> isedraf_textbytes
+    isedraf_baseline_approve --> isedraf
+    isedraf_baseline_approve --> isedraf_baseline
+    isedraf_baseline_approve --> isedraf_baseline_revision
+    isedraf_baseline_approve --> isedraf_ids
+    isedraf_baseline_approve --> isedraf_ledger
+    isedraf_baseline_approve --> isedraf_stateroot
+    isedraf_baseline_profile --> isedraf
+    isedraf_baseline_profile --> isedraf_canonical
+    isedraf_baseline_projection --> isedraf
+    isedraf_baseline_projection --> isedraf_accounts_model
+    isedraf_baseline_projection --> isedraf_canonical
+    isedraf_baseline_projection --> isedraf_loginpolicy_model
+    isedraf_baseline_projection --> isedraf_ssh_model
+    isedraf_baseline_revision --> isedraf
+    isedraf_baseline_revision --> isedraf_baseline
+    isedraf_baseline_revision --> isedraf_baseline_profile
+    isedraf_baseline_revision --> isedraf_baseline_projection
+    isedraf_baseline_revision --> isedraf_canonical
+    isedraf_baseline_revision --> isedraf_ledger
+    isedraf_baseline_revision --> isedraf_stateroot
+    isedraf_baseline_revision --> isedraf_status
     isedraf_cli --> isedraf
     isedraf_cli --> isedraf_audit
+    isedraf_cli --> isedraf_baseline
+    isedraf_cli --> isedraf_baseline_approve
+    isedraf_cli --> isedraf_baseline_revision
     isedraf_cli --> isedraf_catalog
     isedraf_cli --> isedraf_evaluate
     isedraf_cli --> isedraf_evaluate_run
@@ -64,8 +88,12 @@ graph TD
     isedraf_coverage --> isedraf_status
     isedraf_evaluate_criteria --> isedraf_status
     isedraf_evaluate_record --> isedraf
+    isedraf_evaluate_record --> isedraf_baseline
+    isedraf_evaluate_record --> isedraf_baseline_profile
     isedraf_evaluate_record --> isedraf_canonical
     isedraf_evaluate_run --> isedraf
+    isedraf_evaluate_run --> isedraf_baseline
+    isedraf_evaluate_run --> isedraf_baseline_revision
     isedraf_evaluate_run --> isedraf_canonical
     isedraf_evaluate_run --> isedraf_catalog
     isedraf_evaluate_run --> isedraf_evaluate
@@ -99,7 +127,19 @@ graph TD
     isedraf_inventory_collectors --> isedraf_inventory
     isedraf_inventory_collectors --> isedraf_inventory_model
     isedraf_inventory_model --> isedraf_status
+    isedraf_launcher_approver --> isedraf
+    isedraf_launcher_approver --> isedraf_baseline
+    isedraf_launcher_approver --> isedraf_evaluate
+    isedraf_launcher_approver --> isedraf_exitcodes
+    isedraf_launcher_approver --> isedraf_launcher
+    isedraf_launcher_approver --> isedraf_supervisor
+    isedraf_launcher_baselineunit --> isedraf
+    isedraf_launcher_baselineunit --> isedraf_baseline
+    isedraf_launcher_baselineunit --> isedraf_exitcodes
+    isedraf_launcher_baselineunit --> isedraf_launcher
+    isedraf_launcher_baselineunit --> isedraf_supervisor
     isedraf_launcher_evaluator --> isedraf
+    isedraf_launcher_evaluator --> isedraf_baseline
     isedraf_launcher_evaluator --> isedraf_evaluate
     isedraf_launcher_evaluator --> isedraf_exitcodes
     isedraf_launcher_evaluator --> isedraf_launcher

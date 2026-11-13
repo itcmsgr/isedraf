@@ -3,13 +3,13 @@
 **Linux Host Assurance with Approved Baselines, State Delta & Verifiable Evidence**
 
 [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.3.0-lightgrey)](VERSION)
+[![Version](https://img.shields.io/badge/version-0.4.0-lightgrey)](VERSION)
 [![Status](https://img.shields.io/badge/status-general%20availability-green)](docs/CURRENT_STATE.md)
 [![Platforms](https://img.shields.io/badge/platforms-11%20Linux%20distributions%20measured-informational)](docs/reference/PLATFORM_COMPATIBILITY.md)
 [![Governance](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml/badge.svg)](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/itcmsgr/isedraf/badge)](https://scorecard.dev/viewer/?uri=github.com/itcmsgr/isedraf) [![OpenSSF Baseline](https://www.bestpractices.dev/projects/15010/baseline)](https://www.bestpractices.dev/en/projects/15010/baseline-1)
 
-> **Current release: 0.3.0 — General Availability.** ISEDRAF 0.3 adds native criteria: `isedraf evaluate` checks a committed run against eight
-> ISEDRAF-authored criteria, and `isedraf explain` shows what each one does not establish.
+> **Current release: 0.4.0 — General Availability.** ISEDRAF 0.4 adds approved baselines: approve one
+> complete Full Audit run; later evaluations record what changed.
 
 ## What is ISEDRAF?
 
@@ -52,7 +52,8 @@ reason, and every source records how it was read.
 ## What it does not claim
 
 - **NOT_TESTED is not a pass.** It means the fact was not observed.
-- **It gives no verdicts.** There is no PASS/FAIL, no score and no findings.
+- **Results come only from the eight native criteria** (EXPERIMENTAL), over committed evidence;
+  FAIL or MANUAL_REVIEW is a finding. No score; an approved baseline means accepted, not secure.
 - **`sshd -T` is the global effective configuration only.** Values that depend on `Match`
   blocks, for a given user or address, are not resolved and are reported as such.
 - **Full Audit does not read other users' authorized_keys files** it cannot read as the
@@ -89,15 +90,19 @@ isedraf explain ISE-ACCOUNT-001  # what a criterion checks and does not establis
 sudo isedraf audit             # Full Audit
 sudo isedraf report            # render the last Full Audit run (read-only)
 sudo isedraf evaluate          # evaluate the last Full Audit run (system store)
+sudo isedraf baseline approve  # approve the last complete Full Audit run as the baseline
 ```
 
-Under `sudo`, ISEDRAF runs only `audit` and `report`; everything else is refused.
+Under `sudo`, ISEDRAF runs only `audit`, `report`, `evaluate` and `baseline approve`; everything
+else is refused. Baselines: [Getting started](docs/GETTING_STARTED.md#approve-a-baseline-and-compare).
 
 | Exit | Meaning |
 |---|---|
 | 0 | committed (or rendered), and every area was COLLECTED |
 | 2 | committed (or rendered), but some areas are PARTIAL, NOT_TESTED or ERROR |
+| 5 | the approved baseline does not verify; nothing was written |
 | 64 | usage or engine error; nothing was committed |
+| 65 | baseline approval refused, with the reason; nothing was written |
 | 66 | another ISEDRAF run holds the lock; nothing was collected |
 | 67 | the evidence store cannot be used; nothing was collected |
 | 70 | refused under sudo or root, or Full Audit not supported here; nothing was collected |
@@ -126,8 +131,7 @@ Removing the package never deletes the evidence.
 | read the report section by section | [Report guide](docs/REPORT_GUIDE.md) |
 | know exactly what ISEDRAF cannot tell you | [Security and limitations](docs/SECURITY_AND_LIMITATIONS.md) |
 
-Engineering and design documents live under [`docs/`](docs/README.md); implementation
-status is in [Current state](docs/CURRENT_STATE.md).
+Engineering and design documents: [`docs/`](docs/README.md); status: [Current state](docs/CURRENT_STATE.md).
 
 ## Security
 

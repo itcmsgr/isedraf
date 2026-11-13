@@ -135,6 +135,22 @@ only) and the Match-dependent values, which are NOT_TESTED because `sshd -T` ran
 connection context. COLLECTED for the area never means every connection's settings are
 known.
 
+## Baseline comparison
+
+From 0.4 the report has a "Baseline comparison" part, after the native criteria. It
+shows what the evaluation of this run recorded, and never compares by itself:
+
+- with no evaluation: that nothing was compared, and how to evaluate;
+- with no approved baseline: that nothing was compared, and how to approve one;
+- with a baseline: the baseline, the run it was approved from, whether it applies to this
+  host, one line per tracked section (UNCHANGED, MODIFIED or NOT_COMPARABLE, and whether
+  the collection method changed) and one line per change.
+
+MODIFIED means the section's recorded state differs from the approved one; it is to be
+reviewed and is not a regression or an improvement by itself. A changed collection method
+with an unchanged state is not a change. In the JSON report the same data is under
+`baseline_comparison`.
+
 ## Limitations
 
 The report ends with the limitations that apply to this run, for example that host

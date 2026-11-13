@@ -114,6 +114,36 @@ isedraf report --json          # the machine-readable report
 committed run and never collects anything new. [Report guide](REPORT_GUIDE.md) explains
 what each part means.
 
+## Approve a baseline and compare
+
+A baseline is one run you approve as the reference. Later evaluations record, section by
+section, whether the host's recorded state still matches it.
+
+```sh
+sudo isedraf audit
+sudo isedraf baseline approve   # approves the run just committed; it takes no snapshot name
+sudo isedraf audit              # later
+sudo isedraf evaluate           # compares the new run with the approved one
+sudo isedraf report             # shows the comparison under "Baseline comparison"
+```
+
+- The baseline profile `v0.4-default-1` requires host identity, accounts, SSH and login
+  policy. A run where any of them is not COLLECTED is refused with exit 65, naming each
+  section and why; nothing is written, and no earlier run is approved instead.
+- Approved means accepted, not secure. A MODIFIED section is to be reviewed; it is never
+  called a regression or an improvement. NOT_COMPARABLE means the two runs cannot be
+  compared for that section (for example it was not COLLECTED), not that something was
+  removed.
+- One baseline per store in this release; approving again is refused with exit 65.
+  Accepting a change, re-approving and tracking more sections come later.
+- If an approval was interrupted, `sudo isedraf baseline approve` completes it for the run
+  it had recorded. Until then `evaluate` exits 5.
+- `evaluate` exits 5, writing nothing, when the baseline files or the run they approve do
+  not verify.
+- A standard audit cannot read `/etc/shadow`, so it is always refused. In a development
+  store (`ISEDRAF_STATE_ROOT`), `isedraf baseline approve <SDS-id>` approves a complete run
+  marked `DEV`; it is never a production baseline.
+
 ## Where the evidence lives
 
 The evidence store is `$XDG_STATE_HOME/isedraf` when `XDG_STATE_HOME` is an absolute
@@ -131,7 +161,7 @@ says why.
 
 | Message says | Exit | What to do |
 |---|---|---|
-| Under sudo or root, ISEDRAF runs only `sudo isedraf audit`, `sudo isedraf report` and `sudo isedraf evaluate` | 70 | run other commands as your normal user |
+| Under sudo or root, ISEDRAF runs only `sudo isedraf audit`, `sudo isedraf report`, `sudo isedraf evaluate` and `sudo isedraf baseline approve` | 70 | run other commands as your normal user; under sudo, `baseline approve` takes no snapshot name |
 | FULL_AUDIT_UNSUPPORTED | 70 | Full Audit needs systemd and one of the four platforms above |
 | ENGINE_IDENTITY_MISSING | 70 | reinstall the package, which declares the `isedraf` account |
 | ENGINE_UNSAFE_INSTALL | 64 | `/usr/lib/isedraf` must be root-owned and not writable by others |
@@ -144,6 +174,11 @@ says why.
 | neither XDG_STATE_HOME nor HOME is an absolute path | 64 | set one of them |
 | another ISEDRAF run holds the lock | 66 | wait for the other run to finish |
 | no committed audit run ... run `isedraf audit` first | 64 | run the audit, then report |
+| INCOMPLETE_FOR_BASELINE | 65 | the run lacks a COLLECTED required section; the message names each one. Fix the cause, run a Full Audit again, approve |
+| BASELINE_CLASS_NOT_ADMITTED | 65 | a standard-audit run cannot become a baseline; use `sudo isedraf baseline approve` |
+| BASELINE_ALREADY_APPROVED | 65 | this store already has its baseline |
+| BASELINE_POINTER_MISSING | 5 | an approval was interrupted; run the same approve command again |
+| BASELINE_ARTIFACT_INVALID, BASELINE_SOURCE_INVALID, BASELINE_POINTER_MISMATCH | 5 | the baseline or the run it approves was changed or removed; ISEDRAF never repairs it |
 
 Nothing is collected or committed in any of these cases.
 
@@ -164,6 +199,11 @@ development and testing, and it is refused under root and sudo.
 | `isedraf report` | render the last committed run; `--json`, `--html`, `--save` |
 | `sudo isedraf audit` | Full Audit; commits to `/var/lib/isedraf` |
 | `sudo isedraf report` | render the last Full Audit run, read-only; `--json` or `--html` |
+| `isedraf evaluate` | evaluate the last run against the native criteria and, when a baseline is approved, compare with it |
+| `sudo isedraf evaluate` | the same for the Full Audit store |
+| `isedraf explain <criterion>` | what a criterion checks and what a result does not establish |
+| `sudo isedraf baseline approve` | approve the latest complete Full Audit run as the baseline |
+| `isedraf baseline approve <SDS-id>` | approve a complete development (`DEV`) run |
 | `isedraf identity` | record host identity only, as its own committed run |
 | `isedraf inventory` | print the host inventory now; commits nothing (`--json` for the data) |
 | `isedraf --version` | print the version |

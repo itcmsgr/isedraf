@@ -329,6 +329,12 @@ trusted launcher, in the unit           (root, bounded capability set)
   engine cannot ask for anything to run as root: its only privileged request is an `operation_id` on
   the channel the launcher gave it, answered or refused by the supervisor (`AUTH-003`, `AUTH-004`).
 
+**Amended for v0.4 by D-128.** `isedraf baseline approve` with no further argument enters the baseline
+route of `AUTH-034`. Any argument is refused with exit `70`. The refusal message for every other
+invocation becomes *"Under sudo or root, ISEDRAF runs only `sudo isedraf audit` (Full Audit), `sudo
+isedraf report` (its report), `sudo isedraf evaluate` (its evaluation) and `sudo isedraf baseline
+approve` (its baseline). Run other ISEDRAF commands as your normal user."*
+
 **AUTH-020 (D-124, EXEC-010, EXEC-011, AUTH-011) SHALL** The launcher is hardened and lives in
 `lib/isedraf/launcher/`, the only package where `os.execv*` is allowed:
 
@@ -407,6 +413,16 @@ as follows, within the `STORE-025` subset:
 
 Creation by ISEDRAF uses exclusive, no-follow operations. Package scripts neither create nor delete
 `/var/lib/isedraf` and never remove the `isedraf` account.
+
+**Amended for v0.4 by D-128.** Two more rows, within `STORE-025` as amended by `D-127`:
+
+| Path under `/var/lib/isedraf/` | Owner, mode | Created by | Written by |
+|---|---|---|---|
+| `baselines/` | root:root 0700 | launcher, on the first approval | launcher, by the approval writes of `AUTH-034` only |
+| `baselines/BL-000001.json`, `baselines/current` | root:root 0600 | launcher | launcher only, staged under `tmp/`; the reduced approver never writes the store |
+
+The ledger gains `baseline_approved` records, appended by the launcher only. The engine identity never
+reaches `baselines/`.
 
 **Declared by the package, validated by the launcher, repaired by no one (amended by D-124,
 2026-10-07, `AUTH-027`).** The package declares the root as an empty directory entry of its payload,
@@ -879,3 +895,53 @@ evidence; it adds no collector, no privileged rule evaluator and no general priv
 - **Exit codes** keep their meanings (`OUT-001`, `EVAL-007`): `0` an evaluation is committed or an
   identical one exists, whatever its results; `64` usage, engine, evidence or frame refusal, nothing
   written; `66`; `67`; `70`; and the `AUTH-020` interruption statuses.
+
+**AUTH-034 (D-128, D-127, AUTH-019, AUTH-020, AUTH-022, AUTH-028, AUTH-033) SHALL** The system-store
+baseline route (v0.4 slice 2). It approves a complete Full Audit run as the production baseline; it adds
+no collector, no supervisor operation, no capability and no general privileged writer.
+
+- **One invocation, no snapshot argument.** Under euid 0 or with `SUDO_USER` set, `isedraf baseline
+  approve` with no further argument enters this route on a supported platform. The run approved is
+  always the latest committed run (`D-50`), never one the caller names; any argument is refused with
+  exit `70`. Without systemd or on an unsupported platform it is refused with exit `70` and
+  `FULL_AUDIT_UNSUPPORTED`.
+- **The execution model of `AUTH-033`.** The same outer entry, `systemd-run` properties, unit naming,
+  transport, interruption rules and `AUTH-028` set; no supervisor runs and no fixed operation is
+  requested.
+- **The root side reads metadata only.** Inside the unit it validates the store as `AUTH-022` requires
+  (exit `67`; a `baselines/` that exists and does not conform is refused, never repaired), takes the
+  whole-run lock (exit `66`), and reads the ledger, the latest committed run, `baselines/BL-000001.json`
+  and `baselines/current` when present, and the approved snapshot when it is not the latest, exactly as
+  `AUTH-032` reads, bounded and without following links. From the ledger's events and the presence of
+  those two files alone it derives the action: a `baseline_approved` record and `current` → refused
+  `BASELINE_ALREADY_APPROVED`, exit `65`, before anything else runs; a record without `current` →
+  complete that recorded approval (write `current` only), whatever the latest run is; `current`
+  without a record → integrity failure, exit `5`; an artifact without a record → resume at the ledger
+  append; neither → a new approval. Host evidence is never parsed on the root side.
+- **The reduced approver.** Started as the `AUTH-033` evaluator is (the `AUTH-020` reduction, a fixed
+  entry, a constant argument vector, its own reduction check), it receives one bounded frame, verifies
+  the ledger chain, every snapshot and the latest run's ledger binding, and runs the approval of
+  `BASE-012`/`BASE-013` without writing: refusals keep their exits (`65`, `5`, `64`). It answers with
+  one bounded frame of exactly two items, the action and the artifact's bytes.
+- **The closed contract.** The launcher refuses (exit `64`, nothing written) unless the action is the
+  one it derived; the artifact is canonical JSON within its bound; and, for a new or resumed approval,
+  it names `BL-000001`, the latest run and the manifest hash its ledger record binds, the
+  `SYSTEM_PRODUCTION` class as both `state_root` and `baseline_class`, the packaged profile with the
+  profile hash the launcher computes, that profile's required and tracked sections, and the revision
+  hash the launcher computes by `SCOPE-074`. A resumed approval's bytes must equal the artifact on disk;
+  a completion's bytes must equal the artifact on disk, its digest the record's `artifact_digest`, and
+  its revision hash and snapshot the record's. The launcher reads no other field.
+- **The writes** are `BASE-012`'s, by the launcher, under the lock, with the stop signals blocked from
+  the first write: staging in `tmp/`, a link into `baselines/` that never overwrites, the
+  `baseline_approved` append, then `current`. Everything is root:root, directories 0700, files 0600.
+  A stop before the first write writes nothing and exits `143`.
+- **Eligibility is the profile's, not the route's.** A Full Audit run is approved only when every
+  required section is `COLLECTED` (`BASE-021`, `BASE-026`); running as root does not make a run
+  complete.
+- **Comparison in the system store.** The `AUTH-033` evaluation frame also carries the baseline state;
+  the evaluator verifies it (`BASE-008`, `BASE-011`) and exits `5` when it does not verify. The
+  evaluation identity the launcher computes names the revision and the profile from the ledger record
+  and the packaged profile. Every system-store reader takes the last `snapshot_committed` record as the
+  latest run, never the last record.
+- **Exit codes**: `0` approved or an interrupted approval completed; `5`; `64`; `65`; `66`; `67`; `70`;
+  and the `AUTH-020` interruption statuses.

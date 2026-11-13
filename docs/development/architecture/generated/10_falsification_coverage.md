@@ -24,5 +24,5 @@ GENERATED from `scripts/ci/falsifiable.sh`. A large total is not coverage if mos
 | packaging / release | 10 |
 | governance / gates | 9 |
 | docs truth | 7 |
-| other / cross-cutting | 379 |
-| **total** | **549** |
+| other / cross-cutting | 399 |
+| **total** | **569** |

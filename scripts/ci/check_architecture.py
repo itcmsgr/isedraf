@@ -75,7 +75,11 @@ LAYERS = [
                 # D-125: native evaluation of committed evidence. It reads and verifies
                 # the store and never collects; the report may read an evaluation
                 # (evaluate.record) and may never create one (evaluate.run, rule 8).
-                "isedraf.evaluate")),
+                "isedraf.evaluate",
+                # D-127 (v0.4): baseline approval and comparison over committed evidence.
+                # It reads and verifies the store and never collects; approve is the only
+                # writer of baselines/.
+                "isedraf.baseline")),
     ("presentation", ("isedraf.report", "isedraf.explain")),
     # v0.2 P5b: the Full Audit launcher orchestrates the store and the engine as the CLI
     # does; it sits beside it, above every layer it composes.
@@ -94,7 +98,8 @@ PURE = ("isedraf.shared.keyvalue", "isedraf.shared.compare", "isedraf.shared.res
         "isedraf.nss.sources", "isedraf.nss.model",
         "isedraf.hostname.sources", "isedraf.hostname.model",
         "isedraf.supervisor.protocol", "isedraf.supervisor.contracts",
-        "isedraf.evaluate.criteria", "isedraf.explain")
+        "isedraf.evaluate.criteria", "isedraf.explain",
+        "isedraf.baseline.profile", "isedraf.baseline.projection")
 
 # D-125 EVAL-001: the report and `explain` render; they never evaluate. Importing the
 # module that creates an evaluation would let a rendering produce a result.

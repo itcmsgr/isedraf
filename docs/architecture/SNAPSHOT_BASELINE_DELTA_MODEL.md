@@ -199,6 +199,17 @@ field. The map form was chosen for that reason — the `NORM-037` verifier refus
 Domains for the baseline revision, evaluation manifest, evidence reference, profile and checkpoint are
 **not frozen**: W1-A computes none of them, and speculative bytes are not specified (`D-107`).
 
+**Amended for v0.4 by D-127.** Two more domains are frozen, with these ordered components. Neither
+prefixes, nor is prefixed by, any other domain.
+
+| Domain (ASCII) | Ordered components |
+|---|---|
+| `ISEDRAF:PROFILE:V1` | `canonical_bytes(profile_object)` — `SCOPE-073`, the object without a `profile_hash` field |
+| `ISEDRAF:BASELINE:V1` | raw 32 bytes of `approved_snapshot_manifest_hash`, raw 32 bytes of `profile_hash` — `SCOPE-074` |
+
+`ISEDRAF:STATE:V1` also frames the section state object of `DELTA-007`. The evaluation manifest,
+evidence reference and checkpoint domains stay unfrozen.
+
 **NORM-040 (Z-01, NEW) SHALL** **Canonical representation of `reason`, language-neutral.**
 
 `reason` has exactly **two** semantic states, and the architecture already fixes the canonical-evidence
@@ -422,6 +433,25 @@ run, so chaining is reachable from the second run onward — it is not a Freeze 
 Stored row: `canonical_bytes({"record_core": ..., "record_hash": "sha256:..."})`, one physical line.
 `baseline_approved` is W1-B; `ledger_recovered` belongs with recovery. Neither is frozen here.
 
+**Amended for v0.4 by D-127.** `baseline_approved` is frozen with this `record_core`; chaining and
+`record_hash` are the rule above, unchanged:
+
+```text
+record_core:
+    ledger_schema_version integer, literal 1
+    sequence, event_id, occurred_at, previous_record_hash, state_root   as above
+    event                 string, literal "baseline_approved"
+    baseline_revision     string, "BL-000001"
+    revision_hash         "sha256:<64 hex>"   (SCOPE-074)
+    artifact_digest       "sha256:" + SHA-256 of the exact bytes of baselines/BL-000001.json
+    snapshot_id           the approved snapshot
+    manifest_hash         its manifest hash
+```
+
+A record carries exactly the fields of its event; a record of any other event is refused by
+verification. A reader selecting "the latest run" takes the last `snapshot_committed` record, never the
+last record. `ledger_recovered` stays unfrozen.
+
 **SNAP-016 (S-16, NEW) SHALL** An **evidence reference** is a defined object: the collector and source that
 produced it, the argv or file path, a `sha256:` hash of the retained bytes, whether raw output is retained
 at all, its retention — **the W1 literal is `retention: "UNLIMITED_W1"`**, so no deferred retention vocabulary is needed (W-16) — and its redaction class. Which collectors retain raw output is
@@ -529,6 +559,20 @@ baseline pointer. A mismatch is an **integrity failure, exit `5`** — never a s
 `tracked_sections` on disk therefore changes the revision bytes without changing the ledger-bound hash,
 and is detected. This is the binding that makes `BASE-025`'s claim true rather than aspirational.
 
+**BASE-011 (D-127, NEW) SHALL** **Every field of the revision is verified, not only its hash.**
+`BL-000001` binds the approved snapshot and the profile, nothing else (`SCOPE-074`, unchanged). Before any
+comparison the engine also: checks the artifact's bytes against the ledger record's `artifact_digest`
+and its canonical form; requires the record's `revision_hash`, `snapshot_id`, `manifest_hash` and
+`state_root` to equal the artifact's; verifies the approved snapshot as a ledgered snapshot
+(`verify_snapshot`, manifest hash bound); requires the profile to be byte-equal to the packaged profile
+of that identity; and re-derives `host_id`, `required_sections`, `tracked_sections`, the class and, per
+section, `collection_status`, `state_hash` and `method_fingerprint` from those verified sources,
+requiring the result to equal the artifact byte for byte. Where this engine's method fingerprint of a
+section differs from the stored one (`DELTA-008`), the stored `state_hash` and fingerprint cannot be
+reproduced: they stay bound by `artifact_digest` only, and the section is `METHOD_CHANGED`. Any other
+difference, a missing artifact, a missing or mismatching `baselines/current`, or an approved snapshot
+that does not verify, is an integrity failure: exit `5`, nothing written.
+
 **BASE-020 (D-101, Q-04) SHALL** **Completeness and tracking are separate concepts.** Three sets:
 
 | Set | Meaning |
@@ -553,6 +597,32 @@ W1 uses a deliberately narrow fixture profile `prototype-host-identity-v1`
 (`required_sections = ["host_identity"]`); the v0.1 release profile expands only as frozen scope is
 completed.
 
+**Amended for v0.4 by D-127.** The release default profile is `v0.4-default-1` (`SCOPE-073` as
+amended): `host_identity`, `accounts`, `ssh` and `loginpolicy` required and tracked. A required section
+not `COLLECTED` refuses approval with `INCOMPLETE_FOR_BASELINE`, exit `65`; an unprivileged run, which
+cannot read `/etc/shadow`, is therefore refused on a real host. The profile is never narrowed to what a
+host can collect (`BASE-026`).
+
+**BASE-013 (D-127, NEW) SHALL** **Approval refusals, in order.** `isedraf baseline approve <SDS-id>`
+checks, first failure wins, nothing written: root or sudo (`70`); a state root that cannot be resolved
+(`64`); a `USER_PRODUCTION` root that is not the user's own conforming directory (`67`); a store with no
+committed run (`64`); run lock held (`66`); an unknown, unledgered or unverifiable snapshot (`64`); store
+class not admitted — `BASELINE_CLASS_NOT_ADMITTED`, `65` (v0.4 slice 1 admits `DEV` only; the class is
+decided before completeness); a baseline already approved — `BASELINE_ALREADY_APPROVED`, `65` (no
+implicit replacement; this includes an interrupted approval (`BASE-012`) when another snapshot is
+named, while naming the same snapshot completes it); a required section not `COLLECTED` — `INCOMPLETE_FOR_BASELINE`, `65`, naming each blocking
+section with its status and its own reason; a required section whose state cannot be stated
+(`DELTA-007`) — `NOT_COMPARABLE_FOR_BASELINE`, `65`; an unledgered `BL-000001.json` whose bytes differ
+from this approval's — `UNLEDGERED_REVISION_PRESENT`, `65`. Otherwise `0`. Completing an interrupted
+approval (`BASE-012`) re-verifies the recorded baseline first; if it does not verify, `5`.
+
+**Amended for v0.4 by D-128.** `sudo isedraf baseline approve` (`AUTH-034`) approves `SYSTEM_PRODUCTION`
+baselines from complete Full Audit runs. It names no snapshot: it approves the latest committed run,
+and an interrupted approval is completed for the snapshot its ledger record names, whatever the
+latest run is. The checks above apply in the same order; root, store and lock are decided by the
+launcher, and an approval already complete is refused before anything else runs. `USER_PRODUCTION`
+stays refused (`BASELINE_CLASS_NOT_ADMITTED`).
+
 **BASE-026 (T-05, NEW) SHALL** If `REQUIRED_FOR_BASELINE ⊄ SUPPORTED` on this host, approval is **refused
 with a distinct reason** — the required set SHALL NEVER be silently narrowed to what the host can collect.
 
@@ -568,6 +638,10 @@ and a new revision; changing the baseline profile is likewise a policy event. Th
 incomplete → exit `2`. A section never collected or supported in the approved baseline SHALL NOT force
 exit `2`. A newly supported collector becomes **available coverage**, never automatically tracked;
 adoption is an explicit `isedraf baseline track <section>`, **not** `rebind`.
+
+**Amended for v0.4 by D-127.** The exit `2` above is the exit of the comparison journey (`HLD` J-3,
+`check`, deferred). In v0.4 `isedraf evaluate` records a tracked section that is not comparable as a
+`NOT_COMPARABLE` row in `changes.json` and keeps the exits of `EVAL-007`.
 
 **BASE-025 (D-101, Q-04) SHALL** Every tracking or policy change is attributed, timestamped, reasoned and
 hash-chained as a `baseline_event` (`BASE-006`), producing a new revision and a `section_tracked` /
@@ -586,6 +660,18 @@ evidence, and **SHALL NOT satisfy `BASE-003` for v0.1**. This exists because W1 
 forbidden by its own frozen set. `BASE-003` is not softened — a `DEV` baseline is a different, clearly
 labelled object, and promotion of a `DEV` baseline to production is **not** defined and SHALL NOT be
 attempted.
+
+**BASE-012 (D-127, NEW) SHALL** **Approval write order and interrupted approvals.** Under the whole-run
+lock: (1) compute the artifact, a pure function of the snapshot, the profile and the engine (no
+wall-clock time, no ledger sequence); (2) stage it in `tmp/` and fsync; (3) create `baselines/` mode
+0700 and fsync the root; (4) link it to `baselines/BL-000001.json`, never overwriting, and fsync;
+(5) append `baseline_approved` and fsync — the commit point; (6) write `baselines/current` through
+`tmp/` and rename, and fsync. Interrupted: after (1)–(3) only a staging file exists, which the next
+approval removes; after (4) the artifact is `ORPHANED_UNLEDGERED`: it is no baseline, `evaluate` reports
+it and compares nothing, and approving the same snapshot with identical bytes resumes at (5); after
+(5) the baseline is approved but `current` is missing: `evaluate` exits `5`
+(`BASELINE_POINTER_MISSING`) and approving the same snapshot writes `current` after verifying
+everything else. ISEDRAF deletes nothing outside `tmp/`.
 
 **BASE-004 (D-44) SHALL** An acceptance binds the **exact accepted normalized state hash**. Any later
 change to that entity is a new change. A `MISMATCH` MAY be acknowledged but SHALL NEVER be normalized away.
@@ -664,6 +750,14 @@ result is `NOT_COMPARABLE` with a reason.
 | any | any, incompatible schema major | `NOT_COMPARABLE`; rebind required |
 | any | any, host identity mismatch | `BASELINE_NOT_APPLICABLE`; no diff; exit `4` |
 
+**Amended for v0.4 by D-127.** Exits `2` and `4` in this table are the exits of the comparison journey
+(`HLD` J-3, `check`, deferred). In v0.4 `isedraf evaluate` writes the row's result into `changes.json`
+— `applicability: "BASELINE_NOT_APPLICABLE"` with both `host_id` digests and no rows, or a
+`NOT_COMPARABLE` row with its reason — and keeps the exits of `EVAL-007`. When the new snapshot's
+`host_identity` is not `COLLECTED`, applicability is `NOT_ESTABLISHED` and every tracked section is
+`NOT_COMPARABLE`. Both sides are projected by the engine performing the comparison, from verified
+snapshots.
+
 ## 11. Change primitives and interpretation
 
 **DELTA-001 (D-47) SHALL** Primitives: `ADDED`, `REMOVED`, `MODIFIED`, `ENABLED`, `DISABLED`, `MISMATCH`.
@@ -695,6 +789,38 @@ after section hashes. Per-anchor entities, `ADDED`/`REMOVED` rows and change-id 
 `DEFERRED_TO_FREEZE_SET_2`, so "one fact changed → deterministic delta" is deterministic in row count as
 well as in detection.
 
+**Amended for v0.4 by D-127.** The same model applies to each tracked audit section of the profile:
+one entity keyed by section name, one `MODIFIED` row with the before and after `state_hash` of
+`DELTA-007`, interpreted `REVIEW_REQUIRED` (no per-domain regression or improvement rule in v0.4;
+`EXPECTED_CHANGE` never). A section whose state is equal on both sides gives no row.
+
+**DELTA-007 (D-127, NEW) SHALL** **The section state object (projection version 1).** Computed by the
+engine from a committed, verified section; no snapshot changes. Entity lists: `accounts` →
+`evidence.local_accounts` (table prefix none) and `evidence.local_groups` (prefix `group.`); `ssh` →
+`evidence.records`, which holds the declared records and, under Full Audit, the `sshd -T` settings;
+`loginpolicy` → `evidence.records`. Every other key of `evidence` is outside the projection and is named
+in the engine; a key it does not name makes the section not comparable (`UNKNOWN_SECTION_FIELD`). Per
+entity (an object, else `MALFORMED_SECTION`): a key whose prefixed name the domain's `CLASSIFICATION`
+table lists is kept verbatim when `STATE` and dropped otherwise; a key the table lists only as a prefix
+of other fields (such as `shadow`) is walked when an object and kept as `null` when `null`; any other key
+makes the section not comparable (`UNCLASSIFIED_FIELD`). A key absent stays absent; a key present with
+`null` is kept. Lists keep the order the collector recorded and are neither sorted nor deduplicated:
+first-wins semantics (sshd, duplicate account names) make order security-relevant, so a pure reorder
+is reported, never hidden. The object is `{"projection_version": 1, "section": S, "lists": {...}}` and
+`state_hash = HASH_FRAME_V1("ISEDRAF:STATE:V1", canonical_bytes(object))`. `host_identity` keeps its
+frozen `state_hash` (`IDENT-002`). Limitation: fields the existing tables classify as `PROVENANCE`, such
+as `loginpolicy` `family` and `source_path`, do not participate; changing that is a classification
+change (`SCOPE-047`).
+
+**DELTA-008 (D-127, NEW, provisional) SHALL** **The section method fingerprint.**
+`"sha256:" + SHA-256(canonical_bytes({projection_version, section, schema_version, collector_id,
+collector_version, parser_version, classification}))`, the method elements as the section records them
+and `classification` the domain table of the engine computing it; for `host_identity`, the five
+`CMP-020` elements of its manifest entry. A difference is `METHOD_CHANGED`, a comparability fact: equal
+states stay silent (`CMP-021`), different states are `REVIEW_REQUIRED`. A match does **not** prove the
+method identical: audit sections record no `source_id` or `classification_table_version`, and the
+classification element is the computing engine's table, not a record of the table at collection time.
+
 **DELTA-010 (D-36, D-47) SHALL** When no security-relevant change is observed, the run is **quiet**:
 exit `0`, no change rows. Ten consecutive runs on an unchanged host SHALL produce zero changes
 (acceptance test 2).
@@ -711,6 +837,10 @@ package ownership, dependencies). No exact revert and no apply in v0.1.
 the state root. `host/anchor.key`, `baselines/`, `evaluations/`, `acceptances/`, `reports/` and `exports/`
 belong to later sets and are **not created**; the entries below are annotated
 `DEFERRED_TO_FREEZE_SET_2` accordingly.
+
+**Amended for v0.4 by D-127.** `baselines/` is admitted, holding `BL-000001.json` and `current`. Only
+`isedraf baseline approve` creates it; preparing a state root never does. `baselines/events/` stays
+deferred.
 
 **STORE-001 (D-49) SHALL** Root `/var/lib/isedraf/` mode 0700, containing:
 `host/ baselines/ snapshots/ evaluations/ acceptances/ reports/ exports/ tmp/ ledger/ .lock`,
@@ -819,6 +949,9 @@ carries the cumulative hash of everything it replaces. `verify` SHALL print the 
 
 **STORE-020 (Q-09, NEW) SHALL** The `ORPHANED_UNLEDGERED` rule applies to `snapshots/` only;
 `evaluations/` is derived and carries no ledger entry by design.
+
+**Amended for v0.4 by D-127.** It also applies to `baselines/BL-*.json` (`BASE-012`): an artifact without
+its `baseline_approved` record is reported and never used, and ISEDRAF never deletes it.
 
 **STORE-012 (D-51) SHALL** Prune removes directories and appends a `pruned` event carrying the IDs and
 manifest hashes. Compaction occurs only via an explicit `checkpoint` record.

@@ -4,8 +4,8 @@
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
 #
-# Purpose: The W1-A ledger — snapshot_committed records, hash-chained.
-# Implements: STORE-024, STORE-001, SNAP-014, SNAP-018
+# Purpose: The ledger — snapshot_committed and baseline_approved records, hash-chained.
+# Implements: STORE-024, STORE-001, SNAP-014, SNAP-018, BASE-007, SCOPE-075
 #
 # The ledger carries identifiers and hashes. It never duplicates host state and never
 # carries personal data.
@@ -26,7 +26,18 @@ from . import canonical, stateroot
 
 LEDGER_SCHEMA_VERSION = 1
 EVENT_SNAPSHOT_COMMITTED = "snapshot_committed"
+# D-127 (v0.4): the second event W1 admits (SCOPE-075, STORE-010's enum). Same chain, same
+# record_hash rule (STORE-024); its own field set.
+EVENT_BASELINE_APPROVED = "baseline_approved"
 GENESIS_PREVIOUS = "sha256:" + "0" * 64
+_COMMON = ("ledger_schema_version", "sequence", "event", "event_id", "occurred_at",
+           "previous_record_hash", "state_root")
+FIELDS = {
+    EVENT_SNAPSHOT_COMMITTED: frozenset(_COMMON + ("snapshot_id", "manifest_hash")),
+    EVENT_BASELINE_APPROVED: frozenset(_COMMON + (
+        "baseline_revision", "revision_hash", "artifact_digest", "snapshot_id",
+        "manifest_hash")),
+}
 
 
 def segment_path(root):
@@ -44,6 +55,22 @@ def read_records(root):
             if line.strip():
                 out.append(json.loads(line))
     return out
+
+
+def snapshot_records(root):
+    """record_core of every snapshot_committed record, in ledger order.
+
+    A reader that wants "the latest run" takes the last of THESE, never the last record:
+    since v0.4 the ledger also carries baseline_approved records.
+    """
+    return [r["record_core"] for r in read_records(root)
+            if r["record_core"].get("event") == EVENT_SNAPSHOT_COMMITTED]
+
+
+def baseline_records(root):
+    """record_core of every baseline_approved record, in ledger order."""
+    return [r["record_core"] for r in read_records(root)
+            if r["record_core"].get("event") == EVENT_BASELINE_APPROVED]
 
 
 def head(root):
@@ -70,10 +97,35 @@ def build_record(root, snapshot_id, manifest_hash, event_id, occurred_at,
         "manifest_hash": manifest_hash,
         "state_root": state_root_class,
     }
+    return _sealed(core)
+
+
+def _sealed(core):
     core_canonical = canonical.canonical_bytes(core)
     record_hash = canonical.rendered(
         canonical.hash_frame(canonical.DOMAIN_LEDGER_RECORD, core_canonical))
     return core, core_canonical, record_hash
+
+
+def build_baseline_record(root, revision_id, revision_hash, artifact_digest, snapshot_id,
+                          manifest_hash, event_id, occurred_at, state_root_class):
+    """D-127: the baseline_approved record. It binds the revision artifact's exact bytes
+    (artifact_digest), so a field the revision hash does not cover is still bound."""
+    sequence, previous = head(root)
+    return _sealed({
+        "ledger_schema_version": LEDGER_SCHEMA_VERSION,
+        "sequence": sequence + 1,
+        "event": EVENT_BASELINE_APPROVED,
+        "event_id": event_id,
+        "occurred_at": occurred_at,
+        "previous_record_hash": previous,
+        "baseline_revision": revision_id,
+        "revision_hash": revision_hash,
+        "artifact_digest": artifact_digest,
+        "snapshot_id": snapshot_id,
+        "manifest_hash": manifest_hash,
+        "state_root": state_root_class,
+    })
 
 
 def append(root, core, record_hash):
@@ -104,6 +156,6 @@ def unledgered_snapshots(root):
     snapshots = os.path.join(root, "snapshots")
     if not os.path.isdir(snapshots):
         return []
-    known = set(r["record_core"]["snapshot_id"] for r in read_records(root))
+    known = set(r["snapshot_id"] for r in snapshot_records(root))
     return sorted(d for d in os.listdir(snapshots)
                   if d.startswith("SDS-") and d not in known)

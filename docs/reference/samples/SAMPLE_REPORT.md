@@ -24,7 +24,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 |---|---|
 | Report ID | `RPT-20260920T171548Z-71072fdd5e6cd97e` |
 | Generated (UTC) | 2026-09-20T17:15:48Z |
-| ISEDRAF version | 0.3.0 |
+| ISEDRAF version | 0.4.0 |
 | Report status | **COMPLETE** |
 
 > This report describes what was **observed**. It contains no secure/insecure verdict, because host inventory is evidence and a score would be a judgement the data does not support.
@@ -179,6 +179,12 @@ An incomplete observation is reported as incomplete. A missing tool is `NOT_TEST
 *Native criterion results are separate from collection status. Each one is the result of one ISEDRAF criterion over the evidence that criterion names, and only that; it is not a verdict on the host. `isedraf explain <criterion>` says what a result does not establish.*
 
 Not shown: no evaluation was looked up for this rendering. Run `isedraf evaluate` then `isedraf report` for your own store, or `sudo isedraf evaluate` then `sudo isedraf report` for a Full Audit (D-125, D-126) (NOT_SHOWN).
+
+## Baseline comparison
+
+*The comparison with the approved baseline, as the evaluation recorded it. Approved means accepted, not secure. MODIFIED means a section's recorded state differs from the approved one; it is REVIEW_REQUIRED, never a regression or an improvement by itself. NOT_COMPARABLE is not a change.*
+
+Not shown: the run has not been evaluated, so no comparison was recorded; run `isedraf evaluate` (a report never compares).
 
 ## Evidence limitations
 

@@ -94,21 +94,60 @@
       "isedraf.shared.result.RETAIN_VALUE",
       "isedraf.textbytes"
     ],
+    "isedraf.baseline": [],
+    "isedraf.baseline.approve": [
+      "isedraf",
+      "isedraf.baseline",
+      "isedraf.baseline.revision",
+      "isedraf.ids",
+      "isedraf.ledger",
+      "isedraf.stateroot"
+    ],
+    "isedraf.baseline.profile": [
+      "isedraf",
+      "isedraf.canonical"
+    ],
+    "isedraf.baseline.projection": [
+      "isedraf",
+      "isedraf.accounts",
+      "isedraf.accounts.model",
+      "isedraf.canonical",
+      "isedraf.loginpolicy",
+      "isedraf.loginpolicy.model",
+      "isedraf.ssh",
+      "isedraf.ssh.model"
+    ],
+    "isedraf.baseline.revision": [
+      "isedraf",
+      "isedraf.baseline",
+      "isedraf.baseline.profile",
+      "isedraf.baseline.projection",
+      "isedraf.canonical",
+      "isedraf.ledger",
+      "isedraf.stateroot",
+      "isedraf.status",
+      "isedraf.status.COLLECTED"
+    ],
     "isedraf.canonical": [],
     "isedraf.catalog": [],
     "isedraf.cli": [
       "isedraf",
       "isedraf.ENGINE_VERSION",
       "isedraf.audit",
+      "isedraf.baseline",
+      "isedraf.baseline.approve",
+      "isedraf.baseline.revision",
       "isedraf.catalog",
       "isedraf.evaluate",
       "isedraf.evaluate.run",
       "isedraf.exitcodes",
+      "isedraf.exitcodes.APPROVAL_REFUSED",
       "isedraf.exitcodes.INCOMPLETE",
       "isedraf.exitcodes.OK",
       "isedraf.exitcodes.PRIVILEGE_REFUSED",
       "isedraf.exitcodes.RUN_IN_PROGRESS",
       "isedraf.exitcodes.STATE_ROOT_UNUSABLE",
+      "isedraf.exitcodes.TOOL_INTEGRITY_FAILURE",
       "isedraf.exitcodes.USAGE_OR_ENGINE",
       "isedraf.explain",
       "isedraf.identity",
@@ -138,10 +177,14 @@
     ],
     "isedraf.evaluate.record": [
       "isedraf",
+      "isedraf.baseline",
+      "isedraf.baseline.profile",
       "isedraf.canonical"
     ],
     "isedraf.evaluate.run": [
       "isedraf",
+      "isedraf.baseline",
+      "isedraf.baseline.revision",
       "isedraf.canonical",
       "isedraf.catalog",
       "isedraf.evaluate",
@@ -231,9 +274,25 @@
       "isedraf.status.requires_reason"
     ],
     "isedraf.launcher": [],
+    "isedraf.launcher.approver": [
+      "isedraf",
+      "isedraf.baseline",
+      "isedraf.evaluate",
+      "isedraf.exitcodes",
+      "isedraf.launcher",
+      "isedraf.supervisor"
+    ],
+    "isedraf.launcher.baselineunit": [
+      "isedraf",
+      "isedraf.baseline",
+      "isedraf.exitcodes",
+      "isedraf.launcher",
+      "isedraf.supervisor"
+    ],
     "isedraf.launcher.engine": [],
     "isedraf.launcher.evaluator": [
       "isedraf",
+      "isedraf.baseline",
       "isedraf.evaluate",
       "isedraf.exitcodes",
       "isedraf.launcher",

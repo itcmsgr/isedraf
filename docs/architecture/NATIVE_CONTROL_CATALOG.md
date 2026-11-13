@@ -234,6 +234,19 @@ evaluated, and what a `PASS` does not establish.
 
 An evaluation has no ledger entry (`STORE-020`) and never modifies a snapshot (`SNAP-011`).
 
+**Amended for v0.4 by D-127.** With no baseline in force, `changes.json` is exactly the v0.3 record. When
+a `baseline_approved` record is in force, the baseline is verified first (`BASE-008`, `BASE-011`) and
+`changes.json` holds the comparison: `baseline_revision`, `revision_hash`, the approved snapshot, the
+profile identity, `applicability` (`APPLICABLE`, `BASELINE_NOT_APPLICABLE` or `NOT_ESTABLISHED`), a
+per-section summary (`UNCHANGED`, `MODIFIED` or `NOT_COMPARABLE`, and whether the method changed) and
+the rows: one `MODIFIED` row per changed tracked section with its before and after `state_hash`,
+interpreted `REVIEW_REQUIRED`, and one `NOT_COMPARABLE` row per section that cannot be compared, with its
+reason (`DELTA-006`, `DELTA-007`, `CMP-030`). A change is still never manufactured: a row comes only
+from comparing two verified snapshots. The manifest's `baseline_revision` and `profile`, and the
+`EVAL-006` key, name the revision (`revision_id`, `artifact_digest`) and the profile (`profile_id`,
+`profile_version`, `profile_hash`); with no baseline they stay null. An unledgered revision artifact
+(`BASE-012`) is reported as `unledgered_revision` and compared against nothing.
+
 **EVAL-006 (D-125) SHALL** **Regenerable identity.** An evaluation is identified by
 `EVL-<the snapshot's created_at, compact>-<the first 16 hex digits of the SHA-256 of the canonical
 SNAP-012 key>`. The key is the snapshot ID, the snapshot manifest hash, the baseline revision, the
@@ -255,6 +268,13 @@ own exit code. It never returns `1`, which is comparison semantics (v0.4). `expl
 `64` for an unknown criterion ID, and `70` under root. These rows enter `lib/isedraf/exitcodes.json`
 together with the commands, not before.
 
+**Amended for v0.4 by D-127.** `evaluate` also returns `5` when a baseline is in force and does not verify
+(`BASE-008`, `BASE-011`), with nothing written. A comparison result — a `MODIFIED` row, a
+`NOT_COMPARABLE` section, `BASELINE_NOT_APPLICABLE` — never changes `evaluate`'s exit code: those
+belong to the deferred `check` journey. `isedraf baseline approve` returns `0`, `5` (completing an
+interrupted approval whose recorded baseline does not verify), `64`, `65` (`BASE-013`), `66`, `67` and
+`70`. Both rows enter `lib/isedraf/exitcodes.json` with this change.
+
 **EVAL-008 (D-125, D-126) SHALL** **System-store evaluation is phased.** The first implementation evaluates
 the stores the invoking user's unprivileged engine already writes: `USER_PRODUCTION`, and `DEV`, whose
 artifacts are marked `DEV`. `D-126` admits `sudo isedraf evaluate` through `AUTH-033`; until that
@@ -263,6 +283,9 @@ running as the `isedraf` account within the `AUTH-019` execution model. It reads
 only, uses no supervisor operation, needs no root evaluator and no root file access, collects nothing
 live, and does not change the modes of `/var/lib/isedraf`. Until `AUTH-033` is implemented,
 system-store evaluation is `PLANNED`, and nothing describes it as available.
+
+**Amended for v0.4 by D-128.** When the system store holds a baseline, `sudo isedraf evaluate` compares
+against it as `EVAL-005` as amended describes, and returns `5` when it does not verify (`AUTH-034`).
 
 **EVAL-009 (D-125) SHALL** **Explaining a criterion** (`D-77` applied to rule knowledge). `explain`
 renders every field of the record, its lifecycle `EXPERIMENTAL` (`D-80`) and its result scope, and it

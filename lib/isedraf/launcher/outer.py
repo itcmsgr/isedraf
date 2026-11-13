@@ -5,7 +5,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
 #
 # Purpose: The outer entry under root: refuse all but `audit` and `report`, then run systemd-run.
-# Implements: AUTH-019, AUTH-020, AUTH-026, AUTH-027, PRIV-006, PRIV-008, EXEC-010, OUT-003
+# Implements: D-128, AUTH-034, AUTH-019, AUTH-020, AUTH-026, AUTH-027, PRIV-006, PRIV-008, EXEC-010, OUT-003
 #
 # bin/isedraf reaches this module, and only this module, when it runs as root or under sudo
 # (AUTH-019). It is minimal and touches nothing: it never opens, creates, checks or repairs
@@ -72,13 +72,16 @@ EXEC_ENVIRONMENT = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL": "C"}
 SUPPORTED = {("debian", "12"), ("ubuntu", "24.04"), ("rocky", "9"), ("almalinux", "9")}
 
 REFUSAL = ("Under sudo or root, ISEDRAF runs only `sudo isedraf audit` (Full Audit), "
-           "`sudo isedraf report` (its report) and `sudo isedraf evaluate` (its evaluation). "
-           "Run other ISEDRAF commands as your normal user.")
+           "`sudo isedraf report` (its report), `sudo isedraf evaluate` (its evaluation) and "
+           "`sudo isedraf baseline approve` (its baseline). Run other ISEDRAF commands as your "
+           "normal user.")
 # AUTH-032: the read-only report route - the invocations it admits and the format each names.
 REPORT_INVOCATIONS = {("report",): "markdown", ("report", "--json"): "json",
                       ("report", "--html"): "html"}
 # AUTH-033: the evaluation route - exactly one invocation, no argument (D-126).
 EVALUATE_INVOCATION = ("evaluate",)
+# AUTH-034: the baseline route - exactly one invocation, no snapshot argument (D-128).
+BASELINE_INVOCATION = ("baseline", "approve")
 
 # AUTH-020, AUTH-026, AUTH-027, EXEC-001, EXEC-002, PRIV-007, PRIV-009: constants of the
 # package. The bounding set is the measured candidate set (AUTH-027); the ambient set is
@@ -114,6 +117,8 @@ REPORT_ENTRY = ("import sys; sys.path.insert(0, %r); from isedraf.launcher.repor
                 "main; sys.exit(main(sys.argv[1:]))" % INSTALL_ROOT)
 EVALUATE_ENTRY = ("import sys; sys.path.insert(0, %r); from isedraf.launcher.evalunit import "
                   "main; sys.exit(main(sys.argv[1:]))" % INSTALL_ROOT)
+BASELINE_ENTRY = ("import sys; sys.path.insert(0, %r); from isedraf.launcher.baselineunit import "
+                  "main; sys.exit(main(sys.argv[1:]))" % INSTALL_ROOT)
 # AUTH-032: the audit unit's constant properties without write access to the store, which
 # ProtectSystem=strict then leaves read-only.
 REPORT_PROPERTIES = tuple(p for p in PROPERTIES if not p.startswith("ReadWritePaths="))
@@ -143,6 +148,14 @@ def evaluate_unit_argv(run_id):
         raise ValueError("not a run identifier: %r" % (run_id,))
     return _systemd_run("isedraf-evaluate-", run_id, PROPERTIES) + [
         PYTHON, "-IB", "-c", EVALUATE_ENTRY, run_id]
+
+
+def baseline_unit_argv(run_id):
+    """AUTH-034: the baseline unit - the audit unit's properties. Only the run id varies."""
+    if not ids.ID_RE.match(run_id or "") or not run_id.startswith("RUN-"):
+        raise ValueError("not a run identifier: %r" % (run_id,))
+    return _systemd_run("isedraf-baseline-", run_id, PROPERTIES) + [
+        PYTHON, "-IB", "-c", BASELINE_ENTRY, run_id]
 
 
 def _systemd_run(prefix, run_id, properties):
@@ -323,7 +336,7 @@ def refuse(code, text, err):
 def main(argv, err=None):
     err = sys.stderr if err is None else err
     if os.geteuid() != 0 or (list(argv) != ["audit"] and tuple(argv) not in REPORT_INVOCATIONS
-                             and tuple(argv) != EVALUATE_INVOCATION):
+                             and tuple(argv) not in (EVALUATE_INVOCATION, BASELINE_INVOCATION)):
         return refuse(PRIVILEGE_REFUSED, REFUSAL, err)
     problem = unsafe_install()
     if problem:
@@ -348,6 +361,9 @@ def main(argv, err=None):
         return relay(report_unit_argv(run_id, REPORT_INVOCATIONS[tuple(argv)]),
                      dict(EXEC_ENVIRONMENT), 1, 2,
                      stop=lambda _proc: stop_unit(run_id, "isedraf-report-"))
+    if tuple(argv) == BASELINE_INVOCATION:
+        return relay(baseline_unit_argv(run_id), dict(EXEC_ENVIRONMENT), 1, 2,
+                     stop=lambda _proc: stop_unit(run_id, "isedraf-baseline-"))
     if tuple(argv) == EVALUATE_INVOCATION:
         return relay(evaluate_unit_argv(run_id), dict(EXEC_ENVIRONMENT), 1, 2,
                      stop=lambda _proc: stop_unit(run_id, "isedraf-evaluate-"))

@@ -622,9 +622,9 @@ inject "AUTH-033 the outer entry admits evaluate with an argument" \
   'python3 - <<'"'"'PYX'"'"'
 import pathlib
 p = pathlib.Path("lib/isedraf/launcher/outer.py"); s = p.read_text()
-old = "                             and tuple(argv) != EVALUATE_INVOCATION):"
+old = "and tuple(argv) not in (EVALUATE_INVOCATION, BASELINE_INVOCATION)):"
 assert old in s, "mutation anchor miss"
-p.write_text(s.replace(old, "                             and tuple(argv[:1]) != EVALUATE_INVOCATION):", 1))
+p.write_text(s.replace(old, "and tuple(argv[:1]) != EVALUATE_INVOCATION and tuple(argv) != BASELINE_INVOCATION):", 1))
 PYX' \
   'FAILED|Error'
 
@@ -633,9 +633,9 @@ inject "AUTH-033 the report renderer accepts any name under evaluations/" \
   'python3 - <<'"'"'PYX'"'"'
 import pathlib
 p = pathlib.Path("lib/isedraf/launcher/renderer.py"); s = p.read_text()
-old = "        elif _EVALUATION_NAME.match(name):"
+old = "        elif _EVALUATION_NAME.match(name) or name in reportunit.BASELINE_NAMES:"
 assert old in s, "mutation anchor miss"
-p.write_text(s.replace(old, "        elif name.startswith(\"evaluations/\"):", 1))
+p.write_text(s.replace(old, "        elif name.startswith(\"evaluations/\") or name in reportunit.BASELINE_NAMES:", 1))
 PYX' \
   'FAILED|Error'
 
@@ -1028,7 +1028,7 @@ inject "D-84 a tracked file carries no licence statement at all" \
 # checked them, so they aged while everything around them was gated.
 inject "D-88 the README version badge disagrees with VERSION" \
   'python3 scripts/ci/check_public_claims.py' \
-  'sed -i "s|badge/version-0.3.0-lightgrey|badge/version-9.9.9-lightgrey|" README.md' \
+  'sed -i "s|badge/version-0.4.0-lightgrey|badge/version-9.9.9-lightgrey|" README.md' \
   'version badge says|public claims gate FAILED'
 
 # OpenSSF Baseline Level 2 (2026-09-29): the repository's security configuration and policy
@@ -2103,7 +2103,7 @@ inject "RC1-LAUNCH-1 the launcher lets the interpreter write bytecode again" \
 # GA track, `isedraf audit`: one committed run, reported only after the ledger commits it.
 inject "GA-AUDIT-1 the report follows the newest directory, not the ledger" \
   'python3 tests/test_audit.py' \
-  'sed -i "s|    name = records\[-1\]\[\"record_core\"\]\[\"snapshot_id\"\]|    name = sorted(os.listdir(os.path.join(root, \"snapshots\")))[-1]|" lib/isedraf/report/model.py' \
+  'sed -i "s|    name = records\[-1\]\[\"snapshot_id\"\]|    name = sorted(os.listdir(os.path.join(root, \"snapshots\")))[-1]|" lib/isedraf/report/model.py' \
   'FAILED|Error'
 
 inject "GA-AUDIT-2 audit sections are bound but never written into the bundle" \
@@ -4861,6 +4861,233 @@ inject "DOC-PUBLIC-UX-001 a reused framing term list disappears" \
   'python3 scripts/docs/public_ux.py' \
   'sed -i "s/^FORBIDDEN = /FORBIDDEN_TERMS = /" scripts/docs/doclint.py' \
   'cannot load its rules'
+
+
+# D-127 (v0.4 slice 1): each injection breaks one guarantee of the DEV baseline slice -
+# class first, strict completeness, integrity of every field, order kept, silent method
+# change, applicability, CMP-030, no implicit default, exit 5, no implicit replacement.
+inject "D-127 a snapshot of a class that is not admitted becomes a baseline" \
+  'python3 tests/test_baseline.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/baseline/revision.py"); s = p.read_text()
+old = "if store_class not in ADMITTED_CLASSES or core.get(\"state_root\") != store_class:\n        raise ApprovalRefused(BASELINE_CLASS_NOT_ADMITTED"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "if False:\n        raise ApprovalRefused(BASELINE_CLASS_NOT_ADMITTED", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-127 an incomplete required section is approved" \
+  'python3 tests/test_baseline.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/baseline/revision.py"); s = p.read_text()
+old = "if status != COLLECTED:\n            blocking.append("
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "if False:\n            blocking.append(", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-127 revision fields are trusted once the digest matches" \
+  'python3 tests/test_baseline.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/baseline/revision.py"); s = p.read_text()
+old = "if artifact_bytes(expected) != raw:"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "if False:", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-127 a missing baselines/current is not an integrity failure" \
+  'python3 tests/test_baseline.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/baseline/revision.py"); s = p.read_text()
+old = "if current is None:\n            raise IntegrityFailure(BASELINE_POINTER_MISSING"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "if False:\n            raise IntegrityFailure(BASELINE_POINTER_MISSING", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-127 the projection sorts entities and hides a reorder" \
+  'python3 tests/test_baseline.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/baseline/projection.py"); s = p.read_text()
+old = "for i, item in enumerate(items)]"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "for i, item in enumerate(items)]; lists[key].sort(key=canonical.canonical_bytes)", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-127 a method change with identical state is reported as a change" \
+  'python3 tests/test_baseline.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/baseline/revision.py"); s = p.read_text()
+old = "if b_state == n_state:"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "if b_state == n_state and not changed:", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-127 another host is compared" \
+  'python3 tests/test_baseline.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/baseline/revision.py"); s = p.read_text()
+old = "if new_core.get(\"host_id\") != revision[\"host_id\"]:"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "if False:", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-127 a section not COLLECTED is compared" \
+  'python3 tests/test_baseline.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/baseline/revision.py"); s = p.read_text()
+old = "if b_status != COLLECTED or n_status != COLLECTED:"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "if False:", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-127 an unclassified field is silently dropped" \
+  'python3 tests/test_baseline.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/baseline/projection.py"); s = p.read_text()
+old = "raise NotProjectable(UNCLASSIFIED_FIELD, \"%s: field %r has no classification\"\n                             % (section, name))"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "continue", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-127 a baseline that does not verify exits 64, not 5" \
+  'python3 tests/test_baseline.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/cli.py"); s = p.read_text()
+old = "err.write(\"isedraf: baseline integrity failure, nothing was written: %s\\n\" % exc)\n        return TOOL_INTEGRITY_FAILURE\n    except stateroot.StateRootError as exc:\n        err.write(\"isedraf: %s\\n\" % exc)\n        return STATE_ROOT_UNUSABLE\n    except Exception as exc:                          # pragma: no cover - engine failure\n        err.write(\"isedraf: engine error: %s\\n\" % exc)\n        return USAGE_OR_ENGINE\n    out.write(\"ISEDRAF native evaluation"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "err.write(\"isedraf: baseline integrity failure, nothing was written: %s\\n\" % exc)\n        return USAGE_OR_ENGINE\n    except stateroot.StateRootError as exc:\n        err.write(\"isedraf: %s\\n\" % exc)\n        return STATE_ROOT_UNUSABLE\n    except Exception as exc:                          # pragma: no cover - engine failure\n        err.write(\"isedraf: engine error: %s\\n\" % exc)\n        return USAGE_OR_ENGINE\n    out.write(\"ISEDRAF native evaluation", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-127 a second approval silently replaces the baseline" \
+  'python3 tests/test_baseline.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/baseline/approve.py"); s = p.read_text()
+old = "if current is not None or (not complete_recorded"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "if False and (not complete_recorded", 1))
+PYX' \
+  'FAILED|Error'
+
+
+# D-128 (v0.4 slice 2): the system-store baseline route. Each injection breaks one
+# guarantee of the root side (AUTH-034) or of a system reader that sees baseline records.
+inject "D-128 the root side accepts the approver's action without deriving its own" \
+  'python3 tests/test_baseline_route.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/baselineunit.py"); s = p.read_text()
+old = "if got[ACTION_NAME] != action.encode(\"ascii\"):"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "if False:", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-128 the root side writes an artifact whose fields it did not check" \
+  'python3 tests/test_baseline_route.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/baselineunit.py"); s = p.read_text()
+old = "if any(a != b for a, b in checks):"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "if False:", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-128 a system reader takes the last ledger record as the latest run" \
+  'python3 tests/test_baseline_route.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/reportunit.py"); s = p.read_text()
+old = "runs = [c for c in cores if c.get(\"event\") == SNAPSHOT_COMMITTED]"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "runs = list(cores)", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-128 a complete system baseline is approved again" \
+  'python3 tests/test_baseline_route.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/baselineunit.py"); s = p.read_text()
+old = "if pointer is not None:\n            raise AlreadyApproved("
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "if False:\n            raise AlreadyApproved(", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-128 sudo isedraf baseline approve accepts a named snapshot" \
+  'python3 tests/test_baseline_route.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/outer.py"); s = p.read_text()
+old = "and tuple(argv) not in (EVALUATE_INVOCATION, BASELINE_INVOCATION)):"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "and tuple(argv)[:2] not in (EVALUATE_INVOCATION, BASELINE_INVOCATION)):", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-128 an interrupted system approval is completed only for the latest run" \
+  'python3 tests/test_baseline_route.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/approver.py"); s = p.read_text()
+old = "complete_recorded=True)"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "complete_recorded=False)", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-128 a system baseline that does not verify exits 64, not 5" \
+  'python3 tests/test_baseline_route.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/evaluator.py"); s = p.read_text()
+old = "            return TOOL_INTEGRITY_FAILURE"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "            return USAGE_OR_ENGINE", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-128 a reader computes the evaluation identity without the baseline" \
+  'python3 tests/test_baseline.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/evaluate/record.py"); s = p.read_text()
+old = "    if record_core is None:\n        return None, None"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    if True:\n        return None, None", 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-128 the report reads run metadata from a ledger record instead of the manifest" \
+  'python3 tests/test_baseline.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/report/model.py"); s = p.read_text()
+old = "        \"host_id\": manifest_core.get(\"host_id\"),"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "        \"host_id\": record_core.get(\"host_id\"),", 1))
+PYX' \
+  'FAILED|Error'
 
 rm -f /tmp/sd_msg_a /tmp/sd_msg_b
 harness_summary

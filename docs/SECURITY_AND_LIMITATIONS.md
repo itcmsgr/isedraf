@@ -29,8 +29,7 @@ that ends with the run.
 The standard audit runs as your own user. Facts it cannot read, such as `/etc/shadow` and
 the sudo policy, are NOT_TESTED or PARTIAL, with the reason.
 
-Under `sudo`, ISEDRAF runs only `audit` and `report`; every other command is refused with
-exit 70. It never asks for a password and never calls `sudo` itself. In a Full Audit:
+Under `sudo`, ISEDRAF runs only `audit`, `report`, `evaluate` and `baseline approve`; every other command is refused with exit 70. It never asks for a password and never calls `sudo` itself. In a Full Audit:
 
 - a root launcher starts a sandboxed systemd unit with a fixed property set: the file
   system read-only except the evidence store, no network, four capabilities as its bound;
@@ -41,7 +40,10 @@ exit 70. It never asks for a password and never calls `sudo` itself. In a Full A
   argument and no command from the engine, and interprets nothing.
 
 `sudo isedraf report` reads the Full Audit store without changing it and renders through
-an unprivileged renderer that verifies the evidence first.
+an unprivileged renderer that verifies the evidence first. `sudo isedraf baseline approve`
+takes no argument: root reads only ISEDRAF's own records, an unprivileged
+process verifies the evidence and builds the baseline, and root writes it only after
+checking it against values it computes itself.
 
 ## How the evidence is protected
 
@@ -68,13 +70,15 @@ evidence.
 
 Do not attach evidence or reports to public issues.
 
-## What ISEDRAF 0.2 does not include
+## What ISEDRAF does not include
 
 These are not part of this release. Some are the direction of the project; none is
 promised here.
 
-- comparison between runs, approved baselines and change detection;
-- findings, PASS/FAIL judgements or scores;
+- beyond the one approved baseline of 0.4: accepting a change, re-approving,
+  tracking more sections, exit codes that report a change (`check`), and per-domain
+  judgements of a change;
+- scores, and any judgement beyond the eight native criteria;
 - mappings to any security framework or standard: none exists in this repository, none is
   bundled and none is licensed;
 - connection-specific SSH settings: `sshd -T` gives the global effective configuration,
@@ -101,7 +105,12 @@ control may exist elsewhere.
 
 - NOT_TESTED is not PASS: it means not observed.
 - A host with no observed change is not shown to be uncompromised.
-- An accepted state, once baselines exist, will be a decision, not a security judgement.
+- An approved baseline is a decision to accept a state, not a security judgement.
+- An unchanged comparison shows that the recorded state matches the approved one for the
+  sections compared; it does not show what was not collected, and a reordering of
+  configuration lines is reported as a change to review.
+- The baseline and its ledger record are checked before every comparison, but someone with
+  root on the host can rewrite the store, the baseline and the ledger together.
 - Host evidence is not organizational compliance.
 - Local verification is not remote attestation.
 

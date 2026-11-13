@@ -34,7 +34,8 @@ from . import artifact as artifact_module
 from . import sections as section_summaries
 from .profile import IDENTITY_DISCLAIMER
 
-REPORT_SCHEMA_VERSION = 3          # 2: evidence_limitations (IQ-042 (3)); 3: native_results (D-125)
+REPORT_SCHEMA_VERSION = 4          # 2: evidence_limitations (IQ-042 (3)); 3: native_results (D-125)
+                                   # 4: baseline_comparison (D-127, D-128)
 
 # Plain words on the report itself (GA v0.1 public docs review): the two blocks stay
 # distinct, because host identity is part of host state and inventory is not.
@@ -64,19 +65,21 @@ BASE_LIMITATIONS = [
 
 
 def _latest_snapshot(root):
-    """The snapshot of the LAST LEDGER RECORD - the latest committed run.
+    """The snapshot of the LAST snapshot_committed RECORD - the latest committed run.
 
     D-50: the ledger append is the commit. The newest directory under snapshots/ can be an
     orphan whose run stopped between the atomic rename and the append; reporting it would
     present uncommitted evidence as the run (GA track, found while wiring `audit`).
+    D-127: the ledger also carries baseline_approved records, which name a snapshot they
+    approve, not a run; they are never "the latest run".
     """
     try:
-        records = list(ledger.read_records(root))
+        records = ledger.snapshot_records(root)
     except (OSError, ValueError):
         return None
     if not records:
         return None
-    name = records[-1]["record_core"]["snapshot_id"]
+    name = records[-1]["snapshot_id"]
     return name if os.path.isdir(os.path.join(root, "snapshots", name)) else None
 
 
@@ -141,26 +144,31 @@ def identity_evidence(root):
     except (OSError, ValueError) as exc:
         block["reason"] = "snapshot %s is unreadable: %s" % (name, exc)
         return block
-    core = envelope["manifest_core"]
-    section = core["sections"]["host_identity"]
+    # Two different objects, kept in two names: the snapshot's manifest_core describes the
+    # run; a ledger record_core only binds it. Reusing one name for both nulled the run's
+    # metadata in every report (regression found in owner review, 2026-11-12).
+    manifest_core = envelope["manifest_core"]
+    section = manifest_core["sections"]["host_identity"]
     problems = verify.verify_store(root)
     record = None
     for row in ledger.read_records(root):
-        if row["record_core"]["snapshot_id"] == name:
+        record_core = row["record_core"]
+        if (record_core.get("event") == ledger.EVENT_SNAPSHOT_COMMITTED
+                and record_core.get("snapshot_id") == name):
             record = row
     block.update({
         "available": True,
         "snapshot_id": name,
         "manifest_hash": envelope.get("manifest_hash"),
-        "host_id": core.get("host_id"),
+        "host_id": manifest_core.get("host_id"),
         "collection_status": section.get("collection_status"),
         "reason": section.get("reason"),
         "state_hash": section.get("state_hash"),
-        "state_root_class": core.get("state_root"),
-        "created_at": core.get("created_at"),
-        "run_id": core.get("run_id"),
+        "state_root_class": manifest_core.get("state_root"),
+        "created_at": manifest_core.get("created_at"),
+        "run_id": manifest_core.get("run_id"),
         # D-124: absent from 0.1.x manifests, and then not rendered.
-        "run_mode": core.get("run_mode"),
+        "run_mode": manifest_core.get("run_mode"),
         "ledger_sequence": record["record_core"]["sequence"] if record else None,
         "ledger_record_hash": record["record_hash"] if record else None,
         "verification": {"verified": not problems, "problems": problems},
@@ -331,8 +339,14 @@ def native_results(root, snapshot_id, engine_version=ENGINE_VERSION):
         _registry, raw = catalog.load()
     except (OSError, ValueError, KeyError) as exc:
         return {"status": "UNAVAILABLE", "reason": "the evaluation cannot be located: %s" % exc}
+    try:
+        in_force = ledger.baseline_records(root)
+    except (OSError, ValueError, KeyError) as exc:
+        return {"status": "UNAVAILABLE", "reason": "the evaluation cannot be located: %s" % exc}
+    # D-127/D-128: a baseline in force is part of the evaluation's identity (EVAL-006).
+    key_revision, key_profile = evaluation_record.baseline_key(in_force[-1] if in_force else None)
     the_key = evaluation_record.key(snapshot_id, envelope.get("manifest_hash"), engine_version,
-                                    catalog.digest(raw))
+                                    catalog.digest(raw), key_revision, key_profile)
     evl_id = evaluation_record.evaluation_id(envelope["manifest_core"]["created_at"], the_key)
     loaded = evaluation_record.load(root, evl_id)
     if loaded is None:
@@ -345,12 +359,38 @@ def native_results(root, snapshot_id, engine_version=ENGINE_VERSION):
     severity = dict((f["criterion_id"], f["severity"])
                     for f in objects["findings.json"]["findings"])
     return {"status": "EVALUATED", "evaluation_id": evl_id,
+            "changes": objects["changes.json"],
             "state_root": manifest.get("state_root"),
             "result_counts": manifest.get("result_counts"),
             "finding_counts": manifest.get("finding_counts"),
             "results": [dict([(k, r[k]) for k in _NATIVE_FIELDS],
                              finding_severity=severity.get(r["criterion_id"]))
                         for r in objects["results.json"]["results"]]}
+
+
+# D-127/D-128: the comparison is SHOWN as the committed evaluation recorded it; the report
+# never compares, never re-verifies the baseline and never interprets a row.
+COMPARISON_NOT_EVALUATED = ("the run has not been evaluated, so no comparison was recorded; "
+                            "run `isedraf evaluate` (a report never compares)")
+
+
+def baseline_comparison(native):
+    """The committed changes.json of the reported evaluation, or why there is none."""
+    if not native or native.get("status") != "EVALUATED":
+        return {"status": "NOT_EVALUATED", "reason": COMPARISON_NOT_EVALUATED}
+    changes = native.get("changes") or {}
+    if changes.get("baseline_revision") is None:
+        return {"status": "NO_BASELINE",
+                "reason": "no approved baseline was in force when this run was evaluated",
+                "unledgered_revision": changes.get("unledgered_revision")}
+    return {"status": "COMPARED" if changes.get("comparison_performed") else "NOT_COMPARED",
+            "baseline_revision": changes.get("baseline_revision"),
+            "approved_snapshot_id": changes.get("approved_snapshot_id"),
+            "profile": changes.get("profile"),
+            "applicability": changes.get("applicability"),
+            "reason": changes.get("reason"),
+            "sections": changes.get("sections") or {},
+            "changes": changes.get("changes") or []}
 
 
 def build(root, inventory, assessment=None, generated_at=None, report_id=None,
@@ -371,6 +411,8 @@ def build(root, inventory, assessment=None, generated_at=None, report_id=None,
     status = "COMPLETE" if all(s == inventory_model.COLLECTED for s in statuses) \
         else "PARTIAL"
 
+    native = (native_results(root, snapshot_id) if snapshot_id is not None
+              else {"status": "NOT_SHOWN", "reason": NATIVE_NOT_LOOKED_UP})
     return {
         "report_schema_version": REPORT_SCHEMA_VERSION,
         "report": {
@@ -421,8 +463,10 @@ def build(root, inventory, assessment=None, generated_at=None, report_id=None,
         # "no manifest" and "an empty manifest" stay distinguishable (NORM-034).
         "evidence_limits": coverage_manifest,
         # D-125: kept apart from collection status, with its own counters (CMP-001).
-        "native_results": (native_results(root, snapshot_id) if snapshot_id is not None
-                           else {"status": "NOT_SHOWN", "reason": NATIVE_NOT_LOOKED_UP}),
+        "native_results": native,
+        # D-127/D-128: the committed comparison, apart from criterion results and from
+        # collection status (CMP-001); a report never compares.
+        "baseline_comparison": baseline_comparison(native),
         "evidence_limitations": evidence_limitations(coverage_manifest),
         "limitations": (_limitations(inventory) + _coverage_limitations(coverage_manifest)
                         + ([FULL_AUDIT_KEYS_LIMITATION]

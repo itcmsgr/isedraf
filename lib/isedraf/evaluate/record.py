@@ -5,7 +5,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
 #
 # Purpose: The evaluation record: its derived identity, and a read-only, verifying reader.
-# Implements: SNAP-012, SNAP-013, EVAL-005, EVAL-006
+# Implements: SNAP-012, SNAP-013, EVAL-005, EVAL-006, BASE-007, D-128
 #
 # EVAL-006: an evaluation's identity is derived from the SNAP-012 key, so the same
 # snapshot, engine and catalog name the same directory, and a reader can find the one
@@ -29,6 +29,7 @@ import os
 import re
 
 from .. import canonical
+from ..baseline import profile as baseline_profile
 
 SCHEMA_VERSION = 1
 ARTIFACTS = ("results.json", "findings.json", "changes.json")
@@ -40,11 +41,29 @@ def digest(data):
     return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
-def key(snapshot_id, manifest_hash, engine_version, catalog_digest):
-    """SNAP-012's key. baseline_revision is null until v0.4; profile is null (EVAL-005)."""
+def key(snapshot_id, manifest_hash, engine_version, catalog_digest,
+        baseline_revision=None, profile=None):
+    """SNAP-012's key. With no baseline in force, baseline_revision and profile are null,
+    exactly as in v0.3 (EVAL-005); with one, they name it (D-127)."""
     return {"snapshot_id": snapshot_id, "snapshot_manifest_hash": manifest_hash,
-            "baseline_revision": None, "engine_version": engine_version,
-            "catalog_digest": catalog_digest, "profile": None}
+            "baseline_revision": baseline_revision, "engine_version": engine_version,
+            "catalog_digest": catalog_digest, "profile": profile}
+
+
+def baseline_key(record_core):
+    """(baseline_revision, profile) of the EVAL-006 key for the baseline_approved record in
+    force, or (None, None) without one. D-127/D-128: the ONE derivation every reader and
+    writer of an evaluation uses - the revision from the ledger record, the profile from the
+    packaged profile - so the report, the user route and the system route cannot compute
+    different identities for the same evaluation."""
+    if record_core is None:
+        return None, None
+    packaged = baseline_profile.default()
+    return ({"revision_id": record_core.get("baseline_revision"),
+             "artifact_digest": record_core.get("artifact_digest")},
+            {"profile_id": packaged["profile_id"],
+             "profile_version": packaged["profile_version"],
+             "profile_hash": baseline_profile.profile_hash(packaged)})
 
 
 def evaluation_id(created_at, the_key):
