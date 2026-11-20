@@ -6,17 +6,30 @@ isedraf.baseline.approve,lib/isedraf/baseline/approve.py,_write_current,FS_WRITE
 isedraf.baseline.approve,lib/isedraf/baseline/approve.py,commit,FS_WRITE,makedirs unlink,no
 isedraf.baseline.revision,lib/isedraf/baseline/revision.py,_read,FS_READ,open read,no
 isedraf.catalog,lib/isedraf/catalog/__init__.py,load,FS_READ,open read,no
+isedraf.cli,lib/isedraf/cli.py,__call__,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,_commit_run,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,_field,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,_identity_lines,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,_missing,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,_recover_ledger,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,_refuse_unrecovered,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,_refused,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,_render,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,_render_changes,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,_render_inventory,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,close,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,cmd_audit,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,cmd_baseline_approve,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,cmd_evaluate,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,cmd_explain,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,cmd_help,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,cmd_identity,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,cmd_inventory,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,cmd_list,FS_WRITE,write,yes
 isedraf.cli,lib/isedraf/cli.py,cmd_report,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,main,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,show,FS_WRITE,write,yes
+isedraf.cli,lib/isedraf/cli.py,write,FS_WRITE,write,yes
 isedraf.evaluate.record,lib/isedraf/evaluate/record.py,load,FS_READ,open read,no
 isedraf.evaluate.run,lib/isedraf/evaluate/run.py,_read,FS_READ,open read,no
 isedraf.evaluate.run,lib/isedraf/evaluate/run.py,commit,FS_READ,listdir,no
@@ -66,16 +79,21 @@ isedraf.launcher.evalunit,lib/isedraf/launcher/evalunit.py,read_catalog,FS_READ,
 isedraf.launcher.evalunit,lib/isedraf/launcher/evalunit.py,run,FS_READ,read,yes
 isedraf.launcher.evalunit,lib/isedraf/launcher/evalunit.py,run,FS_WRITE,write,yes
 isedraf.launcher.evalunit,lib/isedraf/launcher/evalunit.py,run,SUBPROCESS,Popen,no
+isedraf.launcher.listunit,lib/isedraf/launcher/listunit.py,_names,FS_READ,scandir,no
+isedraf.launcher.listunit,lib/isedraf/launcher/listunit.py,main,FS_WRITE,write,yes
+isedraf.launcher.listunit,lib/isedraf/launcher/listunit.py,main,SUBPROCESS,run,yes
+isedraf.launcher.listunit,lib/isedraf/launcher/listunit.py,run,FS_WRITE,write,yes
 isedraf.launcher.outer,lib/isedraf/launcher/outer.py,_copy,FS_READ,read,yes
 isedraf.launcher.outer,lib/isedraf/launcher/outer.py,_write_all,FS_WRITE,write,yes
 isedraf.launcher.outer,lib/isedraf/launcher/outer.py,main,FS_READ,open read,no
+isedraf.launcher.outer,lib/isedraf/launcher/outer.py,main,FS_WRITE,write,yes
 isedraf.launcher.outer,lib/isedraf/launcher/outer.py,main,SUBPROCESS,run,yes
 isedraf.launcher.outer,lib/isedraf/launcher/outer.py,refuse,FS_WRITE,write,yes
 isedraf.launcher.outer,lib/isedraf/launcher/outer.py,relay,SUBPROCESS,Popen,no
 isedraf.launcher.outer,lib/isedraf/launcher/outer.py,stop_unit,SUBPROCESS,run,yes
 isedraf.launcher.outer,lib/isedraf/launcher/outer.py,unsafe_install,FS_READ,lstat stat,no
 isedraf.launcher.renderer,lib/isedraf/launcher/renderer.py,bound_to_ledger,FS_READ,open read,no
-isedraf.launcher.renderer,lib/isedraf/launcher/renderer.py,layout,FS_READ,open read,no
+isedraf.launcher.renderer,lib/isedraf/launcher/renderer.py,layout,FS_READ,open,no
 isedraf.launcher.renderer,lib/isedraf/launcher/renderer.py,layout,FS_WRITE,makedirs write,no
 isedraf.launcher.renderer,lib/isedraf/launcher/renderer.py,main,FS_READ,read,yes
 isedraf.launcher.renderer,lib/isedraf/launcher/renderer.py,main,FS_WRITE,write,yes
@@ -103,12 +121,20 @@ isedraf.launcher.unit,lib/isedraf/launcher/unit.py,discard,FS_WRITE,chmod rmdir,
 isedraf.launcher.unit,lib/isedraf/launcher/unit.py,engine_uid,SUBPROCESS,run,yes
 isedraf.launcher.unit,lib/isedraf/launcher/unit.py,main,FS_WRITE,write,yes
 isedraf.launcher.unit,lib/isedraf/launcher/unit.py,main,SUBPROCESS,run,yes
+isedraf.launcher.unit,lib/isedraf/launcher/unit.py,recover_ledger,FS_WRITE,write,yes
 isedraf.launcher.unit,lib/isedraf/launcher/unit.py,remaining_processes,FS_READ,open read,no
 isedraf.launcher.unit,lib/isedraf/launcher/unit.py,run,FS_WRITE,write,yes
+isedraf.ledger,lib/isedraf/ledger.py,_write_all_checked,FS_WRITE,write,yes
 isedraf.ledger,lib/isedraf/ledger.py,append,FS_READ,open,no
-isedraf.ledger,lib/isedraf/ledger.py,append,FS_WRITE,fsync write,no
-isedraf.ledger,lib/isedraf/ledger.py,read_records,FS_READ,open,no
+isedraf.ledger,lib/isedraf/ledger.py,append,FS_WRITE,fsync,no
+isedraf.ledger,lib/isedraf/ledger.py,read_segments,FS_READ,open read,no
+isedraf.ledger,lib/isedraf/ledger.py,recover,FS_READ,open,no
+isedraf.ledger,lib/isedraf/ledger.py,recover,FS_WRITE,fsync rename unlink,no
+isedraf.ledger,lib/isedraf/ledger.py,segment_names,FS_READ,listdir,no
 isedraf.ledger,lib/isedraf/ledger.py,unledgered_snapshots,FS_READ,listdir,no
+isedraf.listing,lib/isedraf/listing.py,_evaluation,FS_READ,open read,no
+isedraf.listing,lib/isedraf/listing.py,_reports,FS_READ,lstat stat,no
+isedraf.listing,lib/isedraf/listing.py,collect,FS_READ,listdir,no
 isedraf.loginpolicy.acquire,lib/isedraf/loginpolicy/acquire.py,collect,FS_READ,read_file_lossless,no
 isedraf.mounts.acquire,lib/isedraf/mounts/acquire.py,_namespace,FS_READ,readlink,no
 isedraf.mounts.acquire,lib/isedraf/mounts/acquire.py,collect_active,FS_READ,read_file_lossless,no
@@ -135,6 +161,8 @@ isedraf.shared.include_graph,lib/isedraf/shared/include_graph.py,resolve,FS_READ
 isedraf.shared.include_graph,lib/isedraf/shared/include_graph.py,walk,FS_READ,read,yes
 isedraf.snapshot,lib/isedraf/snapshot.py,commit,FS_WRITE,makedirs rename,no
 isedraf.snapshot,lib/isedraf/snapshot.py,write_bundle,FS_WRITE,makedirs,no
+isedraf.space,lib/isedraf/space.py,run_estimate,FS_READ,listdir lstat stat,no
+isedraf.space,lib/isedraf/space.py,snapshot_size,FS_READ,lstat stat,no
 isedraf.ssh.acquire,lib/isedraf/ssh/acquire.py,__call__,FS_READ,read_file_lossless,no
 isedraf.stateroot,lib/isedraf/stateroot.py,__enter__,FS_READ,open,no
 isedraf.stateroot,lib/isedraf/stateroot.py,_under_sudo,ENVIRONMENT,environ,no
@@ -192,6 +220,11 @@ scripts.ci.check_architecture_artifacts,scripts/ci/check_architecture_artifacts.
 scripts.ci.check_architecture_artifacts,scripts/ci/check_architecture_artifacts.py,main,FS_WRITE,mkdtemp,no
 scripts.ci.check_architecture_artifacts,scripts/ci/check_architecture_artifacts.py,main,SUBPROCESS,run,yes
 scripts.ci.check_architecture_artifacts,scripts/ci/check_architecture_artifacts.py,run,SUBPROCESS,run,yes
+scripts.ci.check_commands,scripts/ci/check_commands.py,_root_route,FS_READ,read,yes
+scripts.ci.check_commands,scripts/ci/check_commands.py,_root_route,SUBPROCESS,run,yes
+scripts.ci.check_commands,scripts/ci/check_commands.py,_user_route,SUBPROCESS,run,yes
+scripts.ci.check_commands,scripts/ci/check_commands.py,check_help,SUBPROCESS,run,yes
+scripts.ci.check_commands,scripts/ci/check_commands.py,run,FS_READ,read,yes
 scripts.ci.check_dco,scripts/ci/check_dco.py,git,SUBPROCESS,run,yes
 scripts.ci.check_dco,scripts/ci/check_dco.py,main,ENVIRONMENT,environ,no
 scripts.ci.check_dco,scripts/ci/check_dco.py,self_test,ENVIRONMENT,environ,no
@@ -215,13 +248,13 @@ scripts.ci.check_sbom,scripts/ci/check_sbom.py,sha256_file,FS_READ,open read,no
 scripts.ci.check_storage_vocabulary,scripts/ci/check_storage_vocabulary.py,tracked_files,SUBPROCESS,check_output,no
 scripts.ci.check_test_inclusion,scripts/ci/check_test_inclusion.py,check,SUBPROCESS,run,yes
 scripts.ci.check_test_inclusion,scripts/ci/check_test_inclusion.py,main,SUBPROCESS,run,yes
+scripts.ci.generate_sbom,scripts/ci/generate_sbom.py,extract_tar,FS_READ,open,no
 scripts.ci.generate_sbom,scripts/ci/generate_sbom.py,main,CLOCK,now,no
 scripts.ci.generate_sbom,scripts/ci/generate_sbom.py,main,FS_WRITE,mkdir mkdtemp,no
 scripts.ci.generate_sbom,scripts/ci/generate_sbom.py,main,SUBPROCESS,check_output,no
 scripts.ci.generate_sbom,scripts/ci/generate_sbom.py,sha256_file,FS_READ,open read,no
-scripts.ci.generate_sbom,scripts/ci/generate_sbom.py,unpack,FS_READ,open,no
 scripts.ci.generate_sbom,scripts/ci/generate_sbom.py,unpack,FS_WRITE,mkdir,no
-scripts.ci.generate_sbom,scripts/ci/generate_sbom.py,unpack,SUBPROCESS,Popen check_output,no
+scripts.ci.generate_sbom,scripts/ci/generate_sbom.py,unpack,SUBPROCESS,check_output run,no
 scripts.compat.floor_experiment,scripts/compat/floor_experiment.py,compare_case,FS_READ,listdir open read,no
 scripts.compat.floor_experiment,scripts/compat/floor_experiment.py,compare_case,FS_WRITE,makedirs write,no
 scripts.compat.floor_experiment,scripts/compat/floor_experiment.py,main,FS_READ,listdir,no
@@ -235,8 +268,8 @@ scripts.compat.probe,scripts/compat/probe.py,read_text,FS_READ,open read,no
 scripts.compat.reboot_pass,scripts/compat/reboot_pass.py,describe,FS_READ,listdir open read,no
 scripts.compat.reboot_pass,scripts/compat/reboot_pass.py,main,ENVIRONMENT,environ,no
 scripts.compat.reboot_pass,scripts/compat/reboot_pass.py,main,FS_WRITE,write,yes
+scripts.docs.bash_completion,scripts/docs/bash_completion.py,main,FS_WRITE,mkdir,no
 scripts.docs.criteria_pages,scripts/docs/criteria_pages.py,main,FS_WRITE,mkdir,no
-scripts.docs.current_state,scripts/docs/current_state.py,cli_surfaces,SUBPROCESS,call,yes
 scripts.docs.current_state,scripts/docs/current_state.py,count,SUBPROCESS,check_output,no
 scripts.docs.current_state,scripts/docs/current_state.py,counted,SUBPROCESS,check_output,no
 scripts.docs.public_ux,scripts/docs/public_ux.py,_write_tree,FS_WRITE,mkdir,no

@@ -34,6 +34,20 @@ DEB_VERSION="${VERSION/-/\~}"
 RPM_VERSION="${VERSION%%-*}"
 RPM_RELEASE="0.${VERSION#*-}"
 [ "$RPM_RELEASE" = "0.$VERSION" ] && RPM_RELEASE="1"
+# D-129 (owner ruling 2026-11-14): a development build (VERSION ending in -dev) carries the
+# source commit in its package version, so two builds are never mistaken for each other or
+# for a published release. The commit time (UTC, from the commit, not the clock) comes first
+# so successive builds upgrade in order; both formats order it below every prerelease and
+# release of the same version: 0.5.0~dev.<time>.g<commit> < 0.5.0~rc1 < 0.5.0 (deb); rpm
+# version 0.5.0 with release 0.<label>.<time>.g<commit>, label "dev", below 0.rc1 and 1.
+SOURCE_COMMIT="$(git rev-parse --verify 'HEAD^{commit}')" || die "no commit to build from"
+COMMIT_TIME="$(date -u -d "@$(git log -1 --pretty=%ct)" +%Y%m%d%H%M%S)" || die "commit time"
+case "$VERSION" in
+    *-dev)
+        DEV_BUILD="$COMMIT_TIME.g${SOURCE_COMMIT:0:12}"
+        DEB_VERSION="$DEB_VERSION.$DEV_BUILD"
+        RPM_RELEASE="$RPM_RELEASE.$DEV_BUILD" ;;
+esac
 DIST="$ROOT/dist"
 STAGE="$DIST/stage"
 MAINTAINER="Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
@@ -97,6 +111,22 @@ install -d -m 0755 "$STAGE/usr/share/doc/isedraf/docs"
 for guide in GETTING_STARTED EVIDENCE_MODEL AUDITOR_GUIDE REPORT_GUIDE SECURITY_AND_LIMITATIONS; do
     install -m 0644 "docs/$guide.md" "$STAGE/usr/share/doc/isedraf/docs/$guide.md"
 done
+# D-129 (v0.5 K1): the command reference generated from the command table, offline, and the
+# bash completion generated from the same table. bash-completion loads the file on demand
+# from this directory; without that package the file is simply never read (no dependency).
+install -m 0644 docs/reference/CLI.md "$STAGE/usr/share/doc/isedraf/docs/CLI.md"
+install -D -m 0644 packaging/completion/isedraf.bash \
+    "$STAGE/usr/share/bash-completion/completions/isedraf" || die "staging the bash completion"
+# The source record: which commit both packages were built from. One file, written once and
+# shipped by the deb and the rpm alike (the rpm receives it as Source1).
+SOURCE_RECORD="$DIST/SOURCE"
+{ echo "ISEDRAF $VERSION"
+  echo "source commit: $SOURCE_COMMIT"
+  echo "commit time: $(date -u -d "@$(git log -1 --pretty=%ct)" +%Y-%m-%dT%H:%M:%SZ)"
+  echo "deb version: $DEB_VERSION"
+  echo "rpm version: $RPM_VERSION-$RPM_RELEASE"
+} > "$SOURCE_RECORD" || die "source record"
+install -m 0644 "$SOURCE_RECORD" "$STAGE/usr/share/doc/isedraf/SOURCE"
 
 # D-17/D-86: bytecode is never shipped.
 # IQ-018: captured, not piped into `grep -q` (under pipefail SIGPIPE could skip it).
@@ -171,6 +201,7 @@ if command -v rpmbuild >/dev/null 2>&1; then
     RPMTOP="$DIST/rpmbuild"
     mkdir -p "$RPMTOP"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
     cp "$TARBALL" "$RPMTOP/SOURCES/"
+    cp "$SOURCE_RECORD" "$RPMTOP/SOURCES/SOURCE"
     sed -e "s|@VERSION@|$RPM_VERSION|g" -e "s|@RELEASE@|$RPM_RELEASE|g" \
         -e "s|@FULLVERSION@|$VERSION|g" -e "s|@DESCRIPTION@|$DESCRIPTION|g" \
         packaging/rpm/isedraf.spec.in > "$RPMTOP/SPECS/isedraf.spec" || die "rpm spec"

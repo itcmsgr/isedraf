@@ -19,6 +19,8 @@
 # meta:binaries=""
 # =============================================================================
 """EVAL-009: explaining a criterion is rendering its record."""
+from isedraf.summary import wrap
+
 
 LIFECYCLE = "EXPERIMENTAL"          # D-80: every control in the prototype
 NO_HISTORY = "not available: baseline and delta are v0.4"
@@ -29,37 +31,45 @@ def _items(value):
 
 
 def lines(c):
-    """The explanation of one criterion record, as a list of text lines."""
+    """The explanation of one criterion record, as a list of text lines.
+
+    v0.5 terminal rule (owner, 2026-11-20): every line fits 80 columns; prose wraps, and an
+    artifact path, a JSON pointer or a command is never split - a pointer gets its own line."""
     sem = c["evaluation_semantics"]
     out = ["%s  (version %d, %s)" % (c["criterion_id"], c["version"], LIFECYCLE), "",
-           "Purpose", "  " + c["purpose"], "",
-           "Why it matters", "  " + c["rationale"], "",
-           "Check type      %s" % c["check_type"],
-           "Severity        %s (default_severity; a FAIL finding takes it unchanged)"
-           % c["default_severity"],
-           "Applicability   %s" % c["applicability"], "",
-           "Facts required"]
-    out += ["  - " + f for f in _items(c["facts_required"])]
+           "Purpose"] + wrap("  ", c["purpose"], 2) + ["", "Why it matters"]
+    out += wrap("  ", c["rationale"], 2) + [""]
+    out += wrap("Check type      ", c["check_type"], 16)
+    out += wrap("Severity        ", "%s (default_severity; a FAIL finding takes it unchanged)"
+                % c["default_severity"], 16)
+    out += wrap("Applicability   ", c["applicability"], 16) + ["", "Facts required"]
+    for f in _items(c["facts_required"]):
+        out += wrap("  - ", f, 4)
     out += ["", "Dimensions"]
     for name in ("declared", "resolved", "active"):
         if isinstance(c["dimensions"], dict) and name in c["dimensions"]:
-            out.append("  %-9s %s" % (name, c["dimensions"][name]))
-    out += ["", "How it is evaluated", "  Input: " + sem["input"], "  Evidence is sufficient when:"]
-    out += ["    - " + s for s in sem["evidence_sufficient_when"]]
+            out += wrap("  %-9s " % name, c["dimensions"][name], 12)
+    out += ["", "How it is evaluated"] + wrap("  Input: ", sem["input"], 4)
+    out.append("  Evidence is sufficient when:")
+    for s in sem["evidence_sufficient_when"]:
+        out += wrap("    - ", s, 6)
     out.append("  Results:")
     for rule in sem["rules"]:
-        out.append("    %-14s %s" % (rule["result"], rule["when"]))
-    out.append("  Never produced: " + ", ".join(sem.get("never_produced", [])))
-    out.append("  " + sem["determinism"])
+        out += wrap("    %-14s " % rule["result"], rule["when"], 19)
+    out += wrap("  Never produced: ", ", ".join(sem.get("never_produced", [])), 4)
+    out += wrap("  ", sem["determinism"], 2)
     out += ["", "Limitations - what a result does not establish"]
-    out += ["  - " + s for s in _items(c["limitations"])]
+    for s in _items(c["limitations"]):
+        out += wrap("  - ", s, 4)
     out += ["", "Evidence pointers"]
-    out += ["  %s  %s  (%s)" % (p["artifact"], p["pointer"], p["role"])
-            for p in c["evidence_pointers"]]
+    for p in c["evidence_pointers"]:
+        out.append("  - %s" % p["artifact"])
+        out.append("      %s" % p["pointer"])
+        out += wrap("      ", p["role"], 6)
     if c.get("manual_verification"):
-        out += ["", "Manual verification (read-only)", "  " + c["manual_verification"]]
+        out += ["", "Manual verification (read-only)"] + wrap("  ", c["manual_verification"], 2)
     if c.get("remediation_guidance"):
-        out += ["", "Remediation guidance (illustrative; ISEDRAF changes nothing)",
-                "  " + c["remediation_guidance"]]
+        out += ["", "Remediation guidance (illustrative; ISEDRAF changes nothing)"]
+        out += wrap("  ", c["remediation_guidance"], 2)
     out += ["", "Baseline state  " + NO_HISTORY, "Delta           " + NO_HISTORY]
     return out

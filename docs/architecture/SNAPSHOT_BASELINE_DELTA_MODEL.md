@@ -452,6 +452,23 @@ A record carries exactly the fields of its event; a record of any other event is
 verification. A reader selecting "the latest run" takes the last `snapshot_committed` record, never the
 last record. `ledger_recovered` stays unfrozen.
 
+**Amended for v0.5 by D-129.** `ledger_recovered` (`STORE-016`) is frozen with this `record_core`; it is
+always the first record of a segment, and chaining and `record_hash` are the rule above, unchanged:
+
+```text
+record_core:
+    ledger_schema_version integer, literal 1
+    sequence, event_id, occurred_at, previous_record_hash, state_root   as above
+    event                 string, literal "ledger_recovered"
+    damaged_segment       string, the segment it seals: "segment-NNNNNN.jsonl", the previous number
+    verified_length       integer, the bytes of the damaged segment that hold its verified records
+    damaged_length        integer, the damaged segment's total length
+    torn_tail_hash        "sha256:" + SHA-256 of the damaged segment's bytes after verified_length
+```
+
+A segment sealed this way contributes exactly its first `verified_length` bytes to the chain; its length
+and the hash of the rest must still match the record, or the ledger does not verify.
+
 **SNAP-016 (S-16, NEW) SHALL** An **evidence reference** is a defined object: the collector and source that
 produced it, the argv or file path, a `sha256:` hash of the retained bytes, whether raw output is retained
 at all, its retention — **the W1 literal is `retention: "UNLIMITED_W1"`**, so no deferred retention vocabulary is needed (W-16) — and its redaction class. Which collectors retain raw output is
@@ -919,6 +936,23 @@ fails — is **preserved as forensic evidence**, the chain is recovered only to 
 record, and a **new segment** opens with an explicit `ledger_recovered` event referencing the damaged
 segment and the torn tail's byte hash. Bytes are never silently discarded, and uninterrupted integrity is
 never claimed across a recovery. Append-only SHALL NOT mean one torn write destroys the product.
+
+**Amended for v0.5 by D-129.** As implemented, and narrower than the sentence above by owner decision
+(2026-11-16): a torn tail is recovered only when it is a recognisable interruption of the last write -
+bytes after the newest segment's last newline, at most one record's bound, with every complete record
+before them verifying and chaining. A complete last record that does not verify, any earlier record that
+does not verify, a broken chain, or an incomplete record in a segment that is not the newest is refused
+(`LEDGER_INTEGRITY_FAILURE`, exit `64`) and nothing is written. The damaged segment keeps its exact bytes
+in place (`ledger/segment-NNNNNN.jsonl`, 0600) and is never appended to again; the `ledger_recovered`
+record of `STORE-024` opens the next segment, written in `tmp/`, byte-count checked, fsynced and renamed
+into `ledger/`, so the new segment exists complete or not at all. Recovery runs under the whole-run lock,
+before anything is collected or written, only in the operations that append to the ledger: `isedraf
+audit`, `isedraf identity` and `isedraf baseline approve`, and `sudo isedraf audit` and `sudo isedraf
+baseline approve`. `isedraf report` and `isedraf list` (each also under `sudo`) and `isedraf evaluate`
+and `sudo isedraf evaluate` never recover; `evaluate` writes an evaluation under `evaluations/` but never
+the ledger. Each of them refuses an unrecovered tail with exit `64`, writes nothing, and names the
+command that recovers it. A recovery that finds no space exits `68` (`STORE-022`) and is repeated by the
+next writer; it never loops.
 
 **STORE-021 (T-24, NEW) SHALL** The current segment number and head `seq` are recorded **outside** the
 ledger — in `host/` and in the `ISEDRAF_CHECKPOINT=` line — because deleting the highest-numbered segments

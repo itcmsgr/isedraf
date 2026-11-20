@@ -257,7 +257,7 @@ class FailClosed(Slice):
         self.audit()
         self.tamper("sections/accounts.json")
         _out, err = self.evaluate(expect=exitcodes.USAGE_OR_ENGINE)
-        self.assertIn("nothing was written", err)
+        self.assertIn("nothing was written", err.lower())
         self.assertEqual(self.evaluations(), [])
 
     def test_a_section_changed_after_verification_is_refused_as_it_is_read(self):
@@ -451,11 +451,12 @@ class OneRecord(unittest.TestCase):
     def test_explain_renders_every_required_field(self):
         registry, _raw = catalog.load()
         c = catalog.criterion(registry, ID)
-        text = "\n".join(explain.lines(c))
+        lines = explain.lines(c)
+        text = " ".join(" ".join(lines).split())          # prose wraps at 80 columns (v0.5)
         for value in (c["purpose"], c["rationale"], c["check_type"], c["default_severity"]):
-            self.assertIn(value, text)
-        for p in c["evidence_pointers"]:
-            self.assertIn(p["pointer"], text)
+            self.assertIn(" ".join(value.split()), text)
+        for p in c["evidence_pointers"]:             # a pointer is never split: a line of its own
+            self.assertIn("      " + p["pointer"], lines)
 
 
 if __name__ == "__main__":

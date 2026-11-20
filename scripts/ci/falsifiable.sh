@@ -278,7 +278,7 @@ inject "C-01 an identity surface drifts from the declared canonical form" \
 
 inject "C-01 the CLI describes the product differently from the packages" \
   'python3 scripts/ci/check_public_claims.py' \
-  'sed -i "s|description=\"Linux host evidence and assurance tool\"|description=\"A Linux tool\"|" lib/isedraf/cli.py' \
+  'sed -i "s|^DESCRIPTION = \"Linux host evidence and assurance tool\"|DESCRIPTION = \"A Linux tool\"|" lib/isedraf/commands.py' \
   'CLI description is|public claims gate FAILED'
 
 inject "C-01 the frozen header policy and the identity registry disagree on the noun" \
@@ -1028,7 +1028,7 @@ inject "D-84 a tracked file carries no licence statement at all" \
 # checked them, so they aged while everything around them was gated.
 inject "D-88 the README version badge disagrees with VERSION" \
   'python3 scripts/ci/check_public_claims.py' \
-  'sed -i "s|badge/version-0.4.0-lightgrey|badge/version-9.9.9-lightgrey|" README.md' \
+  'sed -i -E "s#badge/version-[^)]*-lightgrey#badge/version-9.9.9-lightgrey#" README.md' \
   'version badge says|public claims gate FAILED'
 
 # OpenSSF Baseline Level 2 (2026-09-29): the repository's security configuration and policy
@@ -4334,6 +4334,13 @@ p.write_text(s.replace(old, "cp -a lib/isedraf/. %{buildroot}%{_prefix}/lib/ised
 PYX' \
   'ship DIFFERENT runtime files'
 
+# D-129 (owner ruling 2026-11-14): both packages record the commit they were built from, in
+# the same file. A deb whose record names no commit must be caught by the payload gate.
+inject "D-129 a package does not record its source commit" \
+  'git add -A >/dev/null 2>&1; git -c user.name=falsifiable -c user.email=falsifiable@invalid commit -qm mutation >/dev/null 2>&1; bash packaging/build.sh 2>&1; bash scripts/ci/check_package_payload.sh' \
+  'sed -i "s|^install -m 0644 \"\$SOURCE_RECORD\" |: > \"\$SOURCE_RECORD.none\"; install -m 0644 \"\$SOURCE_RECORD.none\" |" packaging/build.sh' \
+  'the source record'
+
 # The comparison was by basename until the guides moved into docs/ (0.1.0, 2026-09-29): it
 # failed identical payloads, and it could never see a guide installed in the wrong
 # directory. It now compares paths relative to the doc directory.
@@ -4970,9 +4977,9 @@ inject "D-127 a baseline that does not verify exits 64, not 5" \
   'python3 - <<'"'"'PYX'"'"'
 import pathlib
 p = pathlib.Path("lib/isedraf/cli.py"); s = p.read_text()
-old = "err.write(\"isedraf: baseline integrity failure, nothing was written: %s\\n\" % exc)\n        return TOOL_INTEGRITY_FAILURE\n    except stateroot.StateRootError as exc:\n        err.write(\"isedraf: %s\\n\" % exc)\n        return STATE_ROOT_UNUSABLE\n    except Exception as exc:                          # pragma: no cover - engine failure\n        err.write(\"isedraf: engine error: %s\\n\" % exc)\n        return USAGE_OR_ENGINE\n    out.write(\"ISEDRAF native evaluation"
+old = "err.write(\"isedraf: baseline integrity failure, nothing was written: %s\\n\" % exc)\n        return TOOL_INTEGRITY_FAILURE\n    except stateroot.StateRootError as exc:\n        err.write(\"isedraf: %s\\n\" % exc)\n        return STATE_ROOT_UNUSABLE\n    except Exception as exc:                          # pragma: no cover - engine failure\n        err.write(\"isedraf: engine error: %s\\n\" % exc)\n        return USAGE_OR_ENGINE\n    out.write(summary.header(\"isedraf evaluate\""
 assert old in s, "mutation anchor miss"
-p.write_text(s.replace(old, "err.write(\"isedraf: baseline integrity failure, nothing was written: %s\\n\" % exc)\n        return USAGE_OR_ENGINE\n    except stateroot.StateRootError as exc:\n        err.write(\"isedraf: %s\\n\" % exc)\n        return STATE_ROOT_UNUSABLE\n    except Exception as exc:                          # pragma: no cover - engine failure\n        err.write(\"isedraf: engine error: %s\\n\" % exc)\n        return USAGE_OR_ENGINE\n    out.write(\"ISEDRAF native evaluation", 1))
+p.write_text(s.replace(old, "err.write(\"isedraf: baseline integrity failure, nothing was written: %s\\n\" % exc)\n        return USAGE_OR_ENGINE\n    except stateroot.StateRootError as exc:\n        err.write(\"isedraf: %s\\n\" % exc)\n        return STATE_ROOT_UNUSABLE\n    except Exception as exc:                          # pragma: no cover - engine failure\n        err.write(\"isedraf: engine error: %s\\n\" % exc)\n        return USAGE_OR_ENGINE\n    out.write(summary.header(\"isedraf evaluate\"", 1))
 PYX' \
   'FAILED|Error'
 
@@ -5086,6 +5093,247 @@ p = pathlib.Path("lib/isedraf/report/model.py"); s = p.read_text()
 old = "        \"host_id\": manifest_core.get(\"host_id\"),"
 assert old in s, "mutation anchor miss"
 p.write_text(s.replace(old, "        \"host_id\": record_core.get(\"host_id\"),", 1))
+PYX' \
+  'FAILED|Error'
+
+# --- D-129 (v0.5 register H6, H7): one command table ---------------------------------------
+inject "D-129 a command record's exit codes drift from exitcodes.json" \
+  'python3 scripts/ci/check_commands.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/commands.py"); s = p.read_text()
+old = "\"exits\": {\"isedraf explain\": (0, 64, 70)},"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "\"exits\": {\"isedraf explain\": (0, 64)},", 1))
+PYX' \
+  'FAIL'
+
+inject "D-129 the command table claims a sudo form the root route does not admit" \
+  'python3 scripts/ci/check_commands.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/commands.py"); s = p.read_text()
+old = "\"exit_notes\": {0: \"the criterion was explained\"},\n        \"sudo_forms\": (),"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "\"exit_notes\": {0: \"the criterion was explained\"},\n        \"sudo_forms\": ((\"explain\",),),", 1))
+PYX' \
+  'FAIL'
+
+inject "D-129 the command reference is edited by hand" \
+  'python3 scripts/docs/cli_reference.py check' \
+  'printf "\nA hand-written option: --pdf\n" >> docs/reference/CLI.md' \
+  'stale'
+
+inject "D-129 a missing argument falls back to the bare argparse error" \
+  'python3 tests/test_commands.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/cli.py"); s = p.read_text()
+old = "leaf.add_argument(argument[\"name\"], nargs=\"?\", default=None,"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "leaf.add_argument(argument[\"name\"],", 1))
+PYX' \
+  'FAILED|Error'
+
+# --- D-129 (v0.5 H1, H2, H3; AUTH-019 as amended for v0.5): help on both routes ------------
+inject "D-129 bare isedraf is a usage error again" \
+  'python3 tests/test_commands.py' \
+  'sed -i "s|    ((), \"start\"),|    ((\"--start\",), \"start\"),|" lib/isedraf/commands.py' \
+  'FAILED|Error'
+
+inject "D-129 the root route answers help only after the privilege check" \
+  'python3 scripts/ci/check_commands.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/outer.py"); s = p.read_text()
+old = "    helped = answer_help(argv)\n    if helped is not None:\n        return helped\n"
+assert s.count(old) == 1, "mutation anchor miss"
+s = s.replace(old, "", 1)
+anchor = "    problem = unsafe_install()\n"
+assert s.count(anchor) == 1, "mutation anchor miss"
+p.write_text(s.replace(anchor, old + anchor, 1))
+PYX' \
+  'answer the help forms before geteuid'
+
+inject "D-129 the launcher fallback refusal drifts from the root route" \
+  'python3 scripts/ci/check_commands.py' \
+  'sed -i "s|  sudo isedraf evaluate           its evaluation\" |  sudo isedraf evaluate           evaluation\" |" bin/isedraf' \
+  'bin/isedraf does not print the refusal line'
+
+# --- D-129 (v0.5 P2): the audit summary ----------------------------------------------------
+inject "D-129 the audit summary leaves out an area that was not collected" \
+  'python3 tests/test_summary.py' \
+  'sed -i "s|               if (sections.get(n) or {}).get(\"collection_status\") != COLLECTED\]|               if (sections.get(n) or {}).get(\"collection_status\") == ERROR]|" lib/isedraf/summary.py' \
+  'FAILED|Error'
+
+inject "D-129 the audit summary sends every incomplete area to Full Audit" \
+  'python3 tests/test_summary.py' \
+  'sed -i "s|            if name in FULL_AUDIT_READS and store_class != \"SYSTEM_PRODUCTION\":|            if store_class != \"SYSTEM_PRODUCTION\":|" lib/isedraf/summary.py' \
+  'FAILED|Error'
+
+# --- D-129 (v0.5 D1): documented commands are real command forms --------------------------
+inject "D-129 a guide documents a command option that does not exist" \
+  'python3 scripts/ci/check_commands.py' \
+  'printf "\n\`\`\`sh\nisedraf report --pdf\n\`\`\`\n" >> docs/REPORT_GUIDE.md' \
+  'does not parse with the command table'
+
+# --- D-129 (v0.5 P4, P5): the Full Audit summary and the approval display ------------------
+inject "D-129 the Full Audit engine claims a commit the launcher has not made" \
+  'python3 tests/test_summary.py' \
+  'sed -i "s|    out = wrap(\"\", \"Committed: one run, %s.\" % state if committed else|    out = wrap(\"\", \"Committed: one run, %s.\" % state if True else|" lib/isedraf/summary.py' \
+  'FAILED|Error'
+
+inject "D-129 the approval is shown only after it was written" \
+  'python3 tests/test_summary.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/baseline/approve.py"); s = p.read_text()
+old = "    if before_write is not None:\n        before_write(obj)\n"
+assert s.count(old) == 1, "mutation anchor miss"
+s = s.replace(old, "", 1)
+tail = "    return commit(root, store_class, action, obj, raw, digest), obj\n"
+assert s.count(tail) == 1, "mutation anchor miss"
+p.write_text(s.replace(tail, "    done = commit(root, store_class, action, obj, raw, digest)\n" + old + "    return done, obj\n", 1))
+PYX' \
+  'FAILED|Error'
+
+# --- D-129 (v0.5 R1): isedraf list ----------------------------------------------------------
+inject "D-129 isedraf list shows snapshot directories the ledger does not record" \
+  'python3 tests/test_list.py' \
+  'sed -i "s|            for c in cores if c.get(\"event\") == ledger.EVENT_SNAPSHOT_COMMITTED\]|            for c in cores if c.get(\"event\") == ledger.EVENT_SNAPSHOT_COMMITTED] + [{\"snapshot_id\": d, \"collected_at\": \"?\", \"state_root\": \"?\"} for d in ledger.unledgered_snapshots(root)]|" lib/isedraf/listing.py' \
+  'FAILED|Error'
+
+inject "D-129 isedraf list skips the personal store check" \
+  'python3 tests/test_list.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/cli.py"); s = p.read_text()
+anchor = "        found = listing.collect(root)\n"
+i = s.index("def cmd_list")
+j = s.index("    if state_root_class == stateroot.USER_PRODUCTION:\n", i)
+k = s.index("    try:\n" + anchor, j)
+p.write_text(s[:j] + s[k:])
+PYX' \
+  'FAILED|Error'
+
+# --- STORE-016 (v0.5): ledger recovery -------------------------------------------------------
+inject "STORE-016 the ledger write does not check its byte count" \
+  'python3 tests/test_ledger_recovery.py' \
+  'sed -i "s|    if written != len(data):|    if False:|" lib/isedraf/ledger.py' \
+  'FAILED|Error'
+
+inject "STORE-016 the recovery drops the torn tail instead of keeping it" \
+  'python3 tests/test_ledger_recovery.py' \
+  'sed -i "s|^    if before_rename is not None:$|    os.truncate(os.path.join(root, LEDGER_DIRECTORY, torn[\"segment\"]), torn[\"verified_length\"])\n    if before_rename is not None:|" lib/isedraf/ledger.py' \
+  'FAILED|Error'
+
+inject "STORE-016 a damaged earlier record is accepted" \
+  'python3 tests/test_ledger_recovery.py' \
+  'sed -i "s|            if _sealed(core)\[2\] != record_hash:|            if False:|" lib/isedraf/ledger.py' \
+  'FAILED|Error'
+
+inject "STORE-016 the recovery record is written in place, not staged" \
+  'python3 tests/test_ledger_recovery.py' \
+  'sed -i "s|    staging = os.path.join(root, \"tmp\", \"ledger-recovery-\" + name)|    staging = final|" lib/isedraf/ledger.py' \
+  'FAILED|Error'
+
+inject "STORE-016 a read-only route reads past an unrecovered tail" \
+  'python3 tests/test_ledger_recovery.py' \
+  'sed -i "s|^    if torn is not None:$|    if False:|" lib/isedraf/launcher/reportunit.py' \
+  'FAILED|Error'
+
+inject "STORE-016 a run appends without recovering the ledger first" \
+  'python3 tests/test_ledger_recovery.py' \
+  'sed -i "s|^            refused = _recover_ledger(root, state_root_class, err)$|            refused = None|" lib/isedraf/cli.py' \
+  'FAILED|Error'
+
+# --- AUTH-035 (D-129 point 12): the read-only system-store listing --------------------------
+inject "AUTH-035 the list unit gets write access to the store" \
+  'python3 tests/test_list_route.py' \
+  'sed -i "s|    return _systemd_run(\"isedraf-list-\", run_id, REPORT_PROPERTIES) + \[|    return _systemd_run(\"isedraf-list-\", run_id, PROPERTIES) + [|" lib/isedraf/launcher/outer.py' \
+  'FAILED|Error'
+
+inject "AUTH-035 the system listing opens evaluation artifacts" \
+  'python3 tests/test_list_route.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("lib/isedraf/launcher/listunit.py"); s = p.read_text()
+old = "    evaluations = [{\"evaluation_id\": n, \"identity_only\": True}\n"
+assert s.count(old) == 1, "mutation anchor miss"
+p.write_text(s.replace(old, "    for n in _names(os.path.join(root, \"evaluations\"), record.EVL_RE):\n        try:\n            os.close(os.open(os.path.join(root, \"evaluations\", n, \"manifest.json\"), os.O_RDONLY))\n        except OSError:\n            pass\n" + old, 1))
+PYX' \
+  'FAILED|Error'
+
+inject "D-129 H9 a sudo-entered account gets the bare refusal" \
+  'python3 tests/test_list_route.py' \
+  'sed -i "s|^        refuse(PRIVILEGE_REFUSED, SUDO_SESSION, err)$|        pass|" lib/isedraf/launcher/outer.py' \
+  'FAILED|Error'
+
+inject "D-129 H8 a refusal drops its reason token" \
+  'python3 tests/test_list_route.py' \
+  'sed -i "s|    lines += wrap(\"  reason: \", \"%s: %s\" % (token, parts\[0\]), 10)|    lines += wrap(\"  reason: \", parts[0], 10)|" lib/isedraf/summary.py' \
+  'FAILED|Error'
+
+# --- STORE-016, STORE-022 (D-129 Q4): the free-space preflight -----------------------------
+inject "STORE-022 the user route collects without the free-space preflight" \
+  'python3 tests/test_space.py' \
+  'sed -i "s|^        space.preflight(root)$|        pass|" lib/isedraf/cli.py' \
+  'FAILED|Error'
+
+inject "STORE-022 the preflight keeps no headroom for a recovery record" \
+  'python3 tests/test_space.py' \
+  'sed -i "s|    if free < estimate + RECOVERY_RESERVE:|    if free < estimate:|" lib/isedraf/space.py' \
+  'FAILED|Error'
+
+inject "STORE-022 a disk that fills during the commit is reported as an engine error" \
+  'python3 tests/test_space.py' \
+  'sed -i "s|        if space.out_of_space(exc):|        if False:|" lib/isedraf/cli.py' \
+  'FAILED|Error'
+
+inject "STORE-022 the Full Audit launcher skips the free-space preflight" \
+  'python3 tests/test_space.py' \
+  'sed -i "s|^        space.preflight(root)$|        pass|" lib/isedraf/launcher/unit.py' \
+  'FAILED|Error'
+
+# --- D-129 (v0.5 register C1): bash completion from the command table ----------------------
+inject "D-129 the bash completion is edited by hand" \
+  'python3 scripts/docs/bash_completion.py check' \
+  'printf "complete -W \"--pdf\" isedraf\n" >> packaging/completion/isedraf.bash' \
+  'stale'
+
+inject "D-129 the completion offers every option to every command" \
+  'python3 tests/test_completion.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib, subprocess
+p = pathlib.Path("scripts/docs/bash_completion.py"); s = p.read_text()
+old = "options = \" \".join([\"--help\"] + [o[\"flag\"] for o in record[\"options\"]])"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "options = \" \".join([\"--help\"] + [o[\"flag\"] for r in commands.COMMANDS for o in r[\"options\"]])", 1))
+subprocess.check_call(["python3", "-B", "scripts/docs/bash_completion.py", "generate"])
+PYX' \
+  'FAILED|Error'
+
+inject "D-129 the completion offers names for a snapshot argument" \
+  'python3 tests/test_completion.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib, subprocess
+p = pathlib.Path("scripts/docs/bash_completion.py"); s = p.read_text()
+old = "    # COMPLETE_NONE and COMPLETE_SNAPSHOT: nothing is offered.\n    return [\x27:\x27]"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "    return [\x27_isedraf_paths -f\x27]", 1))
+subprocess.check_call(["python3", "-B", "scripts/docs/bash_completion.py", "generate"])
+PYX' \
+  'FAILED|Error'
+
+# --- IQ-071: archive members are checked before the SBOM generator extracts them ------------
+inject "IQ-071 the SBOM generator extracts archive members unchecked" \
+  'python3 tests/test_sbom_unpack.py' \
+  'python3 - <<'"'"'PYX'"'"'
+import pathlib
+p = pathlib.Path("scripts/ci/generate_sbom.py"); s = p.read_text()
+old = "tf.extractall(str(target), members=safe_members(tf))"
+assert old in s, "mutation anchor miss"
+p.write_text(s.replace(old, "tf.extractall(str(target))", 1))
 PYX' \
   'FAILED|Error'
 

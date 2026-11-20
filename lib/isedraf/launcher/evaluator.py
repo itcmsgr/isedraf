@@ -29,7 +29,7 @@ import secrets
 import shutil
 import sys
 
-from isedraf import ENGINE_VERSION, fullaudit, verify
+from isedraf import ENGINE_VERSION, fullaudit, stateroot, summary, verify
 from isedraf.baseline import revision as baseline_revision
 from isedraf.evaluate import run as evaluate_run
 from isedraf.exitcodes import OK, TOOL_INTEGRITY_FAILURE, USAGE_OR_ENGINE
@@ -54,8 +54,8 @@ def evaluate(data, out, err, state_root_class=None):
         items = frame.decode(data, reportunit.FRAME_LIMIT, evalunit.FRAME_ITEMS)
         catalog_bytes, evidence = _split(items)
     except (frame.FrameError, renderer.FrameRefused) as exc:
-        err.write("isedraf: EVALUATION_REFUSED: the evidence frame is invalid (%s); nothing was "
-                  "written.\n" % exc)
+        err.write(summary.refusal("EVALUATION_REFUSED: the evidence frame is invalid (%s)" % exc,
+                                  "Nothing was written."))
         return USAGE_OR_ENGINE
     base = os.path.join(TMP, "isedraf-evaluate-" + secrets.token_hex(16))
     os.mkdir(base, 0o700)
@@ -67,7 +67,7 @@ def evaluate(data, out, err, state_root_class=None):
             with os.fdopen(fd, "wb") as fh:
                 fh.write(catalog_bytes)
         except (renderer.FrameRefused, OSError, UnicodeError) as exc:
-            err.write("isedraf: EVALUATION_REFUSED: %s; nothing was written.\n" % exc)
+            err.write(summary.refusal("EVALUATION_REFUSED: %s" % exc, "Nothing was written."))
             return USAGE_OR_ENGINE
         try:
             problems = list(verify.verify_store(base)) + renderer.bound_to_ledger(base, sid)
@@ -81,7 +81,7 @@ def evaluate(data, out, err, state_root_class=None):
             evl_id, raw, results = evaluate_run.build(base, state_root_class, ENGINE_VERSION,
                                                       registry_path=catalog_path)
         except evaluate_run.EvaluationRefused as exc:
-            err.write("isedraf: EVALUATION_REFUSED: %s; nothing was written.\n" % exc)
+            err.write(summary.refusal("EVALUATION_REFUSED: %s" % exc, "Nothing was written."))
             return USAGE_OR_ENGINE
         except baseline_revision.IntegrityFailure as exc:
             # D-128, BASE-008/011: the system store's baseline does not verify (exit 5).
@@ -94,11 +94,12 @@ def evaluate(data, out, err, state_root_class=None):
                                for name in sorted(raw)])
         out.write(answer)
         out.flush()
-        err.write("ISEDRAF native evaluation (system store)\n")
-        err.write("  evaluated snapshot: %s\n" % json.loads(raw["results.json"])["snapshot_id"])
+        # v0.5 P1, P4: the header the user route prints, naming the system store.
+        err.write(summary.header("sudo isedraf evaluate", stateroot.SYSTEM_PRODUCTION,
+                                 json.loads(raw["results.json"])["snapshot_id"]))
         for r in results:
             err.write("  %-17s : %s  %s\n" % (r["criterion_id"], r["result"], r["reason_code"]))
-            err.write("                      %s\n" % r["reason"])
+            err.write("\n".join(summary.wrap(" " * 22, r["reason"], 22)) + "\n")
         return OK
     finally:
         shutil.rmtree(base, ignore_errors=True)

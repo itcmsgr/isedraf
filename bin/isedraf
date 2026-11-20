@@ -28,7 +28,8 @@ set -u
 # AUTH-019, AUTH-020: under root or sudo, nothing below runs. No interpreter is searched
 # for, ISEDRAF_PYTHON and PYTHONPATH are ignored, the operator's environment is dropped,
 # and the only thing that runs is the launcher's outer entry, from the root-owned install
-# root, with /usr/bin/python3 -IB. It refuses everything but `sudo isedraf audit`.
+# root, with /usr/bin/python3 -IB. It answers the help forms and refuses everything but
+# its four routes.
 # PRIV-004: the development state root is refused under root before anything starts.
 if [ "$(/usr/bin/id -u)" = "0" ] || [ -n "${SUDO_USER:-}" ]; then
     if [ -n "${ISEDRAF_STATE_ROOT:-}" ]; then
@@ -36,7 +37,30 @@ if [ "$(/usr/bin/id -u)" = "0" ] || [ -n "${SUDO_USER:-}" ]; then
         exit 70
     fi
     if [ ! -x /usr/bin/python3 ] || [ ! -f /usr/lib/isedraf/launcher/outer.py ]; then
-        echo "isedraf: Under sudo or root, ISEDRAF runs only \`sudo isedraf audit\`, \`sudo isedraf report\`, \`sudo isedraf evaluate\` and \`sudo isedraf baseline approve\`, which need /usr/bin/python3 and the installed package. Run other ISEDRAF commands as your normal user." >&2
+        # The refusal of launcher/outer.py (AUTH-019), line for line; the command gate holds
+        # them equal. No help is answered here: help comes from the installed definitions, so
+        # without them `sudo isedraf --help` is refused too and the last line says why.
+        missing=""
+        [ -x /usr/bin/python3 ] || missing="/usr/bin/python3"
+        [ -f /usr/lib/isedraf/launcher/outer.py ] \
+            || missing="${missing:+$missing and }the installed package in /usr/lib/isedraf"
+        printf '%s\n' \
+            "isedraf: Under sudo or root, ISEDRAF runs only:" \
+            "  sudo isedraf audit              Full Audit" \
+            "  sudo isedraf report             its report (also --json or --html)" \
+            "  sudo isedraf evaluate           its evaluation" \
+            "  sudo isedraf baseline approve   its baseline" \
+            "  sudo isedraf list               what the system store holds (also --all)" \
+            "Nothing was collected or written. Run every other ISEDRAF command as your" \
+            "normal user. Help: sudo isedraf help" \
+            "To export a Full Audit report privately, as your user:" \
+            "  (umask 077; set -o noclobber; sudo isedraf report > ~/isedraf-report.md)" \
+            "Under sudo, ISEDRAF 0.5 - help included - runs only with /usr/bin/python3 and" \
+            "the installed package. Not found here: $missing." >&2
+        # IQ-078 / H10 (owner, 2026-11-16): v0.5 keeps /usr/bin/python3 for the root route.
+        [ -x /usr/bin/python3 ] || printf '%s\n' \
+            "A stock AlmaLinux 8 has only platform-python, so on such a host ISEDRAF runs" \
+            "as your normal user only: isedraf help, isedraf audit." >&2
         exit 70
     fi
     exec /usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin LC_ALL=C \

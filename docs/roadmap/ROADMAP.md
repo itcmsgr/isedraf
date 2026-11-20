@@ -432,10 +432,10 @@ v0.1  Evidence Foundation - RELEASED 2026-09-28
       Python standard-library engine; user-mode production store; `isedraf audit`;
       committed evidence; first report; DEB/RPM; upgrade, reboot and uninstall proven.
       No privileged component and no compiled code.
-      Corrections: 0.1.1 (2026-10-06), 0.1.2 (2026-10-08, latest): the v0.2 P1-P3
+      Corrections: 0.1.1 (2026-10-06), 0.1.2 (2026-10-08): the v0.2 P1-P3
       truth fixes, registry truth and evidence limits, all unprivileged.
 
-v0.2  Evidence Authority - Full Audit (D-118) - IN ENGINEERING, NOT RELEASED
+v0.2  Evidence Authority - Full Audit (D-118) - published 2026-10-19 as 0.2.0
       Status 2026-10-08: P0-P6 done; the supervisor and Full Audit route are built;
       read_shadow_v1 is implemented and corpus-validated; OD-06 is closed. AUTH-025,
       amended 2026-10-09, admits one new operation at a time, validated by the owner in a
@@ -474,17 +474,17 @@ v0.4  Historical Assurance - approved baseline and classified delta
       the engine on complete fixtures; the production baseline workflow then follows
       through Full Audit, which must itself meet the profile's completeness. Both are
       v0.4 scope. The `check` journey and its exit codes come later.
-      Delivered in 0.4.0 (prepared 2026-11-13, not yet published): the DEV slice and the
+      Delivered in 0.4.0 (published 2026-11-13): the DEV slice and the
       production workflow, built and lab-tested; one baseline per store; accepting a
       change, re-approval, tracking and `check` come after 0.4.
 
-v0.5  Operator experience (D-129), PLANNED
+v0.5  Operator experience (D-129), delivered in 0.5.0 (prepared 2026-11-20, not yet published)
       help: root --version/--help/help, isedraf help, a grouped help --all, per-command
       examples, effects, privileges and exits; bash completion of commands, options and
       criterion IDs from installed definitions; a common compact header, readable errors,
       coverage counts and complete next commands; discovering and explicitly saving reports,
       with absolute paths and an explanation of private storage; the free-space preflight
-      (STORE-016/022, frozen, not yet implemented) with a named refusal and guidance; one /docs
+      with a named refusal (exit 68) and ledger recovery (STORE-016); one /docs
       tree aligned as each feature lands, with a bounded documentation check; completion and
       offline documentation in the DEB and RPM, installation and upgrade verified.
 

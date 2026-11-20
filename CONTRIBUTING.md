@@ -97,7 +97,7 @@ Firewalls, AV, EDR, IDS/IPS, WAF, SIEM, cloud and network controls, CVE matching
 integrity monitoring are out of scope. The absence of a locally detectable agent is never the absence
 of the control.
 
-**Read-only.** ISEDRAF never modifies host state. Collectors collect; the engine interprets.
+**Observation only.** An audit observes the host: collectors read, the engine interprets, and no collector writes to the host or runs a host-changing command.
 
 **Runtime dependencies.** Python standard library only, with a checked import allowlist. No compiled
 components, no plugins, no network access, no embedded database.

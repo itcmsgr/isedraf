@@ -84,6 +84,29 @@ if [ -n "$DEB" ] && [ -n "$RPM" ] && command -v rpm >/dev/null 2>&1; then
         bad "deb and rpm ship DIFFERENT runtime files:"
         diff "$D/deblib" "$D/rpmlib" | sed 's/^/          /' >&2
     fi
+    # D-129 (v0.5 C1, K1): both formats ship the bash completion generated from the command
+    # table, byte for byte the committed file.
+    COMP=usr/share/bash-completion/completions/isedraf
+    # deb members are listed without a leading "./" and rpm's with one; match either.
+    ar p "$DEB" data.tar.gz 2>/dev/null | tar xzO --wildcards "*$COMP" > "$D/debcomp" 2>/dev/null
+    (cd "$D" && rpm2cpio "$RPM" 2>/dev/null | cpio -i --quiet --to-stdout "./$COMP" \
+        > "$D/rpmcomp" 2>/dev/null)
+    if [ -s "$D/debcomp" ] && cmp -s "$D/debcomp" packaging/completion/isedraf.bash \
+            && cmp -s "$D/debcomp" "$D/rpmcomp"; then
+        ok "deb and rpm ship the same generated bash completion"
+    else
+        bad "the bash completion is missing from a package or differs from packaging/completion/isedraf.bash"
+    fi
+    # D-129 (owner ruling 2026-11-14): both formats record the one commit they were built from.
+    SRC=usr/share/doc/isedraf/SOURCE
+    ar p "$DEB" data.tar.gz 2>/dev/null | tar xzO --wildcards "*$SRC" > "$D/debsrc" 2>/dev/null
+    (cd "$D" && rpm2cpio "$RPM" 2>/dev/null | cpio -i --quiet --to-stdout "./$SRC" \
+        > "$D/rpmsrc" 2>/dev/null)
+    if grep -Eq '^source commit: [0-9a-f]{40}$' "$D/debsrc" && cmp -s "$D/debsrc" "$D/rpmsrc"; then
+        ok "deb and rpm record the same source commit ($(sed -n 's/^source commit: //p' "$D/debsrc" | cut -c1-12))"
+    else
+        bad "the source record ($SRC) is missing from a package, names no commit, or differs between deb and rpm"
+    fi
     rm -rf "$D"
 fi
 

@@ -38,10 +38,24 @@ sudo apt install ./dist/packages/isedraf-latest_all.deb        # Debian, Ubuntu
 sudo dnf install ./dist/packages/isedraf-latest.noarch.rpm     # RHEL family
 ```
 
+Keep the `./`: with it, `apt` and `dnf` install that file; without it, they look the name up in
+your configured repositories instead. A downloaded release package installs the same way, for
+example `sudo apt install ./isedraf_<version>_all.deb`.
+
 Installing needs root, as any package does. The package installs `/usr/bin/isedraf` and
 `/usr/lib/isedraf/`, declares the `isedraf` system account through systemd-sysusers (no
 home, no login shell, never removed on uninstall) and creates `/var/lib/isedraf`, owned by
 root with mode 0700, only when nothing exists at that path. It starts nothing.
+
+**Tab completion (bash).** The package also installs a bash completion file at
+`/usr/share/bash-completion/completions/isedraf`. In a new shell, where the distribution's
+`bash-completion` package is installed, `isedraf <Tab>` completes commands, each command's own
+options and the installed criterion IDs (`isedraf explain ISE-<Tab>`). It never reads an
+evidence store and never offers a snapshot ID. Without `bash-completion` nothing is loaded and
+`isedraf` works the same; to use the completion anyway, run
+`source /usr/share/bash-completion/completions/isedraf` in your shell. Other shells: not
+provided. After `sudo isedraf`, completion offers the same commands as for your user; under
+sudo only `audit`, `report` (`--json`, `--html`), `evaluate` and `baseline approve` run.
 
 To try ISEDRAF without installing, run it from the checkout: `./bin/isedraf audit`.
 
@@ -58,31 +72,43 @@ and prints a summary. On a small test host it looked like this (the evidence pat
 shortened):
 
 ```text
-ISEDRAF host identity
-  collection status : COLLECTED
-  host id           : sha256:e896539f9dd3b417d1fd5b8c327d8caeb02353d1c2714a2889d2593442d899fa
-  snapshot          : SDS-20260928T140403Z-41a4d71af5303e60
-  evidence root     : ~/.local/state/isedraf (USER_PRODUCTION)
-  privilege level   : UNPRIVILEGED - evidence that needs root is
-                      NOT_TESTED, never assumed
-  audit             : PARTIAL
-    inventory       PARTIAL
-    nss             COLLECTED
-    hostname        COLLECTED
-    accounts        PARTIAL
-    sudo            NOT_TESTED
-    ssh             COLLECTED
-    pam             COLLECTED
-    loginpolicy     COLLECTED
-    mounts          PARTIAL
-    authorizedkeys  NOT_TESTED
+------------------------------------------------------------------------------
+ISEDRAF 0.5.0 | isedraf audit
+Standard Audit, your personal evidence store
+snapshot SDS-20261115T065303Z-2a8c61d4974efe03, collected 2026-11-15T06:53:03Z
+------------------------------------------------------------------------------
+host identity: COLLECTED, host id
+  sha256:4956f552f82650b1fa4a40fc9f65f1f0a92b36deede852462f907096fbfe3532
+privilege level: UNPRIVILEGED - evidence that needs root is NOT_TESTED, never
+  assumed
 
-Render it with: isedraf report
+Committed: one run, incomplete (some areas could not be fully read).
+Coverage of 10 areas: 5 COLLECTED, 3 PARTIAL, 2 NOT_TESTED, 0 ERROR.
+Not fully collected:
+  accounts        PARTIAL    etc/shadow: SOURCE_UNREADABLE: etc/shadow could
+                             not be read: permission denied. Password and
+                             ageing evidence requires privilege; nothing about
+                             it was observed. Full Audit (sudo isedraf audit)
+                             reads /etc/shadow.
+  sudo            NOT_TESTED /etc/sudoers could not be read
+                             (SOURCE_UNREADABLE). Full Audit (sudo isedraf
+                             audit) reads the sudo policy files.
+  ...
+Full Audit runs on Debian 12, Ubuntu 24.04, Rocky Linux 9, AlmaLinux 9, with
+systemd.
+Stored in your personal evidence store: ~/.local/state/isedraf
+  (private to you: a 0700 directory only your account can read)
+Next:
+  isedraf evaluate     evaluate this run against the native criteria
+  isedraf report       show the report of this run
+Exit 2 means the run was committed with incomplete areas. Without root that is
+expected. It is not a security verdict.
 ```
 
-The exit code was 2: the run was committed, and some areas were not fully observed. On a
-real host run without root, that is the expected result. [Evidence model](EVIDENCE_MODEL.md)
-explains each status.
+The exit code was 2: the run was committed, and some areas were not fully observed. Each
+area that was not fully collected is listed with its reason; where a Full Audit fixed
+operation reads more, the summary says so. On a real host run without root, that is the
+expected result. [Evidence model](EVIDENCE_MODEL.md) explains each status.
 
 ## Run a Full Audit
 
@@ -161,13 +187,15 @@ says why.
 
 | Message says | Exit | What to do |
 |---|---|---|
-| Under sudo or root, ISEDRAF runs only `sudo isedraf audit`, `sudo isedraf report`, `sudo isedraf evaluate` and `sudo isedraf baseline approve` | 70 | run other commands as your normal user; under sudo, `baseline approve` takes no snapshot name |
+| Under sudo or root, ISEDRAF runs only: (then one line each for `sudo isedraf audit`, `report`, `evaluate`, `baseline approve`, `list`, whether anything was written, and the private export command) | 70 | run other commands as your normal user; under sudo, `baseline approve` takes no snapshot name. `sudo isedraf help`, `--help` and `--version` are answered, never refused |
+| this session was started through sudo for a non-root account (SUDO_USER is set) | 70 | log in as that account directly, for example `su - <account>`, and run `isedraf` there |
 | FULL_AUDIT_UNSUPPORTED | 70 | Full Audit needs systemd and one of the four platforms above |
 | ENGINE_IDENTITY_MISSING | 70 | reinstall the package, which declares the `isedraf` account |
 | ENGINE_UNSAFE_INSTALL | 64 | `/usr/lib/isedraf` must be root-owned and not writable by others |
 | the evidence store ... has mode ... it must be 0700 | 67 | `chmod 700` the directory yourself |
 | is not a directory (a symlink or file is refused) | 67 | replace the link with a real directory |
 | is owned by uid ..., not the invoking uid | 67 | use your own directory; stores are per user |
+| INSUFFICIENT_SPACE: the filesystem holding ... has ... available; this run needs ... | 68 | free space on that filesystem and run the command again. The message states what is available and what the run needs (a margin over the store's recent snapshots, at least 8 MiB, plus 1 MiB kept for a ledger recovery record). Nothing was collected; ISEDRAF never deletes evidence to make room |
 | STORAGE_UNSUITABLE ... nfs, cifs, fuse ... | 67 | point `XDG_STATE_HOME` at a directory on a local disk |
 | STORAGE_NOT_ESTABLISHED | 67 | use a local ext4, XFS or btrfs directory |
 | STATE_ROOT_UNUSABLE: /var/lib/isedraf ... | 67 | restore it as a root-owned 0700 directory; ISEDRAF never repairs it |
@@ -197,6 +225,8 @@ development and testing, and it is refused under root and sudo.
 |---|---|
 | `isedraf audit` | collect all ten areas once and commit one run |
 | `isedraf report` | render the last committed run; `--json`, `--html`, `--save` |
+| `isedraf list` | what your store holds: committed runs, evaluations, the baseline, saved reports with their paths; `--all` for every entry |
+| `sudo isedraf list` | what the system store holds, read-only: Full Audit runs, the baseline, evaluation identities; `--all` for every entry |
 | `sudo isedraf audit` | Full Audit; commits to `/var/lib/isedraf` |
 | `sudo isedraf report` | render the last Full Audit run, read-only; `--json` or `--html` |
 | `isedraf evaluate` | evaluate the last run against the native criteria and, when a baseline is approved, compare with it |
@@ -206,7 +236,17 @@ development and testing, and it is refused under root and sudo.
 | `isedraf baseline approve <SDS-id>` | approve a complete development (`DEV`) run |
 | `isedraf identity` | record host identity only, as its own committed run |
 | `isedraf inventory` | print the host inventory now; commits nothing (`--json` for the data) |
+| `isedraf` or `isedraf help` | the start page: the workflow, with complete commands |
+| `isedraf help --all` or `isedraf --help` | every command, grouped |
+| `isedraf help <command>` or `isedraf <command> --help` | one command: what it does, who runs it, what it writes, its exit codes and examples; an unknown command exits 64 and lists the valid ones |
 | `isedraf --version` | print the version |
+
+Help and the version work the same under `sudo` (`sudo isedraf help`, `sudo isedraf --help`,
+`sudo isedraf --version`): they read no evidence, open no store and start nothing. Under sudo they
+need `/usr/bin/python3`; on a host without it (a stock AlmaLinux 8 has only `platform-python`)
+they are refused with exit 70, and `isedraf help` as your normal user gives the same text.
+
+The same help, for every command, is in the [command reference](reference/CLI.md).
 
 ## References
 

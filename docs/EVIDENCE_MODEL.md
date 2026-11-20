@@ -138,7 +138,10 @@ report. Hosts cloned without regenerating their machine-id share a host id.
 A standard audit's store is `~/.local/state/isedraf` (or `$XDG_STATE_HOME/isedraf`), a
 directory owned by you with mode 0700; files are created mode 0600. A Full Audit's store is
 `/var/lib/isedraf`, owned by root with mode 0700. Both are protected by filesystem
-permissions only. Each run and ledger record states its evidence class:
+permissions only. They are private because a run holds the facts an intruder looks for:
+account and group names, sudo rules, SSH key fingerprints and the host's identity. Only you (or
+root, for the system store) can read them; to share a result, save or export a report
+deliberately (`isedraf report --save`, or the private export in the Report guide). Each run and ledger record states its evidence class:
 
 | Class | Produced by |
 |---|---|

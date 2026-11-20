@@ -33,7 +33,7 @@ import signal
 import subprocess
 import sys
 
-from isedraf import canonical, ids, stateroot
+from isedraf import canonical, ids, stateroot, summary
 from isedraf.baseline import approve, profile as baseline_profile, revision
 from isedraf.exitcodes import (APPROVAL_REFUSED, OK, RUN_IN_PROGRESS, STATE_ROOT_UNUSABLE,
                                TOOL_INTEGRITY_FAILURE, USAGE_OR_ENGINE)
@@ -71,7 +71,7 @@ def expected(items, artifact, pointer):
     """(action, selected snapshot, its manifest hash, the record in force) - metadata only."""
     by_name = dict((i["name"].decode("ascii"), i["content"]) for i in items)
     try:
-        cores = reportunit.ledger_cores(by_name[reportunit.LEDGER_NAME])
+        cores = reportunit.verified_cores(by_name)
         sid, ledgered_hash = reportunit.latest_snapshot(cores)
         record = reportunit.baseline_record(cores)
         envelope = json.loads(by_name["snapshots/%s/manifest.json" % sid].decode("utf-8"))
@@ -165,6 +165,10 @@ def run(root=None, err=None, out=None, engine_uid=None, argv=None):
     try:
         reportunit.check_store(root)
         with reportunit._ReadOnlyLock(root):
+            from isedraf.launcher import unit       # STORE-016: recover before reading
+            refused = unit.recover_ledger(root, err)
+            if refused is not None:
+                return refused
             uid = engine_uid if engine_uid is not None else reportunit._engine_uid()
             artifact, pointer = reportunit.baseline_state(root)
             items = reportunit.acquire(root, uid)
@@ -192,7 +196,7 @@ def run(root=None, err=None, out=None, engine_uid=None, argv=None):
             outcome = approve.commit(root, CLASS, action, obj, raw,
                                      record.get("artifact_digest") if record else None)
     except store.Unusable as exc:
-        err.write("isedraf: STATE_ROOT_UNUSABLE: %s\n" % exc)
+        err.write(summary.refusal("STATE_ROOT_UNUSABLE: %s" % exc, "Nothing was written."))
         return STATE_ROOT_UNUSABLE
     except stateroot.RunInProgress as exc:
         err.write("isedraf: RUN_IN_PROGRESS: %s\n" % exc)
@@ -202,8 +206,10 @@ def run(root=None, err=None, out=None, engine_uid=None, argv=None):
                   % exc)
         return USAGE_OR_ENGINE
     except AlreadyApproved as exc:
-        err.write("isedraf: approval refused, nothing was written: %s: %s\n"
-                  % (revision.BASELINE_ALREADY_APPROVED, exc))
+        err.write(summary.explained(revision.BASELINE_ALREADY_APPROVED, exc,
+                                    "Approval refused; nothing was written.",
+                                    "sudo isedraf evaluate compares later Full Audit runs with "
+                                    "it"))
         return APPROVAL_REFUSED
     except LedgerInconsistent as exc:
         err.write("isedraf: baseline integrity failure, nothing was written: %s: %s\n"
@@ -216,6 +222,8 @@ def run(root=None, err=None, out=None, engine_uid=None, argv=None):
         obj["revision_id"], "approved" if outcome == approve.APPROVED
         else "completed (an interrupted approval)"))
     out.write("isedraf: a production baseline means accepted, not secure.\n")
+    out.write("Next: sudo isedraf evaluate\n"
+              "  (compares the latest Full Audit run with this baseline)\n")
     return OK
 
 

@@ -33,12 +33,13 @@
 import fcntl
 import json
 import os
+import re
 import signal
 import stat
 import subprocess
 import sys
 
-from isedraf import ids, stateroot
+from isedraf import ids, ledger, stateroot, summary
 from isedraf.exitcodes import RUN_IN_PROGRESS, STATE_ROOT_UNUSABLE, USAGE_OR_ENGINE
 from isedraf.launcher import engine, store
 from isedraf.supervisor import frame
@@ -46,7 +47,9 @@ from isedraf.supervisor import frame
 FORMATS = ("markdown", "json", "html")
 LEDGER_BOUND = 64 * 1024 * 1024
 FRAME_LIMIT = 160 * 1024 * 1024
-FRAME_ITEMS = 1 + len(store.BUNDLE_FILES)
+# STORE-010, STORE-016 (v0.5): a frame carries every ledger segment, at most this many.
+LEDGER_SEGMENTS_IN_FRAME = 64
+FRAME_ITEMS = LEDGER_SEGMENTS_IN_FRAME + len(store.BUNDLE_FILES)
 # AUTH-032 as extended by D-126: plus the committed evaluation's four artifacts, if any.
 REPORT_FRAME_ITEMS = FRAME_ITEMS + 4
 # D-128: the baseline state - the revision artifact, the pointer, and the approved snapshot
@@ -57,6 +60,7 @@ BASELINE_FRAME_ITEMS = FRAME_ITEMS + len(store.BUNDLE_FILES) + len(BASELINE_NAME
 SNAPSHOT_COMMITTED = "snapshot_committed"
 BASELINE_APPROVED = "baseline_approved"
 LEDGER_NAME = stateroot.LEDGER_SEGMENT
+NO_REPORT = "No report was rendered; nothing was written."
 RENDER_ENTRY = ("import sys; sys.path.insert(0, %r); from isedraf.launcher.renderer import main; "
                 "sys.exit(main(sys.argv[1:]))" % engine.INSTALL_ROOT)
 INTERRUPTED = 128 + signal.SIGTERM
@@ -143,18 +147,46 @@ def check_store(root):
         raise NoCommittedRun("%s has no lock file" % root)
 
 
-def ledger_cores(ledger_bytes):
-    """record_core of every ledger record, in order. ISEDRAF metadata only, never evidence."""
-    out = []
-    for line in [l for l in ledger_bytes.split(b"\n") if l.strip()]:
-        try:
-            core = json.loads(line.decode("utf-8"))["record_core"]
-        except (ValueError, KeyError, TypeError, UnicodeDecodeError):
-            raise Refused("a ledger line is not a ledger record")
-        if not isinstance(core, dict):
-            raise Refused("a ledger line is not a ledger record")
-        out.append(core)
-    return out
+LEDGER_ITEM_RE = re.compile(r"^ledger/(segment-[0-9]{6}\.jsonl)$")
+
+
+def ledger_items(root):
+    """Every ledger segment as frame items, bounded and no-follow (STORE-010). Under the lock."""
+    _directory(os.path.join(root, ledger.LEDGER_DIRECTORY), store.OWNER_UID, store.OWNER_GID)
+    names = ledger.segment_names(root)
+    if len(names) > LEDGER_SEGMENTS_IN_FRAME:
+        raise Refused("the ledger has %d segments, more than %d" % (len(names),
+                                                                 LEDGER_SEGMENTS_IN_FRAME))
+    items = []
+    for name in names:
+        data, meta = _read(os.path.join(root, ledger.LEDGER_DIRECTORY, name), LEDGER_BOUND,
+                           store.OWNER_UID, store.OWNER_GID, 0o600)
+        items.append(frame.item(frame.ENTRY, ("ledger/" + name).encode("ascii"),
+                                frame.READ_OK, meta, data))
+    return items
+
+
+def verified_cores(named):
+    """record_core of every verified record, from {item name or segment name: bytes} or frame
+    items: ISEDRAF's own integrity metadata only. A torn tail is refused here - the read-only
+    routes never recover; the next Full Audit does (STORE-016)."""
+    if isinstance(named, list):
+        named = dict((i["name"].decode("ascii"), i["content"]) for i in named)
+    segments = {}
+    for name, data in named.items():
+        match = LEDGER_ITEM_RE.match(name)
+        if match:
+            segments[match.group(1)] = data
+        elif ledger.SEGMENT_RE.match(name):
+            segments[name] = data
+    rows, torn, problems = ledger.parse(segments)
+    if problems:
+        raise Refused("; ".join(problems))
+    if torn is not None:
+        raise Refused("%s: %s ends in an incomplete record, not yet recovered; the next "
+                      "sudo isedraf audit recovers it (STORE-016)" % (ledger.TORN_TAIL,
+                                                                    torn["segment"]))
+    return [r["record_core"] for r in rows]
 
 
 def _snapshot_id(core, what):
@@ -186,17 +218,13 @@ def baseline_record(cores):
 
 def acquire(root, engine_uid):
     """The ledger and the latest committed snapshot, as frame items. Under the lock."""
-    ledger_path = os.path.join(root, LEDGER_NAME)
-    if not os.path.lexists(ledger_path):
+    if not ledger.segment_names(root):
         raise NoCommittedRun("the ledger is empty")
-    ledger_bytes, ledger_meta = _read(ledger_path, LEDGER_BOUND, store.OWNER_UID,
-                                      store.OWNER_GID, 0o600)
-    cores = ledger_cores(ledger_bytes)
+    items = ledger_items(root)
+    cores = verified_cores(items)
     if not cores:
         raise NoCommittedRun("the ledger is empty")
     sid, _hash = latest_snapshot(cores)
-    items = [frame.item(frame.ENTRY, LEDGER_NAME.encode("ascii"), frame.READ_OK, ledger_meta,
-                        ledger_bytes)]
     return items + snapshot_items(root, sid, engine_uid)
 
 
@@ -250,8 +278,7 @@ def acquire_baseline(root, items, engine_uid):
     when it is not the latest run. Which snapshot that is comes from the ledger record,
     never from the reduced side or the caller.
     """
-    ledger_bytes = [i["content"] for i in items if i["name"] == LEDGER_NAME.encode("ascii")][0]
-    cores = ledger_cores(ledger_bytes)
+    cores = verified_cores(items)
     latest, _hash = latest_snapshot(cores)
     record = baseline_record(cores)
     artifact, pointer = baseline_state(root)
@@ -331,19 +358,24 @@ def run(fmt, root=None, err=None, engine_uid=None):
         with _ReadOnlyLock(root):
             items = acquire(root, engine_uid if engine_uid is not None else _engine_uid())
             items += acquire_evaluation(root, items)
+    # v0.5 H8, P3: 80 columns; reason tokens, identifiers and paths whole.
     except store.Unusable as exc:
-        err.write("isedraf: STATE_ROOT_UNUSABLE: %s\n" % exc)
+        err.write(summary.refusal("STATE_ROOT_UNUSABLE: %s" % exc, NO_REPORT))
         return STATE_ROOT_UNUSABLE
     except stateroot.RunInProgress as exc:
-        err.write("isedraf: RUN_IN_PROGRESS: %s\n" % exc)
+        err.write(summary.refusal("RUN_IN_PROGRESS: %s" % exc, NO_REPORT,
+                                  "wait for the other ISEDRAF run to finish, then run sudo "
+                                  "isedraf report again"))
         return RUN_IN_PROGRESS
     except NoCommittedRun as exc:
-        err.write("isedraf: no committed Full Audit run (%s); run `sudo isedraf audit` first. "
-                  "A report renders committed evidence and never collects.\n" % exc)
+        err.write(summary.refusal("no committed Full Audit run (%s); a report renders committed "
+                                  "evidence and never collects" % exc, NO_REPORT,
+                                  "sudo isedraf audit"))
         return USAGE_OR_ENGINE
     except (Refused, OSError, frame.FrameError) as exc:
-        err.write("isedraf: REPORT_REFUSED: %s; no report was rendered.\n" % exc)
-
+        err.write(summary.refusal("REPORT_REFUSED: %s" % exc, NO_REPORT,
+                                  "sudo isedraf audit (it recovers the ledger first)"
+                                  if ledger.TORN_TAIL in str(exc) else None))
         return USAGE_OR_ENGINE
     data = frame.encode(items)
     if len(data) > FRAME_LIMIT:

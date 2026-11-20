@@ -29,7 +29,7 @@ that ends with the run.
 The standard audit runs as your own user. Facts it cannot read, such as `/etc/shadow` and
 the sudo policy, are NOT_TESTED or PARTIAL, with the reason.
 
-Under `sudo`, ISEDRAF runs only `audit`, `report`, `evaluate` and `baseline approve`; every other command is refused with exit 70. It never asks for a password and never calls `sudo` itself. In a Full Audit:
+Under `sudo`, ISEDRAF runs only `audit`, `report`, `evaluate` and `baseline approve`, and answers `help`, `--help` and `--version` from its installed definitions without reading evidence; every other command is refused with exit 70. It never asks for a password and never calls `sudo` itself. In a Full Audit:
 
 - a root launcher starts a sandboxed systemd unit with a fixed property set: the file
   system read-only except the evidence store, no network, four capabilities as its bound;

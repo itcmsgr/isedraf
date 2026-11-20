@@ -33,6 +33,7 @@ USAGE_OR_ENGINE = 64      # usage or engine error
 PRIVILEGE_REFUSED = 70    # root or sudo execution refused (SCOPE-071)
 RUN_IN_PROGRESS = 66      # the whole-run lock was not acquired; nothing collected or written
 STATE_ROOT_UNUSABLE = 67  # the state root is missing, not a conforming directory, or unsuitable
+INSUFFICIENT_SPACE = 68   # too little free space for the run and a ledger recovery record (STORE-022)
 TOOL_INTEGRITY_FAILURE = 5  # D-127: the baseline in force does not verify (BASE-008)
 APPROVAL_REFUSED = 65     # D-127: baseline approval refused (BASE-021, BASE-026); never 2
 

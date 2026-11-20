@@ -57,6 +57,8 @@ LAYERS = [
     ("core", ("isedraf.canonical", "isedraf.ids", "isedraf.status",
               "isedraf.stateroot", "isedraf.hostio", "isedraf.hostpath",
               "isedraf.coverage",
+              # D-129 S1: the free-space preflight (STORE-016, STORE-022); statvfs and lstat only.
+              "isedraf.space",
               "isedraf.textbytes", "isedraf.exitcodes",
               # v0.2 P4: the supervisor imports nothing from the engine (AUTH-006), so it
               # sits at the bottom; fixedop is the engine's side of the same boundary.
@@ -79,8 +81,12 @@ LAYERS = [
                 # D-127 (v0.4): baseline approval and comparison over committed evidence.
                 # It reads and verifies the store and never collects; approve is the only
                 # writer of baselines/.
-                "isedraf.baseline")),
-    ("presentation", ("isedraf.report", "isedraf.explain")),
+                "isedraf.baseline",
+                # D-129 R1: read-only listing of a store's committed metadata (isedraf list).
+                "isedraf.listing")),
+    # D-129: the command table (help, reference, completion) is presentation data.
+    ("presentation", ("isedraf.report", "isedraf.explain", "isedraf.commands",
+                      "isedraf.summary")),
     # v0.2 P5b: the Full Audit launcher orchestrates the store and the engine as the CLI
     # does; it sits beside it, above every layer it composes.
     ("entrypoint", ("isedraf.cli", "isedraf.launcher", "isedraf.fullaudit")),
@@ -99,7 +105,8 @@ PURE = ("isedraf.shared.keyvalue", "isedraf.shared.compare", "isedraf.shared.res
         "isedraf.hostname.sources", "isedraf.hostname.model",
         "isedraf.supervisor.protocol", "isedraf.supervisor.contracts",
         "isedraf.evaluate.criteria", "isedraf.explain",
-        "isedraf.baseline.profile", "isedraf.baseline.projection")
+        "isedraf.baseline.profile", "isedraf.baseline.projection",
+        "isedraf.commands", "isedraf.summary")
 
 # D-125 EVAL-001: the report and `explain` render; they never evaluate. Importing the
 # module that creates an evaluation would let a rendering produce a result.

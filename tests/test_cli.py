@@ -50,9 +50,11 @@ class UsageErrorsExitSixtyFour(unittest.TestCase):
         code, _ = self.run_cli(["inventory", "--no-such-option"])
         self.assertEqual(code, exitcodes.USAGE_OR_ENGINE)
 
-    def test_no_command_is_a_usage_error(self):
-        code, _ = self.run_cli([])
-        self.assertEqual(code, exitcodes.USAGE_OR_ENGINE)
+    def test_no_command_is_the_start_page_and_exits_zero(self):
+        # D-129 Q1 (owner, 2026-11-13): bare isedraf prints the start page, exit 0. It was a
+        # usage error (64) until v0.5; invalid commands and arguments still are.
+        code, err = self.run_cli([])
+        self.assertEqual((code, err), (exitcodes.OK, ""))
 
     def test_help_and_version_still_exit_zero(self):
         for argv in (["--help"], ["--version"]):

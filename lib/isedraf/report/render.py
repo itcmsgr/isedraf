@@ -166,6 +166,33 @@ def to_markdown(report):
                "would be a judgement the data does not support.")
     out.append("")
 
+    # v0.5 R5: coverage, the native results and the baseline comparison first; the target,
+    # the evidence detail and the technical part (hashes, methods, limitations) follow.
+    sections = report.get("audit_sections") or {}
+    if sections:
+        from .sections import ORDER
+        out.append("## Audit sections")
+        out.append("")
+        out.append("| Area | Status | Reason |")
+        out.append("|---|---|---|")
+        rank = {n: i for i, n in enumerate(ORDER)}
+        for name, s in sorted(sections.items(), key=lambda kv: rank.get(kv[0], 99)):
+            out.append("| %s | %s | %s |" % (
+                s.get("title") or name, s.get("collection_status"),
+                (s.get("reason") or "").replace("|", "\\|") or "—"))
+            for label, status, detail in s.get("dimensions") or []:
+                out.append("| %s · %s | %s | %s |" % (s.get("title") or name, label, status,
+                                                      (detail or "").replace("|", "\\|")))
+        out.append("")
+        out.append("*NOT_TESTED means not observed - never passed. The HTML report "
+                   "(`isedraf report --html`) shows each area's facts and evidence "
+                   "reference.*")
+        out.append("")
+    out.extend(_native_markdown(report.get("native_results") or {"status": "NOT_SHOWN",
+                                                                  "reason": "no native results"}))
+    out.extend(_comparison_markdown(report.get("baseline_comparison") or {
+        "status": "NOT_EVALUATED", "reason": "no comparison in this report"}))
+
     assessment = report.get("assessment")
     if assessment:
         out.append("## Assessment")
@@ -430,30 +457,6 @@ def to_markdown(report):
                "rendered as an empty success.")
     out.append("")
 
-    sections = report.get("audit_sections") or {}
-    if sections:
-        from .sections import ORDER
-        out.append("## Audit sections")
-        out.append("")
-        out.append("| Area | Status | Reason |")
-        out.append("|---|---|---|")
-        rank = {n: i for i, n in enumerate(ORDER)}
-        for name, s in sorted(sections.items(), key=lambda kv: rank.get(kv[0], 99)):
-            out.append("| %s | %s | %s |" % (
-                s.get("title") or name, s.get("collection_status"),
-                (s.get("reason") or "").replace("|", "\\|") or "—"))
-            for label, status, detail in s.get("dimensions") or []:
-                out.append("| %s · %s | %s | %s |" % (s.get("title") or name, label, status,
-                                                      (detail or "").replace("|", "\\|")))
-        out.append("")
-        out.append("*NOT_TESTED means not observed - never passed. The HTML report "
-                   "(`isedraf report --html`) shows each area's facts and evidence "
-                   "reference.*")
-        out.append("")
-    out.extend(_native_markdown(report.get("native_results") or {"status": "NOT_SHOWN",
-                                                                  "reason": "no native results"}))
-    out.extend(_comparison_markdown(report.get("baseline_comparison") or {
-        "status": "NOT_EVALUATED", "reason": "no comparison in this report"}))
     limits = report.get("evidence_limitations") or {"recorded": False, "items": [],
                                                     "note": None}
     out.append("## Evidence limitations")
@@ -580,21 +583,8 @@ def to_html(report):
           % (_esc(name), _esc(s.get("title") or name), _status(s.get("collection_status"))))
     w("</table></div>\n")
 
-    for name, s in _ordered(sections):
-        w('<section id="section-%s">\n<h2>%s %s</h2>\n'
-          % (_esc(name), _esc(s.get("title") or name), _status(s.get("collection_status"))))
-        if s.get("reason"):
-            w('<p class="reason">%s</p>\n' % _esc(s["reason"]))
-        rows = s.get("summary") or []
-        if rows:
-            w("<table>\n")
-            for label, value in rows:
-                w("<tr><th>%s</th><td>%s</td></tr>\n" % (_esc(label), _esc(value)))
-            w("</table>\n")
-        ref = s.get("evidence_ref") or {}
-        w('<p class="ref">evidence: %s &middot; %s</p>\n</section>\n'
-          % (_esc(ref.get("path")), _esc(ref.get("digest") or "unbound")))
-
+    # v0.5 R5: coverage, the native results and the baseline comparison first; the
+    # per-section evidence detail, with its digests, follows them.
     native = report.get("native_results") or {"status": "NOT_SHOWN", "reason": "no native results"}
     w('<div class="panel"><h2>Native criteria</h2>\n<p class="reason">%s</p>\n'
       % _esc(NATIVE_FRAMING))
@@ -652,6 +642,21 @@ def to_html(report):
                 w("<p>%s %s: %s</p>\n" % (_esc(r["section"]), _esc(r.get("primitive")),
                                          _esc(r.get("reason"))))
     w("</div>\n")
+
+    for name, s in _ordered(sections):
+        w('<section id="section-%s">\n<h2>%s %s</h2>\n'
+          % (_esc(name), _esc(s.get("title") or name), _status(s.get("collection_status"))))
+        if s.get("reason"):
+            w('<p class="reason">%s</p>\n' % _esc(s["reason"]))
+        rows = s.get("summary") or []
+        if rows:
+            w("<table>\n")
+            for label, value in rows:
+                w("<tr><th>%s</th><td>%s</td></tr>\n" % (_esc(label), _esc(value)))
+            w("</table>\n")
+        ref = s.get("evidence_ref") or {}
+        w('<p class="ref">evidence: %s &middot; %s</p>\n</section>\n'
+          % (_esc(ref.get("path")), _esc(ref.get("digest") or "unbound")))
 
     limits = report.get("evidence_limitations") or {"recorded": False, "items": [],
                                                     "note": None}

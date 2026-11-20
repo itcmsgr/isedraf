@@ -72,6 +72,7 @@ graph TD
     isedraf_cli --> isedraf_baseline_approve
     isedraf_cli --> isedraf_baseline_revision
     isedraf_cli --> isedraf_catalog
+    isedraf_cli --> isedraf_commands
     isedraf_cli --> isedraf_evaluate
     isedraf_cli --> isedraf_evaluate_run
     isedraf_cli --> isedraf_exitcodes
@@ -79,10 +80,14 @@ graph TD
     isedraf_cli --> isedraf_identity
     isedraf_cli --> isedraf_inventory
     isedraf_cli --> isedraf_ledger
+    isedraf_cli --> isedraf_listing
     isedraf_cli --> isedraf_report
     isedraf_cli --> isedraf_snapshot
+    isedraf_cli --> isedraf_space
     isedraf_cli --> isedraf_stateroot
+    isedraf_cli --> isedraf_summary
     isedraf_cli --> isedraf_verify
+    isedraf_commands --> isedraf
     isedraf_coverage --> isedraf
     isedraf_coverage --> isedraf_canonical
     isedraf_coverage --> isedraf_status
@@ -103,6 +108,7 @@ graph TD
     isedraf_evaluate_run --> isedraf_snapshot
     isedraf_evaluate_run --> isedraf_stateroot
     isedraf_evaluate_run --> isedraf_verify
+    isedraf_explain --> isedraf_summary
     isedraf_fixedop --> isedraf
     isedraf_fixedop --> isedraf_supervisor
     isedraf_fullaudit --> isedraf
@@ -149,6 +155,10 @@ graph TD
     isedraf_launcher_evalunit --> isedraf_exitcodes
     isedraf_launcher_evalunit --> isedraf_launcher
     isedraf_launcher_evalunit --> isedraf_supervisor
+    isedraf_launcher_listunit --> isedraf
+    isedraf_launcher_listunit --> isedraf_evaluate
+    isedraf_launcher_listunit --> isedraf_exitcodes
+    isedraf_launcher_listunit --> isedraf_launcher
     isedraf_launcher_outer --> isedraf
     isedraf_launcher_outer --> isedraf_exitcodes
     isedraf_launcher_renderer --> isedraf
@@ -167,6 +177,7 @@ graph TD
     isedraf_ledger --> isedraf
     isedraf_ledger --> isedraf_canonical
     isedraf_ledger --> isedraf_stateroot
+    isedraf_listing --> isedraf
     isedraf_loginpolicy_acquire --> isedraf
     isedraf_loginpolicy_acquire --> isedraf_coverage
     isedraf_loginpolicy_acquire --> isedraf_hostio
@@ -304,6 +315,8 @@ graph TD
     isedraf_sudo_sources --> isedraf
     isedraf_sudo_sources --> isedraf_sudo_model
     isedraf_sudo_sources --> isedraf_textbytes
+    isedraf_summary --> isedraf
+    isedraf_summary --> isedraf_status
     isedraf_supervisor_perform --> isedraf_supervisor
     isedraf_supervisor_serve --> isedraf_supervisor
     isedraf_verify --> isedraf

@@ -126,13 +126,18 @@ def commit(root, store_class, action, obj, raw, artifact_digest=None):
     return APPROVED if action == NEW else COMPLETED
 
 
-def approve(root, store_class, snapshot_id, load_snapshot):
+def approve(root, store_class, snapshot_id, load_snapshot, before_write=None):
     """(outcome, revision object): the DEV command, plan and commit in one process.
+
+    `before_write(obj)`, when given, is called once the plan succeeded and before anything is
+    written (v0.5 P5: the operator sees what is being approved before it is recorded).
 
     `load_snapshot(snapshot_id)` -> (core, manifest_hash, data) of a ledgered snapshot that
     verifies, or raises (the CLI maps that to 64, nothing written).
     """
     action, obj, raw = plan(root, store_class, snapshot_id, load_snapshot)
+    if before_write is not None:
+        before_write(obj)
     digest = revision.digest(raw) if raw is not None else None
     if action == WRITE_POINTER:
         digest = revision.store_state(root)[0][-1]["artifact_digest"]

@@ -120,6 +120,30 @@ class Audit(unittest.TestCase):
         self.assertEqual(len(names), 1)
         return os.path.join(snaps, names[0])
 
+    def test_the_output_is_header_then_a_summary_of_the_committed_run(self):
+        # v0.5 P1, P2 (D-129): header from the committed run; counts equal its sections.
+        import json
+        code, out, err = self.audit()
+        self.assertIn(code, (exitcodes.OK, exitcodes.INCOMPLETE), err)
+        lines = out.splitlines()
+        snap = self.snapshot_dir()
+        sid = os.path.basename(snap)
+        self.assertIn("| isedraf audit", lines[1])
+        self.assertIn("development run, a development (DEV) store", lines[2])
+        self.assertTrue(lines[3].startswith("snapshot %s, collected " % sid), lines[3])
+        statuses = []
+        for name in audit.SECTIONS:
+            with open(os.path.join(snap, "sections", name + ".json")) as fh:
+                statuses.append(json.load(fh)["collection_status"])
+        self.assertIn("Coverage of %d areas: %d COLLECTED, %d PARTIAL, %d NOT_TESTED, %d ERROR."
+                      % ((len(statuses),) + tuple(statuses.count(s) for s in
+                                                  ("COLLECTED", "PARTIAL", "NOT_TESTED",
+                                                   "ERROR"))), out)
+        self.assertIn("  isedraf evaluate", out)
+        self.assertEqual(code == exitcodes.INCOMPLETE, "Exit 2 means" in out)
+        for line in out.splitlines() + err.splitlines():   # rc3: every line, stdout too
+            self.assertLessEqual(len(line), 80, line)
+
     def test_every_section_is_collected_once_and_committed(self):
         calls = {}
         real = dict(audit.COLLECTORS)

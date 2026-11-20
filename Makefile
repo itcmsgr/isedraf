@@ -6,9 +6,9 @@
 # CI invokes these same targets rather than re-implementing them in YAML, which is
 # what prevents a gate silently degrading into a warning. There is no warning tier.
 
-.PHONY: check check-provider-alignment check-native-catalog check-evidence-limits check-privileged-operations check-licensing check-public-claims check-deb-ordering check-reproducible check-sbom check-tests check-python-floor check-architecture check-architecture-artifacts check-packaging check-storage-vocabulary check-native-catalog check-evidence-limits check-privileged-operations check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-sample-report check-headers check-docs check-scope check-shell check-refs check-paths check-index check-freeze check-precommit check-imports check-vectors check-vectors-negative check-vectors-crossversion check-gate-coverage check-falsifiable check-public-ux help
+.PHONY: check check-provider-alignment check-native-catalog check-evidence-limits check-privileged-operations check-licensing check-public-claims check-deb-ordering check-reproducible check-sbom check-tests check-python-floor check-architecture check-architecture-artifacts check-packaging check-storage-vocabulary check-native-catalog check-evidence-limits check-privileged-operations check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-sample-report check-headers check-docs check-scope check-shell check-refs check-paths check-index check-freeze check-precommit check-imports check-vectors check-vectors-negative check-vectors-crossversion check-gate-coverage check-falsifiable check-public-ux check-commands check-cli-reference check-completion help
 
-check: check-scope check-headers check-python-floor check-architecture check-architecture-artifacts check-packaging check-storage-vocabulary check-native-catalog check-evidence-limits check-privileged-operations check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-sample-report check-shell check-refs check-paths check-index check-freeze check-governance check-precommit check-imports check-exitcodes check-vectors check-vectors-negative check-vectors-crossversion check-tests check-test-inclusion check-docs check-public-ux check-repo-security check-dco check-export
+check: check-scope check-headers check-python-floor check-architecture check-architecture-artifacts check-packaging check-storage-vocabulary check-native-catalog check-evidence-limits check-privileged-operations check-licensing check-public-claims check-privacy check-docs-truth check-current-state check-commands check-cli-reference check-completion check-sample-report check-shell check-refs check-paths check-index check-freeze check-governance check-precommit check-imports check-exitcodes check-vectors check-vectors-negative check-vectors-crossversion check-tests check-test-inclusion check-docs check-public-ux check-repo-security check-dco check-export
 	@echo "make check: all gates passed"
 
 ## check-scope   D-96: no product implementation before architecture freeze
@@ -327,6 +327,33 @@ check-tests:
 	@out=$$(python3 tests/test_cli.py 2>&1); rc=$$?; \
 	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
 	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_commands.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_terminal_width.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_ledger_recovery.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_list_route.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_list.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_space.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_summary.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_completion.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_sbom_unpack.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
 	@out=$$(python3 tests/test_launcher.py 2>&1); rc=$$?; \
 	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
 	 else echo "$$out"; exit $$rc; fi
@@ -400,3 +427,16 @@ check-public-ux:
 
 help:
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/^## /  /'
+
+## check-commands  D-129 (H6): one command table; parser, exit rows, root forms, examples agree
+check-commands:
+	@echo "--- command table (D-129) ---"
+	@python3 -B scripts/ci/check_commands.py
+
+## check-cli-reference  D-89, D-129: docs/reference/CLI.md is generated from the command table
+check-cli-reference:
+	@python3 -B scripts/docs/cli_reference.py check
+
+## check-completion  D-129 (C1): the bash completion is generated from the command table
+check-completion:
+	@python3 -B scripts/docs/bash_completion.py check

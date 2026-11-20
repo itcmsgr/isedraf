@@ -138,11 +138,13 @@
       "isedraf.baseline.approve",
       "isedraf.baseline.revision",
       "isedraf.catalog",
+      "isedraf.commands",
       "isedraf.evaluate",
       "isedraf.evaluate.run",
       "isedraf.exitcodes",
       "isedraf.exitcodes.APPROVAL_REFUSED",
       "isedraf.exitcodes.INCOMPLETE",
+      "isedraf.exitcodes.INSUFFICIENT_SPACE",
       "isedraf.exitcodes.OK",
       "isedraf.exitcodes.PRIVILEGE_REFUSED",
       "isedraf.exitcodes.RUN_IN_PROGRESS",
@@ -153,10 +155,16 @@
       "isedraf.identity",
       "isedraf.inventory",
       "isedraf.ledger",
+      "isedraf.listing",
       "isedraf.report",
       "isedraf.snapshot",
+      "isedraf.space",
       "isedraf.stateroot",
+      "isedraf.summary",
       "isedraf.verify"
+    ],
+    "isedraf.commands": [
+      "isedraf"
     ],
     "isedraf.coverage": [
       "isedraf",
@@ -196,7 +204,9 @@
       "isedraf.verify"
     ],
     "isedraf.exitcodes": [],
-    "isedraf.explain": [],
+    "isedraf.explain": [
+      "isedraf.summary"
+    ],
     "isedraf.fixedop": [
       "isedraf",
       "isedraf.supervisor"
@@ -305,6 +315,12 @@
       "isedraf.launcher",
       "isedraf.supervisor"
     ],
+    "isedraf.launcher.listunit": [
+      "isedraf",
+      "isedraf.evaluate",
+      "isedraf.exitcodes",
+      "isedraf.launcher"
+    ],
     "isedraf.launcher.outer": [
       "isedraf",
       "isedraf.exitcodes"
@@ -334,6 +350,9 @@
       "isedraf",
       "isedraf.canonical",
       "isedraf.stateroot"
+    ],
+    "isedraf.listing": [
+      "isedraf"
     ],
     "isedraf.loginpolicy.acquire": [
       "isedraf",
@@ -526,6 +545,7 @@
       "isedraf.ids",
       "isedraf.stateroot"
     ],
+    "isedraf.space": [],
     "isedraf.ssh.acquire": [
       "isedraf",
       "isedraf.coverage",
@@ -600,6 +620,10 @@
       "isedraf.sudo",
       "isedraf.sudo.model",
       "isedraf.textbytes"
+    ],
+    "isedraf.summary": [
+      "isedraf",
+      "isedraf.status"
     ],
     "isedraf.supervisor": [],
     "isedraf.supervisor.contracts": [],

@@ -291,7 +291,7 @@ class TestCLI(unittest.TestCase):
         args = type("A", (), {"json": False, "root": "/"})()
         code = cli.cmd_inventory(args, out=out, err=err)
         text = out.getvalue()
-        self.assertIn("ISEDRAF host inventory", text)
+        self.assertIn("| isedraf inventory", text.splitlines()[1])          # v0.5 P1 header
         for section in ("PLATFORM", "COMPUTE", "STORAGE", "NETWORK", "TIME"):
             self.assertIn(section, text)
         self.assertIn(code, (0, 2))

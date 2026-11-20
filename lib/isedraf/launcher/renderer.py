@@ -31,7 +31,7 @@ import secrets
 import shutil
 import sys
 
-from isedraf import fullaudit, ids, report, verify
+from isedraf import fullaudit, ids, ledger, report, verify
 from isedraf.exitcodes import INCOMPLETE, OK, USAGE_OR_ENGINE
 from isedraf.launcher import reportunit, store
 from isedraf.supervisor import frame
@@ -59,7 +59,6 @@ def layout(items, base):
     snapshots are accepted - the latest run and the approved baseline's snapshot - and the
     two baseline files; every snapshot written must have its manifest.
     """
-    ledger_name = reportunit.LEDGER_NAME
     sids, seen = set(), set()
     for it in items:
         if it["kind"] != frame.ENTRY or it["acquisition_outcome"] != frame.READ_OK:
@@ -71,8 +70,8 @@ def layout(items, base):
         if name is None or name in seen:
             raise FrameRefused("an item name that is not a single ASCII name")
         seen.add(name)
-        if name == ledger_name:
-            rel = name
+        if reportunit.LEDGER_ITEM_RE.match(name):
+            rel = name                  # every segment (STORE-010); parsed by ledger.parse
         elif _EVALUATION_NAME.match(name) or name in reportunit.BASELINE_NAMES:
             rel = name                  # checked by its manifest digests or BASE-011
         else:
@@ -87,14 +86,14 @@ def layout(items, base):
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
         with os.fdopen(fd, "wb") as fh:
             fh.write(it["content"])
-    if ledger_name not in seen or not sids or any(
+    if not any(reportunit.LEDGER_ITEM_RE.match(n) for n in seen) or not sids or any(
             "snapshots/%s/manifest.json" % s not in seen for s in sids):
         raise FrameRefused("the frame lacks the ledger or a snapshot manifest")
-    with open(os.path.join(base, ledger_name), "rb") as fh:
-        try:
-            sid, _hash = reportunit.latest_snapshot(reportunit.ledger_cores(fh.read()))
-        except (reportunit.Refused, reportunit.NoCommittedRun) as exc:
-            raise FrameRefused(str(exc))
+    try:
+        sid, _hash = reportunit.latest_snapshot(
+            reportunit.verified_cores(ledger.read_segments(base)))
+    except (reportunit.Refused, reportunit.NoCommittedRun, ledger.IntegrityFailure) as exc:
+        raise FrameRefused(str(exc))
     if sid not in sids:
         raise FrameRefused("the frame does not carry the latest committed run")
     return sid
@@ -104,8 +103,7 @@ def bound_to_ledger(base, sid):
     """The last snapshot_committed record names this snapshot and its manifest hash (D-50).
 
     D-128: not the last record - a baseline_approved record may follow it."""
-    with open(os.path.join(base, reportunit.LEDGER_NAME), "rb") as fh:
-        cores = reportunit.ledger_cores(fh.read())
+    cores = reportunit.verified_cores(ledger.read_segments(base))
     runs = [c for c in cores if c.get("event") == reportunit.SNAPSHOT_COMMITTED]
     core = runs[-1] if runs else {}
     with open(os.path.join(base, "snapshots", sid, "manifest.json"), "rb") as fh:
