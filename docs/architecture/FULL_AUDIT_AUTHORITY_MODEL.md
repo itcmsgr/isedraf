@@ -335,6 +335,54 @@ invocation becomes *"Under sudo or root, ISEDRAF runs only `sudo isedraf audit` 
 isedraf report` (its report), `sudo isedraf evaluate` (its evaluation) and `sudo isedraf baseline
 approve` (its baseline). Run other ISEDRAF commands as your normal user."*
 
+**Amended for v0.5 by D-129.** Before any other check, the outer entry answers the help forms from
+the installed command definitions (`lib/isedraf/commands.py`) and the installed version, with the
+same function and the same text as the user route: `isedraf` with no argument (the start page),
+`isedraf help`, `isedraf help --all`, `isedraf help --help` (or `-h`), `isedraf --help`, `isedraf -h`,
+`isedraf --version`, and `isedraf help COMMAND` for each implemented command or command group. They print to standard
+output and exit `0`; `isedraf help` naming anything else exits `64`, naming it and listing the valid
+commands. Answering them reads no evidence, opens, creates or checks no store, collects nothing,
+starts no unit and runs no program, under euid 0 and with `SUDO_USER` set alike. The accepted forms
+are listed explicitly in the command definitions, and a gate holds the user route and this route to
+one answer. `bin/isedraf` answers no help itself; `ISEDRAF_STATE_ROOT` is still refused first
+(`PRIV-004`). Where `/usr/bin/python3` or the installed package is missing (a stock AlmaLinux 8
+host has only `platform-python`), the outer entry cannot run, so help under sudo is refused with
+`70` like every other invocation, with the refusal below and a last line naming what is missing. The admitted routes are unchanged. Every other invocation is refused with exit `70`
+and this message, one command per line:
+
+```text
+Under sudo or root, ISEDRAF runs only:
+  sudo isedraf audit              Full Audit
+  sudo isedraf report             its report (also --json or --html)
+  sudo isedraf evaluate           its evaluation
+  sudo isedraf baseline approve   its baseline
+Run every other ISEDRAF command as your normal user. Help: sudo isedraf help
+```
+
+**Amended for v0.5 by D-129 point 12.** `isedraf list`, alone or with `--all`, enters the read-only
+listing route of `AUTH-035`. A refusal says why, whether anything was written and the next valid
+command, and shows the private export of a Full Audit report, which changes guidance and no right:
+the export runs in the operator's own shell, as the operator. When `SUDO_USER` is set for a non-root
+account (for example after `sudo -iu alice`), a first line says that the session was started through
+sudo, that ISEDRAF treats it as privileged (`SCOPE-071`, unchanged), and that the account should log in
+directly, for example with `su - <account>`. For v0.5 the route keeps `/usr/bin/python3` (`AUTH-020`);
+where it is missing, the refusal says so, and on a host whose interpreter is only `platform-python`
+(a stock AlmaLinux 8) it adds that ISEDRAF runs there as the normal user only. Another interpreter is a
+separate decision. Every other invocation is refused with exit `70` and this message:
+
+```text
+Under sudo or root, ISEDRAF runs only:
+  sudo isedraf audit              Full Audit
+  sudo isedraf report             its report (also --json or --html)
+  sudo isedraf evaluate           its evaluation
+  sudo isedraf baseline approve   its baseline
+  sudo isedraf list               what the system store holds (also --all)
+Nothing was collected or written. Run every other ISEDRAF command as your
+normal user. Help: sudo isedraf help
+To export a Full Audit report privately, as your user:
+  (umask 077; set -o noclobber; sudo isedraf report > ~/isedraf-report.md)
+```
+
 **AUTH-020 (D-124, EXEC-010, EXEC-011, AUTH-011) SHALL** The launcher is hardened and lives in
 `lib/isedraf/launcher/`, the only package where `os.execv*` is allowed:
 
@@ -945,3 +993,23 @@ no collector, no supervisor operation, no capability and no general privileged w
   latest run, never the last record.
 - **Exit codes**: `0` approved or an interrupted approval completed; `5`; `64`; `65`; `66`; `67`; `70`;
   and the `AUTH-020` interruption statuses.
+
+**AUTH-035 (D-129, AUTH-019, AUTH-022, AUTH-023, AUTH-032, AUTH-033) SHALL** The read-only listing of
+the system store. `isedraf list`, alone or with `--all`, under euid 0 or with `SUDO_USER` set, lists what
+the `SYSTEM_PRODUCTION` store holds, and nothing else:
+
+- **The same execution model as `AUTH-032`.** The outer entry runs `/usr/bin/systemd-run` with the
+  report unit's constant properties, so the store is read-only in the unit (`ProtectSystem=strict`, no
+  `ReadWritePaths=`); only the run id and the scope (`newest` or `all`) vary. No other argument is
+  admitted; anything else is refused with `70` (`AUTH-019`).
+- **Metadata only.** The launcher in the unit checks the store as `AUTH-022` states it and never touches
+  it; a store that does not exist is reported and never created. It takes the whole-run lock on a
+  read-only descriptor (`66` while it is held), reads the ledger bounded and no-follow, as `AUTH-032`
+  does, and lists the names of `snapshots/` and `evaluations/`. It shows the committed runs with their
+  times, the baseline approval, the evaluation identities, and how many snapshot directories the ledger
+  does not record (`SNAP-018`). It opens no snapshot file and no evaluation artifact: no host evidence
+  is read and no result is interpreted (`AUTH-033`).
+- **Nothing is written** and nothing is started beyond the unit; no capability beyond `AUTH-028`. The
+  system store keeps no saved reports; the listing shows the private export of `AUTH-019` instead.
+- **Exit codes**: `0` listed (an absent store too); `64`; `66`; `67`; `70`; and the `AUTH-020`
+  interruption statuses.

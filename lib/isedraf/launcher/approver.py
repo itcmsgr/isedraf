@@ -29,7 +29,7 @@ import secrets
 import shutil
 import sys
 
-from isedraf import fullaudit, verify
+from isedraf import fullaudit, ledger, summary, verify
 from isedraf.baseline import approve, revision
 from isedraf.evaluate import run as evaluate_run
 from isedraf.exitcodes import (APPROVAL_REFUSED, OK, TOOL_INTEGRITY_FAILURE,
@@ -78,7 +78,8 @@ def decide(data, out, err, state_root_class=None):
                 base, state_root_class, sid, lambda s: evaluate_run.verified_run(base, s),
                 complete_recorded=True)
         except revision.ApprovalRefused as exc:
-            err.write("isedraf: approval refused, nothing was written: %s\n" % exc)
+            err.write(summary.explained(exc.token, exc.detail, "Approval refused; nothing was "
+                                        "written."))
             return APPROVAL_REFUSED
         except revision.IntegrityFailure as exc:
             err.write("isedraf: baseline integrity failure, nothing was written: %s\n" % exc)
@@ -86,12 +87,16 @@ def decide(data, out, err, state_root_class=None):
         except evaluate_run.EvaluationRefused as exc:
             err.write("isedraf: APPROVAL_REFUSED: %s; nothing was written.\n" % exc)
             return USAGE_OR_ENGINE
+        # v0.5 P5: what is approved, shown before the answer reaches the launcher, which alone
+        # writes; on any refusal above, nothing was shown as approved and nothing was written.
+        collected = dict((r.get("snapshot_id"), r.get("occurred_at"))
+                         for r in ledger.snapshot_records(base)).get(obj["snapshot_id"])
+        err.write(summary.header("sudo isedraf baseline approve", state_root_class,
+                                 obj["snapshot_id"], collected))
+        err.write(summary.approval_text(obj, collected, state_root_class))
+        err.flush()
         out.write(frame.encode(answer_items(action, raw)))
         out.flush()
-        err.write("ISEDRAF baseline (system store)\n")
-        err.write("  approved snapshot : %s\n" % obj["snapshot_id"])
-        err.write("  profile           : %s\n" % obj["profile"]["object"]["profile_id"])
-        err.write("  sections          : %s\n" % ", ".join(obj["tracked_sections"]))
         return OK
     finally:
         shutil.rmtree(base, ignore_errors=True)

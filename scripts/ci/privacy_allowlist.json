@@ -2,6 +2,7 @@
   "$comment": "Consumed by scripts/ci/check_privacy.py. Every entry needs a justification: an allowlist without reasons becomes a place to hide findings. Nothing is excluded silently \u2014 an allowed value is still classified and counted.",
   "approved_public_identifiers": {
     "itcms.gr": "the owner's published business contact, intentionally public in every SPDX header",
+    "lewing@isc.tamu.edu": "Larry Ewing, the author of Tux: his terms ask to be acknowledged by this address; the logo follows Tux's style (docs/assets/LOGO.md, NOTICE; owner 2026-11-20)",
     "contact@itcms.gr": "same",
     "github.com": "the forge this project is published on",
     "img.shields.io": "badge rendering in README",

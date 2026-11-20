@@ -19,7 +19,8 @@ the ledger, reports and logs are stored ·
 [`reference/CONTROL_EVIDENCE_MAP.md`](reference/CONTROL_EVIDENCE_MAP.md) — which Linux fact maps to
 which evidence field, and what it does not prove ·
 [`REPOSITORY_MAP.md`](REPOSITORY_MAP.md) — where everything lives ·
-[`reference/GLOSSARY.md`](reference/GLOSSARY.md) — canonical terms.
+[`reference/GLOSSARY.md`](reference/GLOSSARY.md) — canonical terms ·
+[`reference/CLI.md`](reference/CLI.md) — every command, its effect, privilege, exit codes and examples.
 
 | Section | For | Contents |
 |---|---|---|

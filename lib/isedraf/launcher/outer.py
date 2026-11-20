@@ -4,17 +4,23 @@
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
 #
-# Purpose: The outer entry under root: refuse all but `audit` and `report`, then run systemd-run.
-# Implements: D-128, AUTH-034, AUTH-019, AUTH-020, AUTH-026, AUTH-027, PRIV-006, PRIV-008, EXEC-010, OUT-003
+# Purpose: The outer entry under root: answer help, refuse all but the four routes, run systemd-run.
+# Implements: D-128, D-129, AUTH-034, AUTH-019, AUTH-020, AUTH-026, AUTH-027, PRIV-006, PRIV-008, EXEC-010, OUT-003
+#
+# D-129 (AUTH-019 as amended for v0.5): before anything else is checked, the help forms and
+# the version are answered from the installed command definitions (isedraf.commands.answer,
+# the same function the user route calls) and written to stdout or stderr. That answer reads
+# no evidence, opens no store, starts no unit and runs no program; exit 0, or 64 for
+# `help <unknown>`. Every other invocation goes on to admission exactly as before.
 #
 # bin/isedraf reaches this module, and only this module, when it runs as root or under sudo
 # (AUTH-019). It is minimal and touches nothing: it never opens, creates, checks or repairs
-# the state root (AUTH-026, PRIV-008), takes no option, and passes no operator environment
-# on. It refuses with exit 70 every invocation that is not exactly `audit`, a host without
-# systemd or outside the supported platforms (FULL_AUDIT_UNSUPPORTED, PRIV-006), and a host
-# without the isedraf account (ENGINE_IDENTITY_MISSING). It refuses an install root that is
-# not root-owned and closed to others (ENGINE_UNSAFE_INSTALL, EXEC-010). Then it runs
-# systemd-run, whose properties are the constants below: the exit code of the run is the
+# the state root (AUTH-026, PRIV-008), takes no option beyond the help forms, and passes no
+# operator environment on. It refuses with exit 70 every invocation that is not admitted, a
+# host without systemd or outside the supported platforms (FULL_AUDIT_UNSUPPORTED, PRIV-006),
+# and a host without the isedraf account (ENGINE_IDENTITY_MISSING). It refuses an install root
+# that is not root-owned and closed to others (ENGINE_UNSAFE_INSTALL, EXEC-010). Then it
+# runs systemd-run, whose properties are the constants below: the exit code of the run is the
 # exit code of systemd-run (OUT-003).
 #
 # IQ-062: the outer entry owns the transport. systemd-run gets stdin /dev/null and stdout and
@@ -54,7 +60,7 @@ import stat
 import subprocess
 import sys
 
-from isedraf import ids
+from isedraf import commands, ids, summary
 from isedraf.exitcodes import INCOMPLETE, OK, PRIVILEGE_REFUSED, USAGE_OR_ENGINE
 
 SYSTEMD_RUN = "/usr/bin/systemd-run"
@@ -71,10 +77,25 @@ EXEC_ENVIRONMENT = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL": "C"}
 # AUTH-019: the supported platforms, by os-release ID and the major part of VERSION_ID.
 SUPPORTED = {("debian", "12"), ("ubuntu", "24.04"), ("rocky", "9"), ("almalinux", "9")}
 
-REFUSAL = ("Under sudo or root, ISEDRAF runs only `sudo isedraf audit` (Full Audit), "
-           "`sudo isedraf report` (its report), `sudo isedraf evaluate` (its evaluation) and "
-           "`sudo isedraf baseline approve` (its baseline). Run other ISEDRAF commands as your "
-           "normal user.")
+# AUTH-019 as amended for v0.5 (register item H2): one command per line. bin/isedraf prints
+# the same lines when the installed package is missing; the command gate holds them equal.
+REFUSAL = ("Under sudo or root, ISEDRAF runs only:\n"
+           "  sudo isedraf audit              Full Audit\n"
+           "  sudo isedraf report             its report (also --json or --html)\n"
+           "  sudo isedraf evaluate           its evaluation\n"
+           "  sudo isedraf baseline approve   its baseline\n"
+           "  sudo isedraf list               what the system store holds (also --all)\n"
+           "Nothing was collected or written. Run every other ISEDRAF command as your\n"
+           "normal user. Help: sudo isedraf help\n"
+           "To export a Full Audit report privately, as your user:\n"
+           "  (umask 077; set -o noclobber; sudo isedraf report > ~/isedraf-report.md)")
+NOTHING_RUN = "Nothing was run, collected or written."
+# H9 (register; SCOPE-071 unchanged): a non-root account entered through sudo (for example
+# `sudo -iu alice`) has SUDO_USER set and is refused like root; this says why and what works.
+SUDO_SESSION = ("this session was started through sudo for a non-root account\n"
+                "(SUDO_USER is set), and ISEDRAF treats such a session as privileged\n"
+                "(SCOPE-071). Log in as that account directly - for example\n"
+                "su - <account> - and run isedraf there.")
 # AUTH-032: the read-only report route - the invocations it admits and the format each names.
 REPORT_INVOCATIONS = {("report",): "markdown", ("report", "--json"): "json",
                       ("report", "--html"): "html"}
@@ -82,6 +103,8 @@ REPORT_INVOCATIONS = {("report",): "markdown", ("report", "--json"): "json",
 EVALUATE_INVOCATION = ("evaluate",)
 # AUTH-034: the baseline route - exactly one invocation, no snapshot argument (D-128).
 BASELINE_INVOCATION = ("baseline", "approve")
+# AUTH-035: the read-only listing route (D-129 point 12) - the invocations and their scope.
+LIST_INVOCATIONS = {("list",): "newest", ("list", "--all"): "all"}
 
 # AUTH-020, AUTH-026, AUTH-027, EXEC-001, EXEC-002, PRIV-007, PRIV-009: constants of the
 # package. The bounding set is the measured candidate set (AUTH-027); the ambient set is
@@ -119,6 +142,8 @@ EVALUATE_ENTRY = ("import sys; sys.path.insert(0, %r); from isedraf.launcher.eva
                   "main; sys.exit(main(sys.argv[1:]))" % INSTALL_ROOT)
 BASELINE_ENTRY = ("import sys; sys.path.insert(0, %r); from isedraf.launcher.baselineunit import "
                   "main; sys.exit(main(sys.argv[1:]))" % INSTALL_ROOT)
+LIST_ENTRY = ("import sys; sys.path.insert(0, %r); from isedraf.launcher.listunit import "
+              "main; sys.exit(main(sys.argv[1:]))" % INSTALL_ROOT)
 # AUTH-032: the audit unit's constant properties without write access to the store, which
 # ProtectSystem=strict then leaves read-only.
 REPORT_PROPERTIES = tuple(p for p in PROPERTIES if not p.startswith("ReadWritePaths="))
@@ -156,6 +181,17 @@ def baseline_unit_argv(run_id):
         raise ValueError("not a run identifier: %r" % (run_id,))
     return _systemd_run("isedraf-baseline-", run_id, PROPERTIES) + [
         PYTHON, "-IB", "-c", BASELINE_ENTRY, run_id]
+
+
+def list_unit_argv(run_id, scope):
+    """AUTH-035: the read-only list unit, with the report unit's properties (the store is
+    read-only). Only the run id and the scope vary."""
+    if not ids.ID_RE.match(run_id or "") or not run_id.startswith("RUN-"):
+        raise ValueError("not a run identifier: %r" % (run_id,))
+    if scope not in LIST_INVOCATIONS.values():
+        raise ValueError("not a listing scope: %r" % (scope,))
+    return _systemd_run("isedraf-list-", run_id, REPORT_PROPERTIES) + [
+        PYTHON, "-IB", "-c", LIST_ENTRY, run_id, scope]
 
 
 def _systemd_run(prefix, run_id, properties):
@@ -212,7 +248,7 @@ def stop_argv(run_id, prefix="isedraf-audit-"):
     """The fixed stop of one run's unit. Only the run id varies, and it is never a path."""
     if not ids.ID_RE.match(run_id or "") or not run_id.startswith("RUN-"):
         raise ValueError("not a run identifier: %r" % (run_id,))
-    if prefix not in ("isedraf-audit-", "isedraf-report-"):
+    if prefix not in ("isedraf-audit-", "isedraf-report-", "isedraf-list-"):
         raise ValueError("not an ISEDRAF unit prefix: %r" % (prefix,))
     return [SYSTEMCTL, "kill", "--kill-whom=all", "--signal=SIGUSR2",
             "%s%s.service" % (prefix, run_id)]
@@ -333,14 +369,35 @@ def refuse(code, text, err):
     return code
 
 
+def answer_help(argv, out_fd=1, err_fd=2):
+    """D-129 (AUTH-019 as amended for v0.5): the help forms and the version, answered from
+    the installed command definitions before any other check. Returns the exit code, or None
+    when argv is not a help form. Nothing is read but the definitions; nothing is started."""
+    helped = commands.answer(argv)
+    if helped is None:
+        return None
+    code, text, problem = helped
+    _write_all(out_fd, text.encode("utf-8"))
+    _write_all(err_fd, problem.encode("utf-8"))
+    return code
+
+
 def main(argv, err=None):
     err = sys.stderr if err is None else err
-    if os.geteuid() != 0 or (list(argv) != ["audit"] and tuple(argv) not in REPORT_INVOCATIONS
+    helped = answer_help(argv)
+    if helped is not None:
+        return helped
+    if os.geteuid() != 0:
+        refuse(PRIVILEGE_REFUSED, SUDO_SESSION, err)
+        return refuse(PRIVILEGE_REFUSED, REFUSAL, err)
+    if (list(argv) != ["audit"] and tuple(argv) not in REPORT_INVOCATIONS
+                             and tuple(argv) not in LIST_INVOCATIONS
                              and tuple(argv) not in (EVALUATE_INVOCATION, BASELINE_INVOCATION)):
         return refuse(PRIVILEGE_REFUSED, REFUSAL, err)
     problem = unsafe_install()
     if problem:
-        return refuse(USAGE_OR_ENGINE, "ENGINE_UNSAFE_INSTALL: %s" % problem, err)
+        err.write(summary.explained("ENGINE_UNSAFE_INSTALL", problem, NOTHING_RUN))
+        return USAGE_OR_ENGINE
     try:
         with open(OS_RELEASE) as fh:
             release = platform(fh.read())
@@ -348,19 +405,26 @@ def main(argv, err=None):
         release = ("", "")
     if (not os.path.isdir(SYSTEMD_RUNTIME) or not os.access(SYSTEMD_RUN, os.X_OK)
             or release not in SUPPORTED):
-        return refuse(PRIVILEGE_REFUSED, "FULL_AUDIT_UNSUPPORTED: Full Audit needs systemd on "
-                      "Debian 12, Ubuntu 24.04, Rocky 9 or AlmaLinux 9; nothing was run.", err)
+        err.write(summary.explained("FULL_AUDIT_UNSUPPORTED", "Full Audit needs systemd on "
+                                    "Debian 12, Ubuntu 24.04, Rocky 9 or AlmaLinux 9 (PRIV-006)",
+                                    NOTHING_RUN))
+        return PRIVILEGE_REFUSED
     found = subprocess.run([GETENT, "passwd", ENGINE_ACCOUNT], stdin=subprocess.DEVNULL,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                            env=dict(EXEC_ENVIRONMENT), timeout=10, shell=False)
     if found.returncode != 0:
-        return refuse(PRIVILEGE_REFUSED, "ENGINE_IDENTITY_MISSING: the isedraf account the "
-                      "package declares does not exist; nothing was run.", err)
+        err.write(summary.explained("ENGINE_IDENTITY_MISSING", "the isedraf account the "
+                                    "package declares does not exist (AUTH-012)", NOTHING_RUN))
+        return PRIVILEGE_REFUSED
     run_id = ids.new_id("RUN", ids.now_utc())
     if tuple(argv) in REPORT_INVOCATIONS:
         return relay(report_unit_argv(run_id, REPORT_INVOCATIONS[tuple(argv)]),
                      dict(EXEC_ENVIRONMENT), 1, 2,
                      stop=lambda _proc: stop_unit(run_id, "isedraf-report-"))
+    if tuple(argv) in LIST_INVOCATIONS:
+        return relay(list_unit_argv(run_id, LIST_INVOCATIONS[tuple(argv)]),
+                     dict(EXEC_ENVIRONMENT), 1, 2,
+                     stop=lambda _proc: stop_unit(run_id, "isedraf-list-"))
     if tuple(argv) == BASELINE_INVOCATION:
         return relay(baseline_unit_argv(run_id), dict(EXEC_ENVIRONMENT), 1, 2,
                      stop=lambda _proc: stop_unit(run_id, "isedraf-baseline-"))

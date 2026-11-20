@@ -12,6 +12,156 @@ Semantic Versioning once a release exists. `VERSION` is the single source of the
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-20
+
+ISEDRAF 0.5: operator experience. Help on both routes, bash completion, a summary after every
+run, `isedraf list` and `sudo isedraf list`, refusals that say why, what was written and what
+to run next, a free-space check before every run (exit 68), ledger recovery after an
+interrupted write (`STORE-016`), and terminal text within 80 columns on every command. The
+entries of the release candidates below (0.5.0-rc1 to 0.5.0-rc4) list every change; nothing was
+added after 0.5.0-rc4 but the version.
+
+### Upgrading
+- From 0.4.0: existing runs, evaluations, baselines and the ledger are kept and still verify;
+  nothing is approved, recovered or deleted automatically. Bare `isedraf` exits 0 with the start
+  page (it was 64); exit code 68 (`INSUFFICIENT_SPACE`) is new.
+
+### Tested
+- 0.5.0-rc4: `make check`; the full falsification run, 601 injections detected; the installed
+  packages on Ubuntu 24.04, Debian 12 and AlmaLinux 9.7, every command and case on both routes
+  in an 80-column terminal (109 cases each), with exit codes and store checks.
+- 0.5.0-rc1: the upgrade from the published 0.4.0 on Rocky Linux 9.7, Debian 12 and AlmaLinux
+  8.10; ledger recovery and the free-space refusal in the lab on both routes. Running out of
+  space during a commit or a recovery is covered by unit tests only.
+
+## [0.5.0-rc4] - 2026-11-20
+
+Internal release candidate: the terminal text of every command fits 80 columns, on both routes
+(`explain`, `help --all`, `list`, the identity, inventory and evaluate views, argument errors and
+refusals). An identifier, path or digest is never split; a long one stands alone on its line.
+The Markdown, HTML and JSON reports keep their own formats. A coverage test of every command and
+case holds the rule.
+
+## [0.5.0-rc3] - 2026-11-20
+
+Internal release candidate. From the rc2 acceptance in an 80-column terminal: the audit
+summary's host-identity, development-store and privilege lines wrap too (the host id, a
+hash, gets its own line and is never split). The README shows the ISEDRAF logo; its two lines
+spell out the name, and the product description is unchanged (`docs/assets/LOGO.md`).
+
+## [0.5.0-rc2] - 2026-11-20
+
+Internal release candidate. From the rc1 acceptance: four messages wrap at 80 columns like the
+rest of the human output - the ledger-recovery notice, the user-route and Full Audit evaluate
+refusals, and the Full Audit free-space refusal; reason tokens, identifiers and paths stay whole.
+Exit codes are unchanged.
+
+## [0.5.0-rc1] - 2026-11-17
+
+ISEDRAF 0.5: operator experience. A start page and help on both routes, bash completion, a
+summary after every run, `isedraf list`, refusals that say why and what next, a free-space
+check before every run, and ledger recovery after an interrupted write (`STORE-016`).
+
+### Upgrading
+- Existing runs, evaluations, baselines and the ledger are kept and still verify; a ledger
+  written by 0.4 is segment 1 of the segmented ledger. Nothing is approved, recovered or
+  deleted automatically.
+- Bare `isedraf` now exits 0 with the start page (it was 64). New exit code 68
+  (`INSUFFICIENT_SPACE`).
+
+### Added
+- `isedraf --help` lists every command grouped by purpose (collect evidence, evaluate and
+  understand, approve a reference, view results; developer commands last), with the workflow
+  to start from. `isedraf <command> --help` states what the command does, who runs it, what it
+  writes, its exit codes and complete examples (v0.5, `D-129`).
+- A missing argument now explains what to give: `isedraf explain` lists the installed criterion
+  IDs; `isedraf baseline approve` points to `sudo isedraf baseline approve` for production
+  baselines. The exit code is unchanged (64).
+- `docs/reference/CLI.md`, the command reference, generated from the same command definitions
+  as the help, and installed with the offline documentation.
+- Bash completion, installed by both packages at
+  `/usr/share/bash-completion/completions/isedraf`: commands, each command's own options and
+  the installed criterion IDs. Generated from the command definitions; it never reads an
+  evidence store or offers a snapshot ID. Loaded where the `bash-completion` package is
+  installed; nothing changes without it.
+- `isedraf` with no arguments, and `isedraf help`, print a start page: Standard Audit and Full
+  Audit, the workflow with complete commands, and baseline approval as an explicit decision.
+  `isedraf help --all` lists every command, grouped; `isedraf help <command>` explains one.
+- Under `sudo` or root, `sudo isedraf`, `sudo isedraf help`, `sudo isedraf --help` and `sudo
+  isedraf --version` print the same help from the installed definitions, exit 0, and read no
+  evidence, open no store and start nothing (`AUTH-019` as amended for v0.5).
+
+- A free-space check before every run (`isedraf audit`, `isedraf identity`, `sudo isedraf
+  audit`): when the filesystem holding the evidence store has too little room for the run and
+  a ledger recovery record, the run is refused with exit 68 (`INSUFFICIENT_SPACE`) before
+  anything is collected or written, stating the space available and needed. A disk that fills
+  during a run is reported with the same code, and the run is not committed. Nothing is ever
+  deleted to make room.
+
+- `isedraf list` shows what your evidence store holds: committed runs (with their collection
+  time and class, and which one the baseline approved), evaluations with their result counts,
+  the baseline, and saved reports with their absolute paths; `--all` for every entry. It
+  reads committed metadata only and writes nothing. Snapshot directories the ledger does not
+  record are counted, never listed as runs. `sudo isedraf list` lists the system store
+  read-only: Full Audit runs, the baseline and evaluation identities, from the ledger and
+  directory names; it opens no evidence and writes nothing.
+- Refusals say the reason in plain words first, keep the reason token (for example
+  `BASELINE_CLASS_NOT_ADMITTED`) whole, say whether anything was written and give the next
+  command. The refusal under `sudo` also lists `sudo isedraf list` and shows how to export a
+  Full Audit report privately. An account entered through `sudo -iu` is told why it is
+  refused and to log in directly. Where `/usr/bin/python3` is missing (a stock AlmaLinux 8),
+  the refusal says ISEDRAF runs there as the normal user only.
+- Evaluation reasons and the Full Audit commit line wrap at 80 columns; identifiers, paths
+  and reason tokens are never split.
+
+- Ledger recovery (`STORE-016`): every ledger write checks that the whole record was written.
+  If an earlier write was interrupted (a crash, or a disk that filled), the next audit or
+  approval keeps the damaged segment byte for byte, and a new segment continues the ledger with
+  a `ledger_recovered` record that names it and the hash of the incomplete bytes. Only an
+  interrupted last record is recovered; an earlier damaged record or a broken chain is refused
+  and nothing is written. `report`, `list` and `evaluate` never recover: each refuses an
+  unrecovered ledger, writes nothing (`evaluate` writes evaluations, never the ledger) and says
+  which command recovers it.
+
+### Changed
+- The report (Markdown and HTML) opens with what a reader needs first: the coverage of each
+  area, the native criteria results and the baseline comparison. The target, the evidence
+  detail with its digests, and the limitations follow. The JSON model is unchanged.
+- The install instructions say why the `./` in `apt install ./...` and `dnf install ./...`
+  matters, and the Evidence model explains why the evidence stores are private.
+- `sudo isedraf audit` shows the same summary as a standard audit, naming the system store;
+  the launcher then states the commit. `sudo isedraf evaluate` and `sudo isedraf baseline
+  approve` end with the next command.
+- Baseline approval, on both routes, first shows what is being approved - the run and its
+  collection time, the store, the profile and every required section with its status - and
+  that approval records accepted state without establishing that the host is secure, before
+  anything is written.
+- `isedraf report --save` prints the saved file's absolute path and how to view it. The
+  Report guide shows how to export a Full Audit report privately, without overwriting a file.
+- `isedraf audit` ends with a summary: whether the run was committed complete or
+  incomplete, coverage counts, each area not fully collected with its reason (and, for the
+  areas a Full Audit fixed operation reads, that `sudo isedraf audit` reads them), where the
+  run is stored, the next commands, and what exit 2 means. `audit`, `identity`, `evaluate`,
+  `baseline approve` and `inventory` start with a short header: version, command, and for
+  evidence the store, snapshot and collection time from the committed run. `--json` output
+  is unchanged.
+- Refusals of the store, the run lock and engine failures on the user route say whether
+  anything was written and, where one applies, the next command.
+- `isedraf` with no arguments exits 0 with the start page; it was a usage error (64). It
+  collects, approves and writes nothing. Invalid commands and arguments still exit 64;
+  `isedraf help` naming an unknown command exits 64 and lists the valid ones.
+- The refusal under `sudo` or root lists what runs there one command per line and points to
+  `sudo isedraf help`.
+- `isedraf baseline approve` without a snapshot ID, and its `--help`, describe the two separate
+  contexts: a development (DEV) store, where a named run is approved, and the system store,
+  where `sudo isedraf baseline approve` approves its latest Full Audit run. Approving under
+  sudo never turns a personal-store run into production evidence.
+- Development builds are versioned `0.5.0-dev`. Their packages carry the source commit in the
+  package version (`0.5.0~dev.<commit time>.g<commit>` for the DEB; for the RPM, version
+  `0.5.0` with release `0.<label>.<commit time>.g<commit>`, label `dev`), ordered below any
+  0.5.0 prerelease or release, and both
+  packages install `/usr/share/doc/isedraf/SOURCE`, naming the commit they were built from.
+
 ## [0.4.0] - 2026-11-13
 
 ISEDRAF 0.4: approved baselines. `sudo isedraf baseline approve` approves the latest

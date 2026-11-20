@@ -10,6 +10,8 @@
 #
 # The order is the frozen one:
 #
+#   0. the free-space preflight (STORE-016, STORE-022): room for the run and a ledger recovery
+#      record, or refused with 68 before anything is written or collected
 #   1. the state root is validated, never repaired; its entries created or refused (67)
 #   2. the whole-run lock, before anything is collected (66)
 #   3. a stale staging of an earlier run is emptied by the reduced identity and removed
@@ -19,7 +21,7 @@
 #   7. the mechanical check of the staged tree, the atomic rename, the ledger append
 #
 # The run's exit code is the engine's (0 complete, 2 incomplete) unless the launcher
-# refuses: 67, 66, 64 for an engine failure, a refused staging or a remaining process.
+# refuses: 68, 67, 66, 64 for an engine failure, a refused staging or a remaining process.
 # A refused or failed run is never promoted, and its staging is removed.
 #
 # IQ-063: a stop - SIGUSR2, the unit's KillSignal=, from the outer entry's `systemctl kill`, a
@@ -44,9 +46,9 @@ import signal
 import subprocess
 import sys
 
-from isedraf import ids, ledger, stateroot, verify
-from isedraf.exitcodes import (INCOMPLETE, OK, RUN_IN_PROGRESS, STATE_ROOT_UNUSABLE,
-                               USAGE_OR_ENGINE)
+from isedraf import ids, ledger, space, stateroot, summary, verify
+from isedraf.exitcodes import (INCOMPLETE, INSUFFICIENT_SPACE, OK, RUN_IN_PROGRESS,
+                               STATE_ROOT_UNUSABLE, USAGE_OR_ENGINE)
 from isedraf.launcher import engine, store
 from isedraf.supervisor import serve
 
@@ -135,19 +137,58 @@ def _serve_engine(staging):
     return proc.wait()
 
 
-def run(run_id, root=None, err=None):
+def recover_ledger(root, err):
+    """STORE-016 (v0.5) on the system store, under the lock, before the engine starts: the
+    shared ledger.recover. Returns None to go on, or the exit code of a refusal."""
+    occurred_at = ids.now_utc()
+    try:
+        core = ledger.recover(root, stateroot.SYSTEM_PRODUCTION, occurred_at,
+                              ids.new_id("EVT", occurred_at))
+    except ledger.IntegrityFailure as exc:
+        err.write(summary.refusal("%s; the ledger is not recovered or changed" % exc,
+                                  "Nothing was collected or written."))
+        return USAGE_OR_ENGINE
+    except OSError as exc:
+        if space.out_of_space(exc):
+            err.write(summary.refusal("%s: the ledger recovery found no space" % space.REASON,
+                                      "Nothing was collected or written.",
+                                      "free space on that filesystem, then run sudo isedraf "
+                                      "audit again"))
+            return INSUFFICIENT_SPACE
+        raise
+    if core is not None:
+        err.write(summary.recovered_notice(core["damaged_segment"]))
+    return None
+
+
+def run(run_id, root=None, err=None, out=None):
     err = sys.stderr if err is None else err
+    out = sys.stdout if out is None else out
     root = root or store.ROOT
     if not ids.ID_RE.match(run_id or "") or not run_id.startswith("RUN-"):
         err.write("isedraf: the launcher was given no run identifier\n")
         return USAGE_OR_ENGINE
+    # STORE-016, STORE-022 (D-129 Q4): the shared preflight, before the store is prepared and
+    # before the engine starts. Reads directory metadata only; never deletes anything.
+    try:
+        space.preflight(root)
+    except space.InsufficientSpace as exc:
+        err.write(summary.refusal(str(exc), "Nothing was collected or written; ISEDRAF never "
+                                  "deletes evidence to make room.",
+                                  "free space on that filesystem, then run sudo isedraf audit "
+                                  "again"))
+        return INSUFFICIENT_SPACE
     try:
         store.prepare(root)
     except store.Unusable as exc:
-        err.write("isedraf: STATE_ROOT_UNUSABLE: %s\n" % exc)
+        err.write(summary.refusal("STATE_ROOT_UNUSABLE: %s" % exc,
+                                  "Nothing was collected or written."))
         return STATE_ROOT_UNUSABLE
     try:
         with stateroot.RunLock(root):
+            refused = recover_ledger(root, err)
+            if refused is not None:
+                return refused
             if len(ledger.unledgered_snapshots(root)) > 1:
                 err.write("isedraf: STORE_DISCONTINUITY - snapshots are not in the ledger "
                           "(SNAP-018)\n")
@@ -187,6 +228,12 @@ def run(run_id, root=None, err=None):
                 problem = discard(staging)
                 if problem:
                     err.write("isedraf: %s\n" % problem)
+                if space.out_of_space(exc):
+                    # The preflight cannot stop space disappearing during the run.
+                    err.write(summary.refusal("%s: the filesystem filled during the run"
+                                              % space.REASON, "Evidence committed earlier is "
+                                              "unchanged; nothing is deleted."))
+                    return INSUFFICIENT_SPACE
                 return USAGE_OR_ENGINE
             problems = verify.verify_store(root)
     except stateroot.RunInProgress as exc:
@@ -196,6 +243,10 @@ def run(run_id, root=None, err=None):
         err.write("isedraf: the store does not verify after the commit: %s\n"
                   % "; ".join(problems))
         return USAGE_OR_ENGINE
+    # v0.5 P4: the engine reported the run as collected; the commit is the launcher's to state.
+    out.write("Committed: %s\n  in the system evidence store (%s).\n"
+              % (envelope["manifest_core"]["snapshot_id"], root))
+    out.flush()
     return code
 
 

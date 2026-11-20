@@ -155,9 +155,39 @@
       "eligible": [
         "scripts/ci/project_status.json",
         "docs/CURRENT_STATE.md",
-        "lib/isedraf/cli.py",
+        "lib/isedraf/commands.py",
         "lib/isedraf/snapshot.py",
         "scripts/ci/privileged_operations.json"
+      ]
+    },
+    "check-commands": {
+      "script": "scripts/ci/check_commands.py",
+      "implements": "D-129, OUT-001, SCOPE-077, AUTH-019",
+      "falsification": "D-129 a command record's exit codes drift from exitcodes.json",
+      "eligible": [
+        "lib/isedraf/commands.py",
+        "lib/isedraf/cli.py",
+        "lib/isedraf/exitcodes.json",
+        "lib/isedraf/launcher/outer.py"
+      ]
+    },
+    "check-completion": {
+      "script": "scripts/docs/bash_completion.py",
+      "implements": "D-129",
+      "falsification": "D-129 the bash completion is edited by hand",
+      "eligible": [
+        "lib/isedraf/commands.py",
+        "lib/isedraf/catalog/native_controls.json",
+        "packaging/completion/isedraf.bash"
+      ]
+    },
+    "check-cli-reference": {
+      "script": "scripts/docs/cli_reference.py",
+      "implements": "D-129, D-89",
+      "falsification": "D-129 the command reference is edited by hand",
+      "eligible": [
+        "lib/isedraf/commands.py",
+        "docs/reference/CLI.md"
       ]
     },
     "check-packaging": {

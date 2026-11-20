@@ -18,7 +18,7 @@ version drifted until it announced that no product code existed while three comm
 | | |
 |---|---|
 | Project stage | **GENERAL_AVAILABILITY** |
-| Public release | **0.3.0, published 2026-11-09; 0.4.0 awaiting owner authorization** |
+| Public release | **0.4.0, published 2026-11-13; 0.5.0 awaiting owner authorization** |
 | Production Python floor | 3.6 |
 | Tooling Python floor | 3.9 |
 | Execution model | unprivileged by default (`isedraf audit`, user evidence store); Full Audit (`sudo isedraf audit`) from 0.2.0 |
@@ -49,11 +49,17 @@ Engineering status is not a release: an item marked NOT RELEASED is in no publis
 | Full Audit mounts and storage | engine reads PID 1's mount table with no added privilege (IQ-055); space only where the device matches; four-platform lab proof PASSED 2026-10-09 |
 | Full Audit time on SELinux-enforcing EL9 | chronyc not executed; recorded as MAC_DOMAIN_TRANSITION_UNAVAILABLE |
 | Deferred past v0.2 (owner decision 2026-10-10) | inspect_mount_namespaces_v1 (PLANNED) and read_authorized_keys_v1 (DESIGN_OPEN) - post-v0.2 candidates, not v0.2 scope; Full Audit does not collect other users' authorized_keys |
-| 0.3.0 | PUBLISHED 2026-11-09 - native criteria: isedraf evaluate and sudo isedraf evaluate (eight ISEDRAF-authored criteria, EXPERIMENTAL), isedraf explain; latest |
-| v0.4 slice 1 | NOT RELEASED - in engineering: DEV baseline approval and comparison inside evaluate (D-127) |
-| v0.4 slice 2 | NOT RELEASED - in engineering: production baselines through Full Audit, sudo isedraf baseline approve (D-128) |
-| 0.4.0 | PREPARED, NOT YET PUBLISHED - approved baselines: sudo isedraf baseline approve, comparison in isedraf evaluate and sudo isedraf evaluate, Baseline comparison in the report |
-| v0.4 release | 0.4.0 prepared; release-candidate acceptance of 0.4.0-rc1 PASSED 2026-11-12 (upgrade from 0.3.0 on existing stores: Debian 12, Ubuntu 24.04, Rocky 9.7, AlmaLinux 9.7 Full Audit; AlmaLinux 8.10 standard audit); a report regression found in review was fixed and checked on Debian 12 and Rocky 9.7; publication awaits owner authorization |
+| 0.3.0 | PUBLISHED 2026-11-09 - native criteria: isedraf evaluate and sudo isedraf evaluate (eight ISEDRAF-authored criteria, EXPERIMENTAL), isedraf explain |
+| v0.4 slice 1 | DONE - in 0.4.0: DEV baseline approval and comparison inside evaluate (D-127) |
+| v0.4 slice 2 | DONE - in 0.4.0: production baselines through Full Audit, sudo isedraf baseline approve (D-128) |
+| 0.4.0 | PUBLISHED 2026-11-13 - approved baselines: sudo isedraf baseline approve, comparison in isedraf evaluate and sudo isedraf evaluate, Baseline comparison in the report; latest |
+| 0.5.0-rc1 | RELEASE CANDIDATE, NOT RELEASED - operator experience: start page and help on both routes, bash completion, run summaries, isedraf list, plain refusals, free-space check (exit 68), ledger recovery (STORE-016) |
+| 0.5.0-rc2 | RELEASE CANDIDATE, NOT RELEASED - internal: the rc1 acceptance findings (four messages wrapped at 80 columns) |
+| 0.5.0-rc3 | RELEASE CANDIDATE, NOT RELEASED - internal: the rc2 acceptance findings (the audit summary's identity and privilege lines wrapped at 80 columns); the README logo |
+| 0.5.0-rc4 | RELEASE CANDIDATE, NOT RELEASED - internal: the terminal text of every command within 80 columns on both routes, with a coverage test |
+| 0.5.0 | PREPARED, NOT YET PUBLISHED - operator experience: help on both routes, bash completion, run summaries, isedraf list and sudo isedraf list, plain refusals, a free-space check (exit 68), ledger recovery (STORE-016), terminal text within 80 columns |
+| v0.4 release | 0.4.0 prepared; release-candidate acceptance of 0.4.0-rc1 PASSED 2026-11-12 (upgrade from 0.3.0 on existing stores: Debian 12, Ubuntu 24.04, Rocky 9.7, AlmaLinux 9.7 Full Audit; AlmaLinux 8.10 standard audit); a report regression found in review was fixed and checked on Debian 12 and Rocky 9.7; published 2026-11-13 as 0.4.0 (package upgrade from 0.4.0-rc1 with a Full Audit baseline comparison checked on the lab before publication) |
+| v0.5 release | 0.5.0 prepared 2026-11-20 from 0.5.0-rc4 (version only); rc4 acceptance PASSED 2026-11-20: full falsification 601/601, installed packages on Ubuntu 24.04, Debian 12 and AlmaLinux 9.7, 109 cases each on both routes in an 80-column terminal; upgrade from the published 0.4.0 tested with rc1 on Rocky 9.7, Debian 12 and AlmaLinux 8.10; not yet published |
 | v0.3 release | 0.3.0 prepared; upgrade and release-candidate acceptance of 0.3.0-rc1 PASSED 2026-11-08 (in-place upgrade from 0.2.0 on existing stores: Debian 12, Ubuntu 24.04, Rocky 9.7, AlmaLinux 9.7 Full Audit; AlmaLinux 8.10 standard audit); published 2026-11-09 as 0.3.0 (smoke of the tag-build packages on Debian 12 and Rocky 9.7 the same day) |
 | v0.2 release | 0.2.0 prepared; release acceptance PASSED 2026-10-12 (Debian 12, Ubuntu 24.04, Rocky 9.7, AlmaLinux 9.7 Full Audit; AlmaLinux 8.10 standard audit); published 2026-10-19 as 0.2.0 (final smoke of the tag-build packages on the same five platforms 2026-10-19) |
 
@@ -76,6 +82,7 @@ What exists and runs today. Nothing else on this page does.
 | `delta_comparison` | `tests/test_baseline.py` | `isedraf evaluate` |
 | `framework_neutral_core` | `docs/licensing/FRAMEWORK_MAPPING_POLICY.md` | — |
 | `framework_source_registry` | `scripts/ci/framework_sources.json` | `make check-licensing` |
+| `help_and_start_page` | `lib/isedraf/commands.py` | `isedraf help [--all] [COMMAND]` |
 | `hostname_state` | `lib/isedraf/hostname/` | `isedraf audit` |
 | `identity` | `lib/isedraf/identity.py` | `isedraf identity` |
 | `independent_verifier` | `scripts/vectors/verify.py` | — |
@@ -101,6 +108,7 @@ What exists and runs today. Nothing else on this page does.
 | `scorecard` | `.github/workflows/scorecard.yml` | — |
 | `snapshot` | `lib/isedraf/snapshot.py` | — |
 | `ssh_state` | `lib/isedraf/ssh/` | `isedraf audit` |
+| `store_listing` | `lib/isedraf/listing.py` | `isedraf list [--all]` |
 | `sudo_privilege` | `lib/isedraf/sudo/` | `isedraf audit` |
 | `users_groups` | `lib/isedraf/accounts/` | `isedraf audit` |
 
@@ -147,11 +155,11 @@ Not asserted. Each number is counted at generation time.
 
 | | |
 |---|---|
-| Gates | 33 |
-| Falsification injections | 570 |
+| Gates | 36 |
+| Falsification injections | 603 |
 | Golden vector cases | 15 |
 | Frozen artifacts | 7 |
-| Test files | 56 |
+| Test files | 65 |
 
 ## Release blockers
 

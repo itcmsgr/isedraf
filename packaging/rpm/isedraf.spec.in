@@ -8,6 +8,8 @@ Summary:        @DESCRIPTION@
 License:        MPL-2.0
 URL:            https://github.com/itcmsgr/isedraf
 Source0:        isedraf-@FULLVERSION@.tar.gz
+# The source record packaging/build.sh writes (the commit both packages were built from).
+Source1:        SOURCE
 BuildArch:      noarch
 
 # RPM's automatic dependency generator adds `Requires: /usr/bin/python3` on its own,
@@ -88,6 +90,11 @@ install -d -m 0755 %{buildroot}%{_docdir}/isedraf/docs
 for guide in GETTING_STARTED EVIDENCE_MODEL AUDITOR_GUIDE REPORT_GUIDE SECURITY_AND_LIMITATIONS; do
     install -m 0644 docs/$guide.md %{buildroot}%{_docdir}/isedraf/docs/$guide.md
 done
+# D-129 (v0.5 K1): the same command reference and bash completion as the deb.
+install -m 0644 docs/reference/CLI.md %{buildroot}%{_docdir}/isedraf/docs/CLI.md
+install -D -m 0644 packaging/completion/isedraf.bash \
+    %{buildroot}%{_datadir}/bash-completion/completions/isedraf
+install -m 0644 %{SOURCE1} %{buildroot}%{_docdir}/isedraf/SOURCE
 
 %post
 # D-60 as amended by AUTH-012: declare the isedraf account from the sysusers file, as the
@@ -104,9 +111,30 @@ if [ ! -e /var/lib/isedraf ] && [ ! -L /var/lib/isedraf ]; then mkdir -m 0700 /v
 %{_prefix}/lib/sysusers.d/isedraf.conf
 %ghost %dir %attr(0700,root,root) /var/lib/isedraf
 %doc %{_docdir}/isedraf
+%{_datadir}/bash-completion/completions/isedraf
 
 %changelog
-* Fri Nov 13 2026 Antonios Voulvoulis <contact@itcms.gr> - @VERSION@-@RELEASE@
+* Fri Nov 20 2026 Antonios Voulvoulis <contact@itcms.gr> - @VERSION@-@RELEASE@
+- 0.5.0: operator experience - help on both routes, bash completion, run summaries,
+  isedraf list, plain refusals, a free-space check, ledger recovery, 80-column terminal text.
+
+* Fri Nov 20 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.5.0-0.rc4
+- 0.5.0 release candidate 4: the terminal text of every command fits 80 columns.
+
+* Fri Nov 20 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.5.0-0.rc3
+- 0.5.0 release candidate 3: the audit summary's identity and privilege lines wrap at 80
+  columns.
+
+* Fri Nov 20 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.5.0-0.rc2
+- 0.5.0 release candidate 2: four messages wrap at 80 columns (ledger recovery notice,
+  evaluate refusals, Full Audit free-space refusal).
+
+* Tue Nov 17 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.5.0-0.rc1
+- 0.5.0 release candidate: operator experience - start page and help on both routes, bash
+  completion, run summaries, isedraf list, plain refusals, free-space check (exit 68), ledger
+  recovery after an interrupted write.
+
+* Fri Nov 13 2026 Antonios Voulvoulis <contact@itcms.gr> - 0.4.0-1
 - 0.4.0: approved baselines. sudo isedraf baseline approve approves the latest complete
   Full Audit run; isedraf evaluate and sudo isedraf evaluate then record, per section, what
   changed since, and the report shows it.

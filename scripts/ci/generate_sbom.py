@@ -50,6 +50,40 @@ def sha256_file(path):
     return h.hexdigest()
 
 
+class UnsafeArchive(SystemExit):
+    """IQ-071: an archive member could write outside the extraction directory."""
+
+
+def check_member_name(name):
+    """IQ-071 (CodeQL py/tarslip): a member name must stay inside the extraction directory:
+    relative, no `..` component, not empty. Returns the name; raises UnsafeArchive."""
+    stripped = name[2:] if name.startswith("./") else name
+    parts = [p for p in stripped.split("/") if p not in ("", ".")]
+    if name.startswith("/") or ".." in parts or (not parts and stripped not in ("", ".")):
+        raise UnsafeArchive("unsafe archive member %r: outside the extraction directory "
+                            "(IQ-071); nothing was extracted" % name)
+    return name
+
+
+def safe_members(tf):
+    """Every member checked before anything is written: regular files and directories only.
+    Links, devices and FIFOs are refused - a link can point anywhere, and a package payload
+    here has none."""
+    members = tf.getmembers()
+    for member in members:
+        check_member_name(member.name)
+        if not (member.isfile() or member.isdir()):
+            raise UnsafeArchive("unsafe archive member %r: type %r is not a regular file or "
+                                "directory (IQ-071); nothing was extracted"
+                                % (member.name, member.type))
+    return members
+
+
+def extract_tar(path, target):
+    with tarfile.open(str(path)) as tf:
+        tf.extractall(str(target), members=safe_members(tf))
+
+
 def unpack(artifact, dest):
     """Extract the payload a user actually receives. Returns (kind, root)."""
     name = artifact.name
@@ -57,19 +91,22 @@ def unpack(artifact, dest):
         data = subprocess.check_output(["ar", "p", str(artifact), "data.tar.gz"])
         tarball = dest / "data.tar.gz"
         tarball.write_bytes(data)
-        with tarfile.open(tarball) as tf:
-            tf.extractall(dest / "payload")
+        extract_tar(tarball, dest / "payload")
         return "deb", dest / "payload"
     if name.endswith(".rpm"):
         root = dest / "payload"
         root.mkdir()
-        cpio = subprocess.Popen(["rpm2cpio", str(artifact)], stdout=subprocess.PIPE)
-        subprocess.check_call(["cpio", "-idmu", "--quiet"], stdin=cpio.stdout, cwd=str(root))
-        cpio.wait()
+        # The same rule for the cpio archive: list and check every name before extracting.
+        archive = subprocess.check_output(["rpm2cpio", str(artifact)])
+        names = subprocess.run(["cpio", "-it", "--quiet"], input=archive,
+                               stdout=subprocess.PIPE, check=True).stdout
+        for member in names.decode("utf-8", "surrogateescape").splitlines():
+            check_member_name(member)
+        subprocess.run(["cpio", "-idmu", "--quiet", "--no-absolute-filenames"],
+                       input=archive, cwd=str(root), check=True)
         return "rpm", root
     if name.endswith((".tar.gz", ".tgz")):
-        with tarfile.open(artifact) as tf:
-            tf.extractall(dest / "payload")
+        extract_tar(artifact, dest / "payload")
         return "tarball", dest / "payload"
     raise SystemExit("unsupported artifact type: %s" % name)
 

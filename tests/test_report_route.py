@@ -225,7 +225,9 @@ class ReportRoute(NoLeakedPipe, unittest.TestCase):
             return (json.dumps(record) + "\n").encode()
         code, out, err = self.render(self.tampered("segment-000001.jsonl", bump))
         self.assertEqual((code, out), (64, ""))
-        self.assertIn("EVIDENCE_VERIFICATION_FAILED", err)
+        # STORE-016 (v0.5): the ledger is verified when the frame is laid out, so the refusal
+        # names the ledger itself; nothing is rendered either way.
+        self.assertIn("LEDGER_INTEGRITY_FAILURE", err)
 
     def test_a_name_outside_the_bundle_is_refused(self):
         sid = self.snapshot_id()

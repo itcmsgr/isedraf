@@ -1,5 +1,5 @@
 {
-  "$comment": "OUT-001 (D-72): the single source of ISEDRAF exit codes. OWNER-CONTROLLED (CLAUDE.md section 1). Code, documentation and tests are validated against it by scripts/ci/check_exitcodes.py in make check. It consolidates the codes already admitted by OUT-001, SCOPE-077, AUTH-023 and AUTH-020; it defines no new code. `reachable` says whether this version can return the code; the comparison and baseline codes are frozen and not reachable before v0.4.",
+  "$comment": "OUT-001 (D-72): the single source of ISEDRAF exit codes. OWNER-CONTROLLED (CLAUDE.md section 1). Code, documentation and tests are validated against it by scripts/ci/check_exitcodes.py in make check. It consolidates the codes admitted by OUT-001, SCOPE-077, AUTH-023 and AUTH-020, and 68, the dedicated insufficient-space code STORE-022 requires (D-129, assigned 2026-11-15). `reachable` says whether this version can return the code; the comparison and baseline codes are frozen and not reachable before v0.4.",
   "schema_version": 1,
   "precedence": [5, 4, 6, 3, [2, 1], 0],
   "codes": [
@@ -25,6 +25,8 @@
      "meaning": "the whole-run lock was not acquired; nothing was collected or written"},
     {"code": 67, "name": "STATE_ROOT_UNUSABLE", "reachable": true, "source": "AUTH-023",
      "meaning": "the state root cannot be used (missing, not a conforming directory, a link, wrong owner or mode, not writable, unsuitable storage); detected before any collection"},
+    {"code": 68, "name": "INSUFFICIENT_SPACE", "reachable": true, "source": "STORE-016, STORE-022, D-129",
+     "meaning": "too little free space for the run and a ledger recovery record: refused before any collection, with nothing collected or written; or the filesystem filled during the run, which was not committed. Committed evidence is unchanged and nothing is deleted"},
     {"code": 70, "name": "PRIVILEGE_REFUSED", "reachable": true, "source": "SCOPE-077, SCOPE-071, AUTH-019",
      "meaning": "root or sudo invocation refused; nothing was collected"}
   ],
@@ -39,17 +41,27 @@
     ]
   },
   "subcommands": {
-    "isedraf identity": [0, 2, 64, 66, 67, 70],
-    "isedraf audit": [0, 2, 64, 66, 67, 70],
+    "isedraf": [0],
+    "isedraf --help": [0],
+    "isedraf --version": [0],
+    "isedraf help": [0, 64],
+    "isedraf identity": [0, 2, 64, 66, 67, 68, 70],
+    "isedraf audit": [0, 2, 64, 66, 67, 68, 70],
     "isedraf inventory": [0, 2, 64],
+    "isedraf list": [0, 64, 67, 70],
     "isedraf report": [0, 2, 64, 70],
     "isedraf evaluate": [0, 5, 64, 66, 67, 70],
     "isedraf baseline approve": [0, 5, 64, 65, 66, 67, 70],
     "isedraf explain": [0, 64, 70],
     "isedraf (usage error)": [64],
-    "sudo isedraf audit": [0, 2, 64, 66, 67, 70, 129, 130, 143, 255],
+    "sudo isedraf": [0],
+    "sudo isedraf --help": [0],
+    "sudo isedraf --version": [0],
+    "sudo isedraf help": [0, 64],
+    "sudo isedraf audit": [0, 2, 64, 66, 67, 68, 70, 129, 130, 143, 255],
     "sudo isedraf report": [0, 2, 64, 66, 67, 70, 129, 130, 143, 255],
     "sudo isedraf evaluate": [0, 5, 64, 66, 67, 70, 129, 130, 143, 255],
-    "sudo isedraf baseline approve": [0, 5, 64, 65, 66, 67, 70, 129, 130, 143, 255]
+    "sudo isedraf baseline approve": [0, 5, 64, 65, 66, 67, 70, 129, 130, 143, 255],
+    "sudo isedraf list": [0, 64, 66, 67, 70, 129, 130, 143, 255]
   }
 }

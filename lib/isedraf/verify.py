@@ -186,22 +186,18 @@ def _auxiliary(snapshot_dir, core):
 
 def verify_ledger(root):
     """STORE-024: sequence strictly increments, previous_record_hash links, hashes hold."""
-    problems = []
-    previous = ledger.GENESIS_PREVIOUS
-    for index, row in enumerate(ledger.read_records(root), start=1):
+    # STORE-010, STORE-016 (v0.5): every segment, in order; hashes, canonical form and the chain
+    # are checked by ledger.parse; a torn tail not yet recovered is reported, never read.
+    try:
+        rows, torn, problems = ledger.parse(ledger.read_segments(root))
+    except (OSError, ledger.IntegrityFailure) as exc:
+        return ["ledger: %s" % exc]
+    if torn is not None:
+        problems.append("%s: %s ends in an incomplete record (%d bytes) that is not yet "
+                        "recovered; the next audit or approval recovers it (STORE-016)"
+                        % (ledger.TORN_TAIL, torn["segment"], len(torn["tail"])))
+    for index, row in enumerate(rows, start=1):
         core = row["record_core"]
-        core_canonical = _reserialize(core)
-        expected = canonical.rendered(
-            canonical.hash_frame(canonical.DOMAIN_LEDGER_RECORD, core_canonical))
-        if row.get("record_hash") != expected:
-            problems.append("ledger record %d: record_hash does not match its preimage"
-                            % index)
-        if core.get("sequence") != index:
-            problems.append("ledger record %d: sequence is %r (STORE-024)"
-                            % (index, core.get("sequence")))
-        if core.get("previous_record_hash") != previous:
-            problems.append("ledger record %d: previous_record_hash breaks the chain"
-                            % index)
         if core.get("state_root") not in stateroot.STATE_ROOT_CLASSES:
             problems.append("ledger record %d: state_root %r is not an artifact class "
                             "(STORE-026)" % (index, core.get("state_root")))
@@ -214,7 +210,6 @@ def verify_ledger(root):
         elif set(core) != fields:
             problems.append("ledger record %d: the %s record does not have exactly its "
                             "fields" % (index, core.get("event")))
-        previous = row.get("record_hash")
     return problems
 
 

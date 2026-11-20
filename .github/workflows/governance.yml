@@ -40,7 +40,10 @@ jobs:
     # GOV-002: every critical gate is proven able to fail.
     name: make check-falsifiable
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # The harness runs every injection (587 at v0.5): 9 min 29 s on the 0.4.0 sync pull request,
+    # over 10 min on main the same day, where the 10-minute limit cancelled it. 30 minutes gives
+    # room for growth; a slower run is a signal to split the harness, not to drop injections.
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:

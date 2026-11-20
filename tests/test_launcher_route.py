@@ -6,7 +6,7 @@
 #
 # Purpose: The Full Audit route: outer refusals, constant unit, and the in-unit launcher.
 # Implements: AUTH-019, AUTH-020, AUTH-021, AUTH-022, AUTH-023, AUTH-026, AUTH-027, EXEC-010,
-#             IQ-063
+#             IQ-063, D-129
 #
 # v0.2 P5b-3. Unprivileged. The outer entry is exercised with euid replaced and its relay
 # captured (IQ-062); the in-unit launcher runs end to end in a temporary store whose owner
@@ -40,7 +40,7 @@ sys.path.insert(0, LIB)
 sys.path.insert(0, os.path.join(HERE, "..", "scripts", "ci"))
 sys.path.insert(0, HERE)
 
-from isedraf import ledger, snapshot, stateroot, verify              # noqa: E402
+from isedraf import commands, ledger, snapshot, stateroot, verify    # noqa: E402
 from isedraf.launcher import engine, outer, store, unit              # noqa: E402
 from isedraf.supervisor import contracts                             # noqa: E402
 import check_privileged_operations as gate                           # noqa: E402
@@ -85,6 +85,67 @@ def euid0():
     return mock.patch.object(os, "geteuid", return_value=0)
 
 
+class RootHelp(unittest.TestCase):
+    """D-129 (AUTH-019 as amended for v0.5): the help forms are answered under root before
+    any other check, from the installed command definitions, and touch nothing else."""
+
+    def answer(self, argv, euid=0):
+        out, err = tempfile.TemporaryFile(), tempfile.TemporaryFile()
+        self.addCleanup(out.close)
+        self.addCleanup(err.close)
+        forbidden = mock.Mock(side_effect=AssertionError("help started something"))
+        with mock.patch.object(os, "geteuid", return_value=euid), \
+                mock.patch.object(outer, "relay", forbidden), \
+                mock.patch.object(outer, "unsafe_install", forbidden), \
+                mock.patch.object(outer.subprocess, "run", forbidden), \
+                mock.patch.object(outer.subprocess, "Popen", forbidden), \
+                mock.patch.object(outer.ids, "new_id", forbidden), \
+                mock.patch("builtins.open", forbidden):
+            code = outer.answer_help(argv, out.fileno(), err.fileno())
+        texts = []
+        for handle in (out, err):
+            handle.seek(0)
+            texts.append(handle.read().decode("utf-8"))
+        return code, texts[0], texts[1]
+
+    def test_every_help_form_is_answered_with_the_shared_text(self):
+        for form in commands.help_forms():
+            for euid in (0, 1000):          # root, and a sudo-entered user (SUDO_USER set)
+                code, out, err = self.answer(list(form), euid)
+                self.assertEqual((code, out, err), commands.answer(form), form)
+                self.assertEqual(code, 0, form)
+                self.assertTrue(out, form)
+
+    def test_bare_isedraf_under_root_is_the_start_page(self):
+        code, out, err = self.answer([])
+        self.assertEqual((code, err), (0, ""))
+        self.assertIn("sudo isedraf baseline approve", out)
+        self.assertIn("never an automatic next step", out)
+
+    def test_the_version_is_the_installed_version(self):
+        from isedraf import ENGINE_VERSION
+        self.assertEqual(self.answer(["--version"]), (0, "isedraf %s\n" % ENGINE_VERSION, ""))
+
+    def test_an_unknown_help_topic_exits_64_and_lists_the_commands(self):
+        code, out, err = self.answer(["help", "prune"])
+        self.assertEqual((code, out), (64, ""))
+        self.assertIn("unknown command 'prune'", err)
+        self.assertIn("baseline approve", err)
+
+    def test_main_answers_help_before_the_privilege_check(self):
+        # A sudo-entered non-root user (geteuid != 0) gets help, never the refusal.
+        err = io.StringIO()
+        with mock.patch.object(outer, "answer_help", return_value=0) as helped, \
+                mock.patch.object(os, "geteuid", return_value=1000):
+            self.assertEqual(outer.main(["--help"], err), 0)
+        helped.assert_called_once_with(["--help"])
+        self.assertEqual(err.getvalue(), "")
+
+    def test_an_operational_form_is_not_a_help_form(self):
+        for form in (("audit",), ("report",), ("evaluate",), ("baseline", "approve")):
+            self.assertIsNone(outer.answer_help(list(form)), form)
+
+
 class OuterEntry(unittest.TestCase):
 
     def call(self, argv):
@@ -95,7 +156,7 @@ class OuterEntry(unittest.TestCase):
         # AUTH-032: `report`, alone or with one format, is the one more root invocation;
         # nothing that writes into the store or names a path gets through.
         with euid0():
-            for argv in ([], ["audit", "--root", "/tmp"], ["identity"], ["audit", "audit"],
+            for argv in (["audit", "--root", "/tmp"], ["identity"], ["audit", "audit"],
                          ["report", "--save"], ["report", "--profile", "/tmp/p.json"],
                          ["report", "--json", "--html"], ["report", "/var/lib/isedraf"],
                          ["report", "--json", "--save"], ["inventory"],
@@ -103,13 +164,18 @@ class OuterEntry(unittest.TestCase):
                          ["evaluate", "--snapshot", "SDS-20261101T000000Z-0123456789abcdef"],
                          ["evaluate", "/var/lib/isedraf"], ["evaluate", "evaluate"],
                          ["explain", "ISE-ACCOUNT-001"],
+                         # D-129: only the listed help forms are answered; these are not.
+                         ["audit", "--help"], ["--version", "audit"], ["--all"], ["-V"],
                          # AUTH-034 (D-128): baseline approve names no snapshot.
                          ["baseline"], ["baseline", "approve", "SDS-20261111T000000Z-0123456789abcdef"]):
                 code, err = self.call(argv)
                 self.assertEqual(code, 70, argv)
-                self.assertIn("runs only `sudo isedraf audit` (Full Audit), `sudo isedraf "
-                              "report` (its report), `sudo isedraf evaluate` (its evaluation) "
-                              "and `sudo isedraf baseline approve`", err)
+                self.assertIn("isedraf: Under sudo or root, ISEDRAF runs only:\n"
+                              "  sudo isedraf audit              Full Audit\n", err)
+                self.assertIn("  sudo isedraf baseline approve   its baseline\n"
+                              "  sudo isedraf list               what the system store holds", err)
+                self.assertIn("Nothing was collected or written. Run every other ISEDRAF "
+                              "command as your\nnormal user.", err)
 
     def test_a_report_invocation_runs_the_read_only_report_unit(self):
         self.environment()

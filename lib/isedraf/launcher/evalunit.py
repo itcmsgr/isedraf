@@ -31,7 +31,7 @@ import stat
 import subprocess
 import sys
 
-from isedraf import ENGINE_VERSION, canonical, catalog, ids, stateroot
+from isedraf import ENGINE_VERSION, canonical, catalog, ids, ledger, stateroot, summary
 from isedraf.evaluate import record
 from isedraf.exitcodes import (OK, RUN_IN_PROGRESS, STATE_ROOT_UNUSABLE, USAGE_OR_ENGINE)
 from isedraf.launcher import engine, reportunit, store
@@ -81,7 +81,7 @@ def expected_identity(items, catalog_bytes, engine_version=ENGINE_VERSION):
     the last ledger record, the selected snapshot's manifest header and the catalog digest."""
     by_name = dict((i["name"].decode("ascii"), i["content"]) for i in items)
     try:
-        cores = reportunit.ledger_cores(by_name[reportunit.LEDGER_NAME])
+        cores = reportunit.verified_cores(by_name)
         sid, _hash = reportunit.latest_snapshot(cores)
         record_in_force = reportunit.baseline_record(cores)
     except (reportunit.Refused, reportunit.NoCommittedRun) as exc:
@@ -232,20 +232,26 @@ def run(root=None, err=None, out=None, engine_uid=None, argv=None, catalog_path=
                 return INTERRUPTED       # a stop before the first write: nothing promoted
             path, created = promote(root, evl_id, artifacts)
     except store.Unusable as exc:
-        err.write("isedraf: STATE_ROOT_UNUSABLE: %s\n" % exc)
+        err.write(summary.refusal("STATE_ROOT_UNUSABLE: %s" % exc, "Nothing was written."))
         return STATE_ROOT_UNUSABLE
     except stateroot.RunInProgress as exc:
-        err.write("isedraf: RUN_IN_PROGRESS: %s\n" % exc)
+        err.write(summary.refusal("RUN_IN_PROGRESS: %s" % exc, "Nothing was written.",
+                                  "wait for the other ISEDRAF run to finish, then run sudo "
+                                  "isedraf evaluate again"))
         return RUN_IN_PROGRESS
     except reportunit.NoCommittedRun as exc:
-        err.write("isedraf: no committed Full Audit run (%s); run `sudo isedraf audit` first. "
-                  "An evaluation reads committed evidence and never collects.\n" % exc)
+        err.write(summary.refusal("no committed Full Audit run (%s); an evaluation reads "
+                                  "committed evidence and never collects" % exc,
+                                  "Nothing was written.", "sudo isedraf audit"))
         return USAGE_OR_ENGINE
     except (Refused, reportunit.Refused, OSError, frame.FrameError) as exc:
-        err.write("isedraf: EVALUATION_REFUSED: %s; nothing was written.\n" % exc)
+        err.write(summary.refusal("EVALUATION_REFUSED: %s" % exc, "Nothing was written.",
+                                  "sudo isedraf audit (it recovers the ledger first)"
+                                  if ledger.TORN_TAIL in str(exc) else None))
         return USAGE_OR_ENGINE
-    out.write("isedraf: evaluation %s %s\n" % (evl_id, "committed in the system store"
-                                               if created else "already committed, identical"))
+    out.write("isedraf: evaluation %s:\n  %s\n" % ("committed in the system store" if created
+                                                  else "already committed, identical", evl_id))
+    out.write("Next: sudo isedraf report  (shows the run with this evaluation)\n")
     return OK
 
 

@@ -24,7 +24,6 @@
 # =============================================================================
 
 """`generate` writes the page; `check` fails when the committed page is stale."""
-import ast
 import json
 import pathlib
 import re
@@ -73,30 +72,19 @@ def privileged_operations():
     return json.loads(path.read_text())["operations"]
 
 
-def cli_surfaces(source=None):
-    """Public surfaces read from the argument parser in lib/isedraf/cli.py, not listed by
-    hand: every subcommand, and every output flag a subcommand declares."""
-    if source is None:
-        source = (ROOT / "lib" / "isedraf" / "cli.py").read_text()
-    commands, surfaces = {}, set()
-    for node in ast.walk(ast.parse(source)):
-        if not (isinstance(node, ast.Assign) and isinstance(node.value, ast.Call)):
-            continue
-        call = node.value
-        if (isinstance(call.func, ast.Attribute) and call.func.attr == "add_parser"
-                and call.args and isinstance(call.args[0], ast.Constant)):
-            for target in node.targets:
-                if isinstance(target, ast.Name):
-                    commands[target.id] = call.args[0].value
-            surfaces.add(call.args[0].value)
-    for node in ast.walk(ast.parse(source)):
-        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-                and node.func.attr == "add_argument"
-                and isinstance(node.func.value, ast.Name)
-                and node.func.value.id in commands and node.args
-                and isinstance(node.args[0], ast.Constant)
-                and node.args[0].value in OUTPUT_FLAGS):
-            surfaces.add("%s %s" % (commands[node.func.value.id], node.args[0].value))
+def cli_surfaces(table=None):
+    """Public surfaces read from the command table the parser is built from (D-129,
+    lib/isedraf/commands.py), not listed by hand: every command word, and every output flag
+    a command declares. scripts/ci/check_commands.py holds the parser equal to the table."""
+    if table is None:
+        sys.path.insert(0, str(ROOT / "lib"))
+        from isedraf import commands as table
+    surfaces = set()
+    for record in table.COMMANDS:
+        surfaces.update(record["path"])
+        for option in record["options"]:
+            if option["flag"] in OUTPUT_FLAGS:
+                surfaces.add("%s %s" % (record["path"][-1], option["flag"]))
     return surfaces
 
 

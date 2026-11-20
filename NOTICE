@@ -14,6 +14,9 @@ https://mozilla.org/MPL/2.0/.
 THIRD-PARTY CONTENT
 -------------------
 LICENSE             Mozilla Public License 2.0 text, (c) Mozilla Foundation.
+docs/assets/isedraf.png  The logo, MPL-2.0 for the rights that can be licensed. Its penguin
+                    follows the style of Tux, created by Larry Ewing (lewing@isc.tamu.edu)
+                    with The GIMP, acknowledged as he asks; provenance in docs/assets/LOGO.md.
 
 CODE_OF_CONDUCT.md is independently authored for ISEDRAF and is covered by the
 copyright above. It is not adapted from another project's text.

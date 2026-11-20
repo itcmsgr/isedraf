@@ -1,15 +1,15 @@
 # ISEDRAF (codename)
 
+<p align="center"><img src="docs/assets/isedraf.png" alt="ISEDRAF logo: a penguin examining a ledger line through a magnifying glass" width="600"></p>
+
 **Linux Host Assurance with Approved Baselines, State Delta & Verifiable Evidence**
 
-[![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.4.0-lightgrey)](VERSION)
-[![Status](https://img.shields.io/badge/status-general%20availability-green)](docs/CURRENT_STATE.md)
-[![Platforms](https://img.shields.io/badge/platforms-11%20Linux%20distributions%20measured-informational)](docs/reference/PLATFORM_COMPATIBILITY.md)
-[![Governance](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml/badge.svg)](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/itcmsgr/isedraf/badge)](https://scorecard.dev/viewer/?uri=github.com/itcmsgr/isedraf) [![OpenSSF Baseline](https://www.bestpractices.dev/projects/15010/baseline)](https://www.bestpractices.dev/en/projects/15010/baseline-1)
+ISEDRAF is the Linux Host Assurance, State Delta & Evidence Engine. The logo's two lines spell out the name: Integrity · State · Evidence · Delta · Reporting · Analysis · Facts.
 
-> **Current release: 0.4.0 — General Availability.** ISEDRAF 0.4 adds approved baselines: approve one
-> complete Full Audit run; later evaluations record what changed.
+[![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)](LICENSE) [![Version](https://img.shields.io/badge/version-0.5.0-lightgrey)](VERSION) [![Status](https://img.shields.io/badge/status-general%20availability-green)](docs/CURRENT_STATE.md) [![Platforms](https://img.shields.io/badge/platforms-11%20Linux%20distributions%20measured-informational)](docs/reference/PLATFORM_COMPATIBILITY.md) [![Governance](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml/badge.svg)](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/itcmsgr/isedraf/badge)](https://scorecard.dev/viewer/?uri=github.com/itcmsgr/isedraf) [![OpenSSF Baseline](https://www.bestpractices.dev/projects/15010/baseline)](https://www.bestpractices.dev/en/projects/15010/baseline-1)
+
+> **Current release: 0.5.0 — General Availability.** ISEDRAF 0.5 is easier to run: help on both routes,
+> completion, a summary after every run, `isedraf list`, plain refusals, a space check, ledger recovery.
 
 ## What is ISEDRAF?
 
@@ -71,8 +71,8 @@ DEB and RPM packages are attached to each published release, with build provenan
 SBOM attestations. You can also build them from a clean checkout: `bash packaging/build.sh`.
 
 ```sh
-sudo apt install ./isedraf_<version>_all.deb       # Debian, Ubuntu
-sudo dnf install ./isedraf-<version>.noarch.rpm    # RHEL family
+sudo apt install ./isedraf_<version>_all.deb       # Debian, Ubuntu (keep the ./)
+sudo dnf install ./isedraf-<version>.noarch.rpm    # RHEL family (keep the ./)
 ```
 
 The package installs `/usr/bin/isedraf` and `/usr/lib/isedraf/`, declares the `isedraf`
@@ -93,8 +93,8 @@ sudo isedraf evaluate          # evaluate the last Full Audit run (system store)
 sudo isedraf baseline approve  # approve the last complete Full Audit run as the baseline
 ```
 
-Under `sudo`, ISEDRAF runs only `audit`, `report`, `evaluate` and `baseline approve`; everything
-else is refused. Baselines: [Getting started](docs/GETTING_STARTED.md#approve-a-baseline-and-compare).
+Under `sudo`, ISEDRAF runs only `audit`, `report`, `evaluate` and `baseline approve`, and answers
+`help`, `--help` and `--version`; everything else is refused. Baselines: [Getting started](docs/GETTING_STARTED.md#approve-a-baseline-and-compare).
 
 | Exit | Meaning |
 |---|---|

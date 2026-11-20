@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 -->
 # v0.4 Baseline and Delta — slice plan, slice 1 design and acceptance
 
-Status: IMPLEMENTED in engineering for slices 1 and 2; not released. Ruled by the owner on 2026-11-11 and
+Status: IMPLEMENTED for slices 1 and 2; released in 0.4.0 (2026-11-13). Ruled by the owner on 2026-11-11 and
 recorded as `D-127`; the normative text is in `docs/architecture/SNAPSHOT_BASELINE_DELTA_MODEL.md`
 (`BASE-011`, `BASE-012`, `BASE-013`, `DELTA-007`, `DELTA-008` and the "Amended for v0.4 by D-127"
 paragraphs), `V0_1_IMPLEMENTATION_SCOPE.md` (`SCOPE-073`) and `NATIVE_CONTROL_CATALOG.md`

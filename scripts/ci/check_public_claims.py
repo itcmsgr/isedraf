@@ -219,8 +219,9 @@ else:
             % (m.group(1), IDENT["short"]))
 
     # CLI --help
-    cli = (ROOT / "lib" / "isedraf" / "cli.py").read_text(encoding="utf-8")
-    m = re.search(r'description="(.+?)"\)', cli)
+    # D-129: the CLI help is rendered from the command table, which holds the description.
+    cli = (ROOT / "lib" / "isedraf" / "commands.py").read_text(encoding="utf-8")
+    m = re.search(r'^DESCRIPTION = "(.+?)"$', cli, re.M)
     if not m:
         bad("the CLI declares no description")
     elif m.group(1).rstrip(".") != IDENT["short"].rstrip("."):

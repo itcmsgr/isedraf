@@ -29,7 +29,7 @@
 import os
 import sys
 
-from isedraf import audit, fixedop, hostio, identity, ids, snapshot, stateroot
+from isedraf import audit, fixedop, hostio, identity, ids, snapshot, stateroot, summary
 from isedraf.accounts import sources
 from isedraf.cli import ENGINE_VERSION
 from isedraf.exitcodes import INCOMPLETE, OK, USAGE_OR_ENGINE
@@ -110,9 +110,15 @@ def run(out=None, err=None, channel=None):
         snapshot.write_bundle(".", built)
     finally:
         os.umask(previous)
-    out.write("  audit             : %s\n" % run_status)
-    for name in audit.SECTIONS:
-        out.write("    %-15s %s\n" % (name, sections[name]["collection_status"]))
+    # v0.5 P4: the same summary as the user route, naming the system store and Full Audit.
+    out.write(summary.header("sudo isedraf audit", stateroot.SYSTEM_PRODUCTION, snapshot_id,
+                             created_at))
+    out.write("host identity: %s\n\n" % ("%s, host id\n  %s" % (ident.status, ident.host_id)
+                                         if ident.collected else
+                                         "%s; host id not derived" % ident.status))
+    out.write(summary.audit_summary(sections, audit.SECTIONS, run_status,
+                                    stateroot.SYSTEM_PRODUCTION, stateroot.PRODUCTION_ROOT,
+                                    ident.collected, snapshot_id, committed=False))
     complete = ident.collected and run_status == "COLLECTED"
     return OK if complete else INCOMPLETE
 

@@ -123,3 +123,12 @@ path = ["scripts/analysis/arch01_prose/*"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
 SPDX-License-Identifier = "MPL-2.0"
+
+# The logo (owner decision 2026-11-20): MPL-2.0 for the rights that can be licensed. Generated with
+# AI (ChatGPT) from the NFTBan penguin as a visual reference; its relation to Tux (Larry Ewing, The
+# GIMP) is not legally assessed - see docs/assets/LOGO.md for the provenance and acknowledgement.
+[[annotations]]
+path = ["docs/assets/isedraf.png"]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
+SPDX-License-Identifier = "MPL-2.0"

@@ -20,12 +20,23 @@ isedraf report --html --save         # write it into the store under reports/
 ```
 
 `--save` writes `reports/<year>/<month>/RPT-<time>-<random>.<ext>` inside the evidence
-store, readable only by you, and prints the path.
+store, readable only by you (0600 in your 0700 store). It prints the absolute path on one
+line, so `path=$(isedraf report --save)` works, and how to view the file. `isedraf list`
+shows every saved report with its path.
 
 For a Full Audit, `sudo isedraf report` (or `--json`, `--html`) renders the last run in
-`/var/lib/isedraf`. It never writes to that store, so `--save` and `--profile` are refused
-under sudo; redirect the output instead, for example
-`sudo isedraf report --html > report.html`.
+`/var/lib/isedraf`. It never writes to that store and never writes to a path chosen under
+root, so `--save` and `--profile` are refused under sudo. Export it through your own shell
+instead, private and without replacing an existing file:
+
+```sh
+(umask 077; set -o noclobber; sudo isedraf report --html > ~/isedraf-report.html)
+```
+
+A plain `sudo isedraf report > file` creates the file with your usual umask, often readable
+by other users, and silently replaces a file of that name; `umask 077` makes it private and
+`set -o noclobber` refuses to overwrite. The file is created by your shell as you, not by
+ISEDRAF as root.
 
 The command exits 0 when every part of the run was COLLECTED and 2 when anything was not.
 It exits 64 when there is no audit run to report on, or when the evidence does not verify,
