@@ -14,7 +14,7 @@ home paths, SSH key fingerprints, sudo rule bodies and GECOS fields.
 
 **Never post an unredacted identity or evidence bundle in a public issue, discussion or chat.**
 
-ISEDRAF 0.1 has no automatic redaction. Remove usernames, host names, key fingerprints, sudo rule
+ISEDRAF has no automatic redaction. Remove usernames, host names, key fingerprints, sudo rule
 bodies and GECOS by hand, and review what remains before sharing. When in doubt, send it privately to
 `contact@itcms.gr` instead.
 

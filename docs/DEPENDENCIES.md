@@ -11,7 +11,7 @@ How ISEDRAF chooses, obtains, pins, monitors and updates what it depends on.
 
 ## At run time
 
-ISEDRAF 0.1 needs the host's own **Python 3.6 or later** and nothing else from Python: it uses the
+ISEDRAF needs the host's own **Python 3.6 or later** and nothing else from Python: it uses the
 **standard library only**. There are no third-party Python modules, no compiled components and no
 plugins.
 

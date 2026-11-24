@@ -5,12 +5,14 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 # Evidence model
 
 This page explains what ISEDRAF records, what each status means, and why a run can be
-trusted as a record of what was collected. It describes ISEDRAF 0.2.
+trusted as a record of what was collected. It describes ISEDRAF 0.6.
 
 ## Collecting is not judging
 
-ISEDRAF records what it saw and whether it could see it. It never decides whether what it
-saw is good or bad. There is no PASS, FAIL, score or finding in 0.2.
+A run records what ISEDRAF saw and whether it could see it. It never decides whether what it
+saw is good or bad: a run holds no PASS, FAIL, score or finding. Criteria results are made
+afterwards, by a separate step (`isedraf evaluate`), and kept apart from the run (see
+[Evaluating is a separate step](#evaluating-is-a-separate-step)).
 
 A fact that could not be observed is reported as not observed, never as absent and never
 as fine. That rule decides almost everything else on this page.
@@ -26,6 +28,7 @@ snapshots/SDS-<time>-<random>/
   state/host_identity.json the pseudonymous host id
   method/host_identity.json how the host id was derived
   sections/<area>.json     one file per collected area, ten in all
+  coverage/evidence_limits.json  what the run could and could not observe
 ```
 
 The commit happens in a fixed order, under a lock that allows one run at a time:
@@ -101,8 +104,36 @@ are recorded separately, with their relation (EQUAL, DIFFERENT or NOT_COMPARABLE
 
 Each run records the ISEDRAF version and how each fact was collected, separately from the
 facts themselves. A new ISEDRAF version, or a different collection method, on an unchanged
-host must never look like the host changed. ISEDRAF does not yet compare runs, but it
-keeps this separation so a later comparison can respect it.
+host must never look like the host changed.
+
+When a baseline has been approved (`sudo isedraf baseline approve`, from a complete Full
+Audit run), each evaluation compares the run with it, section by section: UNCHANGED,
+MODIFIED (to be reviewed; never a regression or an improvement by itself) or NOT_COMPARABLE
+with the reason, for example when either side was not completely collected. A changed
+collection method with an unchanged state is recorded as a method change, not as a change of
+the host. A run whose host id is not the baseline's is not compared at all. An approved
+baseline means "accepted", not "secure".
+
+## Evaluating is a separate step
+
+`isedraf evaluate` (or `sudo isedraf evaluate` for a Full Audit) reads the latest committed
+run and writes an **evaluation** under `evaluations/`: one result per native criterion,
+the findings, and the baseline comparison. It never changes the run. An evaluation belongs
+to the ISEDRAF version and the criteria catalogue that made it, so after an upgrade a run
+is evaluated again rather than reinterpreted.
+
+| Result | Meaning |
+|---|---|
+| PASS · FAIL | the criterion's evidence satisfies or violates its definition |
+| NOT_APPLICABLE | a condition recorded in the same run makes the criterion not apply |
+| MANUAL_REVIEW | the evidence is complete but does not decide the answer; a person must |
+| NOT_EVALUATED | the evidence the criterion needs was not completely collected |
+
+A FAIL gives a security finding at the criterion's severity; a MANUAL_REVIEW gives a review
+finding. Only completely collected evidence gives a result other than NOT_EVALUATED. Each
+criterion, what it reads and what its result does not establish, is in the
+[criteria catalogue](reference/NATIVE_CRITERIA.csv), on its page under
+[reference/criteria/](reference/criteria/), and in `isedraf explain <criterion>`.
 
 ## How a run is verified
 

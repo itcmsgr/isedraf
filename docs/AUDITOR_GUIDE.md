@@ -35,6 +35,15 @@ Python's standard library is enough.
 The [Evidence model](EVIDENCE_MODEL.md) explains the statuses; the
 [Report guide](REPORT_GUIDE.md) walks through the report layout.
 
+## Native criteria results
+
+A criterion result (PASS, FAIL, NOT_APPLICABLE, MANUAL_REVIEW, NOT_EVALUATED) covers only the
+evidence that criterion names, and is kept apart from collection status. To see what a criterion
+reads and what its result does not establish, use the
+[criteria catalogue](reference/NATIVE_CRITERIA.csv) (one row per criterion; it opens in a
+spreadsheet), the [criterion pages](reference/criteria/) or `isedraf explain <criterion>`.
+Installed packages carry both under `/usr/share/doc/isedraf/docs/reference/`.
+
 ## Checking one observation by hand
 
 Each report section ends with an evidence reference: the file inside the run and its
@@ -122,8 +131,9 @@ If you have access to the host, compare with the source file, for example
 
 These limits hold for every run. They are not caveats to skip.
 
-- **An accepted baseline is not a secure host.** When baselines arrive, accepting one will
-  record a decision, not a security judgement. ISEDRAF 0.2 has no baselines at all.
+- **An approved baseline is not a secure host.** Approving one records a decision to accept a
+  state, not a security judgement, and an unchanged comparison covers only the sections
+  compared.
 - **The SSH global effective configuration is not every connection's.** `sshd -T` without
   a connection context does not apply `Match` blocks; those values are reported as not
   resolved, and the `Match` blocks themselves are in the declared configuration.
@@ -142,7 +152,7 @@ These limits hold for every run. They are not caveats to skip.
   is signed.
 
 [Security and limitations](SECURITY_AND_LIMITATIONS.md) lists everything outside the
-scope of ISEDRAF 0.2.
+scope of ISEDRAF 0.6.
 
 ## Questions worth asking the operator
 

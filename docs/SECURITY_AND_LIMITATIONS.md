@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 -->
 # Security and limitations
 
-This page states what ISEDRAF 0.2 does to a host, how its evidence is protected, what it
+This page states what ISEDRAF 0.6 does to a host, how its evidence is protected, what it
 does not cover, and what it cannot conclude. It is meant to be read before relying on a
 report.
 

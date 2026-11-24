@@ -501,7 +501,7 @@ v0.5  Operator experience (D-129), delivered in 0.5.0 (published 2026-11-21)
       tree aligned as each feature lands, with a bounded documentation check; completion and
       offline documentation in the DEB and RPM, installation and upgrade verified.
 
-v0.6  Native audit coverage, delivered in 0.6.0 (prepared 2026-11-24, not yet published)
+v0.6  Native audit coverage, delivered in 0.6.0 (published 2026-11-24)
       ISE-* collectors and criteria chosen against a finite coverage matrix (D-111), scope A
       (owner, 2026-11-21): the ten sections every audit already commits, their evidence made
       complete first, then small batches of criteria by area. Matrix and decisions:

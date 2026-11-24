@@ -20,7 +20,9 @@ the ledger, reports and logs are stored ·
 which evidence field, and what it does not prove ·
 [`REPOSITORY_MAP.md`](REPOSITORY_MAP.md) — where everything lives ·
 [`reference/GLOSSARY.md`](reference/GLOSSARY.md) — canonical terms ·
-[`reference/CLI.md`](reference/CLI.md) — every command, its effect, privilege, exit codes and examples.
+[`reference/CLI.md`](reference/CLI.md) — every command, its effect, privilege, exit codes and examples ·
+[`reference/NATIVE_CRITERIA.csv`](reference/NATIVE_CRITERIA.csv) — every native criterion, one row each,
+for a spreadsheet; one page per criterion in [`reference/criteria/`](reference/criteria/).
 
 | Section | For | Contents |
 |---|---|---|
@@ -31,7 +33,7 @@ which evidence field, and what it does not prove ·
 | `integration/` | organizations | export formats, JSON/JSONL schemas, ingestion guidance, schema versioning |
 | `security/` | everyone | threat model, privilege model, execution sandbox, integrity verification, data sensitivity, privacy and retention |
 | `development/` | contributors | development, testing, corpus, documentation policy, style guide, LLM protocol, wiki governance, release process, requirements trace |
-| `reference/` | everyone | CLI, status values, glossary, filesystem layout, supported platforms |
+| `reference/` | everyone | CLI, native criteria catalogue and criterion pages, status values, glossary, filesystem layout, supported platforms |
 | `roadmap/` | everyone | planned and future direction only |
 
 ## Conventions
