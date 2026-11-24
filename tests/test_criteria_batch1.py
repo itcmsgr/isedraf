@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -279,7 +279,8 @@ class Catalog(unittest.TestCase):
         self.assertEqual([c["criterion_id"] for c in registry["criteria"]],
                          ["ISE-ACCOUNT-001", "ISE-ACCOUNT-002", "ISE-ACCOUNT-003",
                           "ISE-ACCOUNT-004", "ISE-SSH-001", "ISE-ACCOUNT-005",
-                          "ISE-AUTH-001", "ISE-SSH-002"])
+                          "ISE-AUTH-001", "ISE-SSH-002", "ISE-PRIV-001", "ISE-PRIV-002",
+                          "ISE-SSH-003", "ISE-SSH-004", "ISE-SSH-005", "ISE-STORAGE-001"])
         for c in registry["criteria"]:
             _fn, pointers, _needs = criteria.EVALUATORS[c["criterion_id"]]
             self.assertTrue(criteria.pointers_match(c, pointers), c["criterion_id"])

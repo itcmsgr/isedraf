@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -117,6 +117,22 @@ for c in REG["criteria"]:
         bad("%s has check_type %r, which is not declared for %s in check_types"
             % (cid, check_type, fam))
 
+    # D-130 (owner, 2026-11-21): the catalogue fields, each with its vocabulary.
+    title = c.get("title")
+    if "title" in c and (not isinstance(title, str) or not title.strip() or len(title) > 80
+                         or "\n" in title):
+        bad("%s: title must be one non-empty line of at most 80 characters" % cid)
+    if "lifecycle" in c and c["lifecycle"] not in REG.get("lifecycle_states", []):
+        bad("%s: lifecycle %r is not one of lifecycle_states" % (cid, c["lifecycle"]))
+    if "introduced_in" in c and not re.match(r"^\d+\.\d+\.\d+$", str(c["introduced_in"])):
+        bad("%s: introduced_in %r is not a release version X.Y.Z (never the criterion's own "
+            "version)" % (cid, c["introduced_in"]))
+    run = c.get("minimum_run")
+    if "minimum_run" in c and not (isinstance(run, dict) and set(run) == {"route", "reason"}
+                                   and run["route"] in REG.get("collection_routes", [])
+                                   and isinstance(run["reason"], str) and run["reason"].strip()):
+        bad("%s: minimum_run must be {route, reason}, route one of collection_routes" % cid)
+
 # --- 5. extended criterion contract (D-111 extended 2026-10-14) -----------------------
 check_types = REG.get("check_types")
 if check_types is None:
@@ -192,6 +208,15 @@ for p in stale:
 if not stale:
     print("  OK    %d generated criterion page(s) render the registry record"
           % len(REG["criteria"]))
+
+# --- 8. the native criteria catalogue is current and consistent (D-130) ---------------
+import criteria_catalogue                                  # noqa: E402
+wrong = criteria_catalogue.problems()
+for p in wrong:
+    bad("criteria catalogue: %s" % p)
+if not wrong:
+    print("  OK    docs/reference/NATIVE_CRITERIA.csv: %d criteria, fresh, consistent, no formula "
+          "cell" % len(REG["criteria"]))
 if FAIL:
     print("=== native control catalog gate FAILED ===")
     print("  The control is ISEDRAF's, or it is not a native control.")

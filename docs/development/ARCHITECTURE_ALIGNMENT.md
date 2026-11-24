@@ -11,11 +11,9 @@ An internal orientation for an engineer joining the project. It explains the fro
 architecture in plain words; it does not replace it. Where this page and a frozen document
 disagree, the frozen document wins and this page is the defect.
 
-Two labels mark what is not yet frozen or not yet code:
-
-- **decided 2026-09-27, amendment pending** — the owner has decided it, but the frozen
-  documents do not say it yet. Until the amendment lands, the frozen text is what binds.
-- **not built yet** — no code on `main` does this today.
+Updated 2026-11-21 for 0.5.0. Earlier versions marked items "amendment pending" and "not built
+yet"; every such item is now built and in the frozen documents (D-115, D-116, D-122, D-123, D-124).
+What is shipped is in `docs/CURRENT_STATE.md`; what comes next is in `docs/roadmap/ROADMAP.md`.
 
 ## The 60-second explanation
 
@@ -29,16 +27,16 @@ Its principle is to measure the host honestly, preserve the evidence, and never 
 certainty than the evidence supports. A fact it could not observe is reported as not
 observed, never as absent. Collecting a fact and judging it are separate steps.
 
-Today it runs only as an unprivileged development tool. The first general release (GA v0.1)
-adds an unprivileged production mode and one `audit` command that collects, commits and
-renders a report from what it committed. A privileged Full Audit, comparison against a
-baseline, findings and framework mappings come later.
+It runs two ways: a Standard Audit as your own user (`isedraf audit`, since 0.1.0) and a
+privileged Full Audit (`sudo isedraf audit`, since 0.2.0). It evaluates committed evidence
+against its own native criteria (0.3.0), compares later runs with an approved baseline (0.4.0),
+and explains itself on both routes (0.5.0). Framework mappings come later (v0.8).
 
 ## 1. What ISEDRAF is
 
 An on-demand, local evidence engine for one Linux host. It collects normalized host state,
-keeps it as evidence an auditor can inspect without ISEDRAF, and — later — compares it with
-a baseline an administrator has explicitly accepted.
+keeps it as evidence an auditor can inspect without ISEDRAF, and compares later runs with a
+baseline an administrator has explicitly accepted.
 
 It is not a firewall, an endpoint agent, a log collector, a vulnerability scanner or a
 compliance engine. It does not assess network or cloud controls, match CVEs or check patch
@@ -111,21 +109,20 @@ three must never be confusable.
 ```text
 class              who runs it          where evidence lives               status
 -----------------  -------------------  ---------------------------------  ----------------------
-DEV                unprivileged user    $ISEDRAF_STATE_ROOT (any abs path) exists today (frozen)
-USER_PRODUCTION    unprivileged user    $XDG_STATE_HOME/isedraf or         GA v0.1; decided
-                                        ~/.local/state/isedraf             2026-09-27, amendment
-                                                                           pending; not built yet
-SYSTEM_PRODUCTION  root, via sudo       /var/lib/isedraf (root, 0700)      later Full Audit
-                                                                           release; not built yet
+DEV                unprivileged user    $ISEDRAF_STATE_ROOT (any abs path) development only
+USER_PRODUCTION    unprivileged user    $XDG_STATE_HOME/isedraf or         since 0.1.0 (D-116)
+                                        ~/.local/state/isedraf
+SYSTEM_PRODUCTION  root, via sudo       /var/lib/isedraf (root, 0700)      since 0.2.0 (D-123,
+                                                                           D-124)
 ```
 
-**DEV — what exists today.** Every command needs `ISEDRAF_STATE_ROOT` set to an absolute
-path. The variable is honoured only when the process is not root and `SUDO_USER` is unset.
-Every artifact is marked `DEV` and can never be approved as a baseline or mistaken for
-production evidence. Running as root or through sudo is refused with exit 70. There is no
-production mode, and no default state root.
+**DEV — development stores.** `ISEDRAF_STATE_ROOT`, set to an absolute path, selects a
+development store. The variable is honoured only when the process is not root and `SUDO_USER`
+is unset. Every artifact is marked `DEV` and is never mistaken for production evidence; a DEV run
+can become a DEV baseline only (BASE-009). Under sudo or root, ISEDRAF runs only the Full Audit
+commands; anything else is refused with exit 70.
 
-**USER_PRODUCTION — what GA v0.1 adds** (D-116, 2026-09-27; built). An unprivileged run as the invoking user, with no environment variable needed:
+**USER_PRODUCTION — the Standard Audit** (D-116; since 0.1.0). An unprivileged run as the invoking user, with no environment variable needed:
 
 - Evidence goes to `$XDG_STATE_HOME/isedraf`, or `~/.local/state/isedraf` when that is unset.
 - Facts that need root (for example `/etc/shadow` or sudoers) are `NOT_TESTED` with a reason.
@@ -133,14 +130,12 @@ production mode, and no default state root.
 - The storage must be on a suitable local filesystem. If it is not, the production commit
   is refused. It fails closed; it never falls back to somewhere else.
 
-The frozen schema currently spells the marker `DEV` or `PRODUCTION`. How the two production
-classes are recorded is part of the pending amendment.
+**SYSTEM_PRODUCTION** is the Full Audit, described next.
 
-**SYSTEM_PRODUCTION** belongs to the later Full Audit release, described next.
+## 5. The Full Audit
 
-## 5. The later Full Audit release
-
-Decided as the future design (D-118); not built yet. It is the privileged path.
+Built since 0.2.0 (D-118; frozen in `FULL_AUDIT_AUTHORITY_MODEL.md`, D-123, D-124). It is
+the privileged path.
 
 ```text
 operator runs:  sudo isedraf audit       (sudo is outside ISEDRAF; a sudoers
@@ -177,9 +172,12 @@ Details that matter when you read or write code for it:
 
 - The tool-integrity record is a trust level (local manifest, package manager, or an
   external signature). It never proves the host or ISEDRAF is uncompromised.
-- The engine runs with the minimum privilege set the platform corpus validates. Do not
-  describe it as having "no capabilities"; the exact set is not frozen until the corpus
-  proves it.
+- The engine runs with the minimum privilege set the platform corpus validated (`AUTH-027`):
+  the bounding set is fixed in `launcher/outer.py`. Do not describe it as having "no
+  capabilities". What only root may read is read by four fixed operations with versioned
+  IDs (`AUTH-017` to `AUTH-025`): `/etc/shadow`, the sudoers graph, the declared sshd configuration and
+  `sshd -T`. Nothing else is read with privilege; other users' `authorized_keys` files under a
+  private directory are therefore `NOT_TESTED` in a Full Audit too.
 - Supervisor and engine talk only through run-private, bounded pipes or inherited file
   descriptors, or through ISEDRAF-owned run artifacts. No socket, no daemon, no internal
   sudo, no password prompt, and no way to reacquire privilege.
@@ -223,12 +221,17 @@ only protected derivatives do. `host_id` is pseudonymous, not anonymous. Untrust
 (file contents, names, comments) is never echoed into diagnostics (owner ruling
 2026-09-26), and every byte written to a console is escaped for control characters first.
 
-## 7. Where we are and the path to GA
+## 7. Where we are, and how GA was reached
 
-**Built today:** the certified evidence contract; `isedraf identity` (snapshot, ledger,
-verification); `isedraf inventory`; `isedraf report`; nine further collectors (accounts,
-NSS topology, hostname, sudo, SSH, PAM, authorized_keys, login policy, mounts) that no
-command reaches yet. All of it runs as DEV only.
+**Where we are (0.5.0, 2026-11-21).** Published: 0.1.0 (2026-09-28, GA, unprivileged), 0.1.1 and
+0.1.2 (corrections), 0.2.0 (2026-10-19, Full Audit), 0.3.0 (2026-11-09, native criteria), 0.4.0
+(2026-11-13, approved baselines), 0.5.0 (2026-11-21, operator experience). Every audit commits ten
+sections (inventory, NSS, hostname, accounts, sudo, SSH, PAM, login policy, mounts,
+authorized_keys); in 0.5.0 eight native criteria read three of them; the 0.6 line adds six that read the sudo policy, `sshd -T` and the host's mount table. Next: v0.6, native audit coverage
+(`docs/development/V0_6_NATIVE_COVERAGE_DESIGN.md`). The shipped state is `docs/CURRENT_STATE.md`,
+generated from `scripts/ci/project_status.json`.
+
+The rest of this section is the record of how GA was reached (2026-09 and 2026-10).
 
 **GA release track** (owner directive, 2026-09-27), in order:
 
@@ -280,20 +283,20 @@ property.
 DISCOVER -> CLASSIFY -> CONTAIN (if needed) -> REGISTER
 ```
 
-**Explicitly after GA v0.1:** comparison and delta against an accepted baseline;
-findings and interpretation; framework mappings; the privileged Full Audit.
+**After GA v0.1, as planned then:** comparison and delta against an accepted baseline (0.4.0);
+findings and interpretation (0.3.0); the privileged Full Audit (0.2.0); framework mappings (v0.8,
+not built).
 
 ## Normative references
 
-This page explains; these bind. Owner decisions marked "amendment pending" have no frozen
-reference yet.
+This page explains; these bind.
 
 | Section | Frozen source | Requirement and decision IDs |
 |---|---|---|
 | 60-second explanation, 1 | `docs/architecture/ISEDRAF_HLD.md` §1–3 | HLD-001, HLD-003, HLD-010…HLD-015, D-03, D-04, D-07…D-09 |
 | 2 Core invariants | `ISEDRAF_HLD.md` §5; `EVIDENCE_AND_TRUST_MODEL.md` §11; `SNAPSHOT_BASELINE_DELTA_MODEL.md` | HLD-031, CMP-001, CMP-002, EVID-001, EVID-040, SCOPE-045, D-13, D-35, D-43; IQ-037 (owner ruling 2026-09-27) |
 | 3 Install footprint | `EVIDENCE_AND_TRUST_MODEL.md` §5; `DECISIONS_REGISTER.md` §11 | EXEC-010, EXEC-016, HLD-015, D-17, D-59, D-60, D-61 |
-| 4 Execution modes | `EVIDENCE_AND_TRUST_MODEL.md` §2; `V0_1_IMPLEMENTATION_SCOPE.md` | PRIV-001, PRIV-004, SCOPE-070, SCOPE-071, SCOPE-077, STORE-001, D-22, D-70; USER_PRODUCTION: amendment pending |
-| 5 Full Audit | `EVIDENCE_AND_TRUST_MODEL.md` §2, §4, §6 | PRIV-002, PRIV-003, PRIV-005, PRIV-007…PRIV-012, EXEC-001, EXEC-004, EXEC-020, INTEG-002, SCOPE-072, D-23, D-24, D-26, D-27, OD-06; dedicated engine user and staging-then-promote: amendment pending |
-| 6 Evidence and outputs | `ISEDRAF_HLD.md` §9; `SNAPSHOT_BASELINE_DELTA_MODEL.md`; `EVIDENCE_AND_TRUST_MODEL.md` §7 | OUT-010, OUT-013, SNAP-010, SNAP-014, SNAP-015, SNAP-018, EVID-013, EVID-014, D-38, D-50, D-55, D-115; report sections as auxiliary artifacts: amendment pending |
+| 4 Execution modes | `EVIDENCE_AND_TRUST_MODEL.md` §2; `V0_1_IMPLEMENTATION_SCOPE.md` | PRIV-001, PRIV-004, SCOPE-070, SCOPE-071, SCOPE-077, STORE-001, D-22, D-70; USER_PRODUCTION: D-116 |
+| 5 Full Audit | `EVIDENCE_AND_TRUST_MODEL.md` §2, §4, §6; `FULL_AUDIT_AUTHORITY_MODEL.md` | PRIV-002, PRIV-003, PRIV-005, PRIV-007…PRIV-012, EXEC-001, EXEC-004, EXEC-020, INTEG-002, SCOPE-072, D-23, D-24, D-26, D-27, OD-06; AUTH-017…AUTH-027, D-123, D-124 |
+| 6 Evidence and outputs | `ISEDRAF_HLD.md` §9; `SNAPSHOT_BASELINE_DELTA_MODEL.md`; `EVIDENCE_AND_TRUST_MODEL.md` §7 | OUT-010, OUT-013, SNAP-010, SNAP-014, SNAP-015, SNAP-018, EVID-013, EVID-014, D-38, D-50, D-55, D-115; report sections as auxiliary artifacts: D-115, D-122 |
 | 7 GA path | `docs/roadmap/ROADMAP.md` (GA release track); `docs/development/GA_CLI_AUDIT.md` | SCOPE-072, SCOPE-077 |

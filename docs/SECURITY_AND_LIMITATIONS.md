@@ -29,7 +29,7 @@ that ends with the run.
 The standard audit runs as your own user. Facts it cannot read, such as `/etc/shadow` and
 the sudo policy, are NOT_TESTED or PARTIAL, with the reason.
 
-Under `sudo`, ISEDRAF runs only `audit`, `report`, `evaluate` and `baseline approve`, and answers `help`, `--help` and `--version` from its installed definitions without reading evidence; every other command is refused with exit 70. It never asks for a password and never calls `sudo` itself. In a Full Audit:
+Under `sudo`, ISEDRAF runs only `audit`, `report`, `evaluate`, `baseline approve` and `list`, and answers `help`, `--help` and `--version` from its installed definitions without reading evidence; every other command is refused with exit 70. It never asks for a password and never calls `sudo` itself. In a Full Audit:
 
 - a root launcher starts a sandboxed systemd unit with a fixed property set: the file
   system read-only except the evidence store, no network, four capabilities as its bound;
@@ -78,13 +78,17 @@ promised here.
 - beyond the one approved baseline of 0.4: accepting a change, re-approving,
   tracking more sections, exit codes that report a change (`check`), and per-domain
   judgements of a change;
-- scores, and any judgement beyond the eight native criteria;
+- scores, and any judgement beyond the fourteen native criteria;
 - mappings to any security framework or standard: none exists in this repository, none is
   bundled and none is licensed;
 - connection-specific SSH settings: `sshd -T` gives the global effective configuration,
   and values that depend on `Match` blocks are reported as not resolved;
 - other users' authorized_keys files that the `isedraf` account cannot read: Full Audit
   has no privileged read for them, and they stay NOT_TESTED;
+- PAM lines that the platform's libpam itself does not read: `@include` is followed on Debian
+  and Ubuntu, where libpam reads it - the family is taken from `/etc/os-release`, an assumption
+  about the library, not a check of it - and recorded as unsupported elsewhere; an absolute
+  `@include` target is not read, and the PAM area says so;
 - the mount tables of other processes and containers (the host's own is read);
 - on SELinux-enforcing Rocky Linux and AlmaLinux, the time source details from `chronyc`
   in Full Audit: the tool is not run there, and the time area says so;

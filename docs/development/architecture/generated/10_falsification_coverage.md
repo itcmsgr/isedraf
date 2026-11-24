@@ -10,7 +10,7 @@ GENERATED from `scripts/ci/falsifiable.sh`. A large total is not coverage if mos
 
 | Subsystem | Injections |
 |---|---|
-| W1-A / canonical | 26 |
+| W1-A / canonical | 27 |
 | inventory / storage D-114 | 5 |
 | accounts W1-D | 22 |
 | S1 key/value | 4 |
@@ -20,9 +20,9 @@ GENERATED from `scripts/ci/falsifiable.sh`. A large total is not coverage if mos
 | S5 enumeration | 5 |
 | architecture | 7 |
 | privacy / disclosure | 30 |
-| licensing / framework | 24 |
+| licensing / framework | 26 |
 | packaging / release | 10 |
-| governance / gates | 9 |
+| governance / gates | 10 |
 | docs truth | 7 |
-| other / cross-cutting | 422 |
-| **total** | **602** |
+| other / cross-cutting | 437 |
+| **total** | **621** |

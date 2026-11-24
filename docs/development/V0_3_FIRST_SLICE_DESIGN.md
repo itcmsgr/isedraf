@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 -->
 # v0.3 first vertical slice — ISE-ACCOUNT-001 end to end
 
-Status: PLANNING. Ruled by the owner on 2026-11-01 and incorporated as `D-125` (`EVAL-001` …
+Status: IMPLEMENTED, released in 0.3.0 (2026-11-09). Ruled by the owner on 2026-11-01 and incorporated as `D-125` (`EVAL-001` …
 `EVAL-009` in `docs/architecture/NATIVE_CONTROL_CATALOG.md`), which supersedes section 3 below,
 S3 in particular: `70` already means a refused privileged invocation.
 Implements: D-41, D-42, D-77, D-111, D-121, CMP-003

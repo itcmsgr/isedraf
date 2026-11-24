@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -34,8 +34,9 @@ from . import artifact as artifact_module
 from . import sections as section_summaries
 from .profile import IDENTITY_DISCLAIMER
 
-REPORT_SCHEMA_VERSION = 4          # 2: evidence_limitations (IQ-042 (3)); 3: native_results (D-125)
+REPORT_SCHEMA_VERSION = 5          # 2: evidence_limitations (IQ-042 (3)); 3: native_results (D-125)
                                    # 4: baseline_comparison (D-127, D-128)
+                                   # 5: pam_nullok, password_max_age (D-132)
 
 # Plain words on the report itself (GA v0.1 public docs review): the two blocks stay
 # distinct, because host identity is part of host state and inventory is not.
@@ -393,6 +394,88 @@ def baseline_comparison(native):
             "changes": changes.get("changes") or []}
 
 
+# D-132 (3): two report additions, read from the committed sections of the reported snapshot.
+# Both are presentation of recorded evidence: neither is a criterion, neither has a threshold,
+# and neither changes a committed evaluation result.
+NULLOK_BESIDE = "ISE-ACCOUNT-002"
+NULLOK_NOTE = ("A report observation from the PAM section of the same snapshot, not part of the "
+               "evaluation: %s keeps the result its committed evaluation recorded. pam_unix with "
+               "nullok on an auth line does not refuse an account because its password field is "
+               "empty; whether a login succeeds depends on the whole stack, which is not computed."
+               % NULLOK_BESIDE)
+
+
+def _section_evidence(audit_sections, name):
+    section = (audit_sections or {}).get(name) or {}
+    return section.get("collection_status"), section.get("reason"), section.get("evidence")
+
+
+def pam_nullok(audit_sections, snapshot_id):
+    """Every auth-type pam_unix rule with the nullok argument, with its service and file.
+
+    OBSERVED: at least one such line. NOT_OBSERVED: none, over a COLLECTED PAM section.
+    NOT_ESTABLISHED: none, but the section is incomplete, so a line in what was not read is
+    not excluded. NOT_COLLECTED: the section holds no evidence."""
+    status, reason, evidence = _section_evidence(audit_sections, "pam")
+    block = {"beside": NULLOK_BESIDE, "snapshot_id": snapshot_id,
+             "pam_section_status": status, "pam_section_reason": reason,
+             "lines": [], "note": NULLOK_NOTE}
+    if not isinstance(evidence, dict):
+        return dict(block, status="NOT_COLLECTED")
+    for r in evidence.get("records") or []:
+        if (r.get("kind") == "RULE" and r.get("type") == "auth"
+                and os.path.basename(r.get("module") or "") == "pam_unix.so"
+                and "nullok" in (r.get("arguments") or [])):
+            block["lines"].append({"service": r.get("service"),
+                                   "source_path": r.get("source_path"),
+                                   "source_line": r.get("source_line"),
+                                   "control": r.get("control"),
+                                   "module": r.get("module")})
+    block["lines"].sort(key=lambda x: (str(x["source_path"]), x["source_line"] or 0))
+    if block["lines"]:
+        return dict(block, status="OBSERVED")
+    return dict(block, status="NOT_OBSERVED" if status == "COLLECTED" else "NOT_ESTABLISHED")
+
+
+MAX_AGE_NOTE = ("The maximum password age each local account's /etc/shadow record states, as "
+                "recorded: a setting, not a criterion, with no threshold applied. An empty field "
+                "(no limit), a number of days as written (99999 included) and a value that was "
+                "not collected are kept apart.")
+
+
+def _max_age(account):
+    shadow = account.get("shadow")
+    if not isinstance(shadow, dict):
+        relation = account.get("shadow_record")
+        return ("NOT_COLLECTED", None, "no /etc/shadow record"
+                if relation == "ABSENT_FROM_COLLECTED_SOURCE"
+                else "/etc/shadow not read (%s)" % (relation or "not recorded"))
+    source = shadow.get("max_days_source")
+    if source == "UNSPECIFIED":
+        return ("NO_LIMIT", None, "field empty")
+    if source == "OBSERVED" and isinstance(shadow.get("max_days"), int):
+        return ("DAYS", shadow["max_days"], "as written")
+    return ("NOT_COLLECTED", None, "field %s" % (source or "not recorded").lower())
+
+
+def password_max_age(audit_sections, snapshot_id):
+    """One row per local account of the accounts section, in /etc/passwd order."""
+    status, reason, evidence = _section_evidence(audit_sections, "accounts")
+    block = {"snapshot_id": snapshot_id, "accounts_section_status": status,
+             "accounts_section_reason": reason, "rows": [], "note": MAX_AGE_NOTE}
+    if not isinstance(evidence, dict):
+        return block
+    for a in evidence.get("local_accounts") or []:
+        state, days, detail = _max_age(a)
+        name = a.get("name")
+        if name is None and a.get("name_bytes_hex"):
+            name = "hex:" + a["name_bytes_hex"]
+        block["rows"].append({"name": name, "uid": a.get("uid"),
+                              "passwd_line": a.get("passwd_line"), "max_age": state,
+                              "max_days": days, "detail": detail})
+    return block
+
+
 def build(root, inventory, assessment=None, generated_at=None, report_id=None,
           inventory_artifact=None, coverage_manifest=None, audit_sections=None,
           audit_digests=None, snapshot_id=None):
@@ -467,6 +550,11 @@ def build(root, inventory, assessment=None, generated_at=None, report_id=None,
         # D-127/D-128: the committed comparison, apart from criterion results and from
         # collection status (CMP-001); a report never compares.
         "baseline_comparison": baseline_comparison(native),
+        # D-132 (3): from the same committed sections; None when the caller gave none.
+        "pam_nullok": (pam_nullok(audit_sections, snapshot_id)
+                       if audit_sections is not None else None),
+        "password_max_age": (password_max_age(audit_sections, snapshot_id)
+                             if audit_sections is not None else None),
         "evidence_limitations": evidence_limitations(coverage_manifest),
         "limitations": (_limitations(inventory) + _coverage_limitations(coverage_manifest)
                         + ([FULL_AUDIT_KEYS_LIMITATION]

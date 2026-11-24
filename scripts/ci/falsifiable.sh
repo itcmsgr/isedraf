@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -1140,6 +1140,65 @@ inject "PAM include and substack are recorded as the same edge" \
 inject "PAM a cycle is treated as an ordinary repeated inclusion" \
   'python3 tests/test_pam.py' \
   'sed -i "s|        if service in in_progress:|        if False:|" lib/isedraf/pam/acquire.py' \
+  'FAILED|Error'
+
+# v0.6 (D-130 scope A): @include is followed on Debian-family hosts and only there.
+inject "PAM @include is left unread on a Debian-family host" \
+  'python3 tests/test_pam.py' \
+  'sed -i "s|        if at_include is not True:|        if True:|" lib/isedraf/pam/sources.py' \
+  'FAILED|Error'
+
+inject "PAM an absolute @include target is followed" \
+  'python3 tests/test_pam.py' \
+  'sed -i "s|== model.AT_INCLUDE$|== None|" lib/isedraf/pam/acquire.py' \
+  'FAILED|Error'
+
+# D-131: the first PRIV criteria - each injection breaks one rule of a definition.
+inject "ISE-PRIV-001 an unresolved candidate no longer blocks PASS" \
+  'python3 tests/test_criteria_priv.py' \
+  'sed -i "s|return (\"MANUAL_REVIEW\", \"CANDIDATE_NOT_RESOLVED\"|return (\"PASS\", \"CANDIDATE_NOT_RESOLVED\"|" lib/isedraf/evaluate/criteria.py' \
+  'FAILED|Error'
+
+inject "ISE-PRIV-001 a declaration only for root is no longer excluded" \
+  'python3 tests/test_criteria_priv.py' \
+  'sed -i "s|continue                                   # a declaration only for root: excluded|pass|" lib/isedraf/evaluate/criteria.py' \
+  'FAILED|Error'
+
+inject "ISE-PRIV-002 settings that disagree across files are ordered anyway" \
+  'python3 tests/test_criteria_priv.py' \
+  'sed -i "s|        if len(values) > 1 and len(files) > 1:|        if False:|" lib/isedraf/evaluate/criteria.py' \
+  'FAILED|Error'
+
+inject "ISE-PRIV-001 runas_default is ignored for a rule without a run-as list" \
+  'python3 tests/test_criteria_priv.py' \
+  'sed -i "s|in ROOT_TARGETS else \"other\"), cited|in ROOT_TARGETS else \"root\"), cited|" lib/isedraf/evaluate/criteria.py' \
+  'FAILED|Error'
+
+# D-132: the second v0.6 batch.
+inject "ISE-SSH-005 host-based authentication off no longer gives NOT_APPLICABLE" \
+  'python3 tests/test_criteria_a064.py' \
+  'sed -i "s|        return (\"NOT_APPLICABLE\", \"HOSTBASED_OFF\"|        return (\"PASS\", \"HOSTBASED_OFF\"|" lib/isedraf/evaluate/criteria.py' \
+  'FAILED|Error'
+
+inject "ISE-STORAGE-001 a mount table that is not the host's is accepted" \
+  'python3 tests/test_criteria_a064.py' \
+  'sed -i "s|    if any(r.get(\"source_path\") != HOST_MOUNT_TABLE for r in records):|    if False:|" lib/isedraf/evaluate/criteria.py' \
+  'FAILED|Error'
+
+inject "ISE-SSH-003 without-password is read as no" \
+  'python3 tests/test_criteria_a064.py' \
+  'sed -i "s|    if value == \"no\":|    if value in (\"no\", \"without-password\"):|" lib/isedraf/evaluate/criteria.py' \
+  'FAILED|Error'
+
+# D-132 (3): the report additions.
+inject "Report nullok: a password-type line is read as an auth line" \
+  'python3 tests/test_report_additions.py' \
+  'sed -i "s|if (r.get(\"kind\") == \"RULE\" and r.get(\"type\") == \"auth\"|if (r.get(\"kind\") == \"RULE\" and r.get(\"type\") in (\"auth\", \"password\")|" lib/isedraf/report/model.py' \
+  'FAILED|Error'
+
+inject "Report maximum password age: an empty field is shown as 99999 days" \
+  'python3 tests/test_report_additions.py' \
+  'sed -i "s|        return (\"NO_LIMIT\", None, \"field empty\")|        return (\"DAYS\", 99999, \"as written\")|" lib/isedraf/report/model.py' \
   'FAILED|Error'
 
 inject "PAM a bracketed control is collapsed to a single token" \
@@ -4471,6 +4530,49 @@ inject "C-06 competitive framing naming an external project" \
   'python3 scripts/ci/check_docs_truth.py' \
   'printf "\nISEDRAF is a replacement for osquery in this role.\n" >> docs/reference/GLOSSARY.md' \
   'COMPETITIVE_FRAMING'
+
+# G2 (2026-11-21): the two test suites of make check, each proven able to fail.
+inject "GOV-002 a production test fails and check-tests still passes" \
+  'make check-tests' \
+  'sed -i "1i assert False, \"injected test failure\"" tests/test_identity.py' \
+  'injected test failure'
+
+inject "NORM-039 the corpus generator fails and the cross-version check still passes" \
+  'bash scripts/vectors/crossversion.sh' \
+  'sed -i "1i raise SystemExit(3)" scripts/vectors/generate.py' \
+  'could not generate the corpus'
+
+inject "G2 a target joins make check without being classified" \
+  'python3 scripts/ci/check_gate_coverage.py' \
+  'sed -i "s/^check: /check: check-unclassified /" Makefile' \
+  'not classified'
+
+# D-130 (2026-11-21): the native criteria catalogue is generated, consistent and formula-free.
+inject "D-130 the criteria catalogue is edited by hand" \
+  'python3 scripts/ci/check_native_catalog.py' \
+  'sed -i "2s/Restricted/Limited/" docs/reference/NATIVE_CRITERIA.csv' \
+  'stale or edited by hand'
+
+inject "D-130 a registry text would run as a spreadsheet formula" \
+  'python3 scripts/ci/check_native_catalog.py' \
+  'sed -i "0,/\"title\": \"/s/\"title\": \"/\"title\": \"=/" lib/isedraf/catalog/native_controls.json' \
+  'runs as a formula'
+
+inject "D-130 a criterion is missing from the catalogue" \
+  'python3 scripts/ci/check_native_catalog.py' \
+  'sed -i "\$d" docs/reference/NATIVE_CRITERIA.csv' \
+  'the catalogue lists'
+
+# 2026-11-21 (v0.6 documentation alignment): stale prose under a status that contradicts it.
+inject "C-01 an IMPLEMENTED document says nothing is implemented" \
+  'python3 scripts/ci/check_docs_truth.py' \
+  'printf "\nNothing here is implemented.\n" >> docs/development/CI_INVENTORY.md' \
+  'STATUS_CONTRADICTION'
+
+inject "C-01 a record of a published release still says PLANNING" \
+  'python3 scripts/ci/check_docs_truth.py' \
+  'sed -i "0,/^Status: .*/s//Status: PLANNING/" docs/development/V0_5_RELEASE_ACCEPTANCE.md' \
+  'RELEASED_STILL_PLANNING'
 
 # C-01. The .git branch added for worktree support is a new code path, and a new code
 # path in a gate is a new way for the gate to stop discriminating. A .git reference that

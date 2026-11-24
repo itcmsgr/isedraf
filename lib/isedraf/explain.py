@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -23,7 +23,13 @@ from isedraf.summary import wrap
 
 
 LIFECYCLE = "EXPERIMENTAL"          # D-80: every control in the prototype
-NO_HISTORY = "not available: baseline and delta are v0.4"
+# D-77, EVAL-009 as amended by D-130: explaining a criterion describes a capability; a baseline and
+# its delta belong to an evidence store, so the explanation says where they are shown instead of
+# stating something about a store it has not read.
+STORE_STATE = ("belongs to an evidence store, not to a criterion: `isedraf evaluate` (or `sudo "
+               "isedraf evaluate`) compares the latest run with the store's approved baseline")
+STORE_DELTA = ("per run, in the Baseline comparison of the evaluation and of the report "
+               "(since 0.4.0)")
 
 
 def _items(value):
@@ -36,8 +42,16 @@ def lines(c):
     v0.5 terminal rule (owner, 2026-11-20): every line fits 80 columns; prose wraps, and an
     artifact path, a JSON pointer or a command is never split - a pointer gets its own line."""
     sem = c["evaluation_semantics"]
-    out = ["%s  (version %d, %s)" % (c["criterion_id"], c["version"], LIFECYCLE), "",
-           "Purpose"] + wrap("  ", c["purpose"], 2) + ["", "Why it matters"]
+    out = ["%s  (version %d, %s)" % (c["criterion_id"], c["version"],
+                                     c.get("lifecycle", LIFECYCLE))]
+    if c.get("title"):                    # D-130: the catalogue's short name
+        out.append(c["title"])
+    if c.get("introduced_in"):
+        route = {"STANDARD_AUDIT": "a Standard Audit", "FULL_AUDIT": "a Full Audit"}.get(
+            c["minimum_run"]["route"], c["minimum_run"]["route"])
+        out += wrap("", "Introduced in ISEDRAF %s. Needs at least %s: %s; that is necessary, "
+                    "not sufficient." % (c["introduced_in"], route, c["minimum_run"]["reason"]), 2)
+    out += ["", "Purpose"] + wrap("  ", c["purpose"], 2) + ["", "Why it matters"]
     out += wrap("  ", c["rationale"], 2) + [""]
     out += wrap("Check type      ", c["check_type"], 16)
     out += wrap("Severity        ", "%s (default_severity; a FAIL finding takes it unchanged)"
@@ -71,5 +85,6 @@ def lines(c):
     if c.get("remediation_guidance"):
         out += ["", "Remediation guidance (illustrative; ISEDRAF changes nothing)"]
         out += wrap("  ", c["remediation_guidance"], 2)
-    out += ["", "Baseline state  " + NO_HISTORY, "Delta           " + NO_HISTORY]
+    out += [""] + wrap("Baseline state  ", STORE_STATE, 16)
+    out += wrap("Delta           ", STORE_DELTA, 16)
     return out

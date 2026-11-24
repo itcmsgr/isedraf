@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -220,6 +220,32 @@ for name, spec in REGISTRY["authoritative_digests"].items():
             failures.append(("STALE_DIGEST", rel, n,
                              "%s… does not match %s (label it historical, or fix it)"
                              % (quoted[:16], spec["path"])))
+
+# --- 5. stale prose: a status that the text or a published release contradicts ----------------
+# Found 2026-11-21: CI_INVENTORY.md said "Nothing here is implemented" under Status: IMPLEMENTED,
+# and the v0.5 records still said PLANNING after 0.5.0 was published. Neither tripped a gate.
+NOT_BUILT = re.compile(r"nothing here is implemented|none is implemented yet|not built yet|"
+                       r"amendment pending", re.I)
+HISTORICAL = re.compile(r"historical|was true when written|earlier versions", re.I)
+PUBLISHED = set(re.findall(r"\[\"(\d+\.\d+)\.0\", \"PUBLISHED",
+                           (ROOT / "scripts" / "ci" / "project_status.json").read_text()))
+for rel in DOCS:
+    text = (ROOT / rel).read_text(encoding="utf-8")
+    status = re.search(r"^Status:\s*(\S+)", text, re.M)
+    if not status:
+        continue
+    value = status.group(1).strip("*`.,;")
+    if value == "IMPLEMENTED":
+        for n, line in enumerate(text.splitlines(), 1):
+            if NOT_BUILT.search(line) and not HISTORICAL.search(line):
+                failures.append(("STATUS_CONTRADICTION", rel, n,
+                                 "Status: IMPLEMENTED, but the text says it is not: %s"
+                                 % NOT_BUILT.search(line).group(0)))
+    release = re.match(r"docs/development/V(\d+)_(\d+)_", rel)
+    if value == "PLANNING" and release and "%s.%s" % release.groups() in PUBLISHED:
+        failures.append(("RELEASED_STILL_PLANNING", rel, 0,
+                         "%s.%s.0 is published; mark the record IMPLEMENTED, released in it"
+                         % release.groups()))
 
 if failures:
     print("=== documentation truth gate FAILED ===", file=sys.stderr)

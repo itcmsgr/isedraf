@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -35,6 +35,10 @@ TYPES = ("auth", "account", "password", "session")
 SIMPLE_CONTROLS = ("required", "requisite", "sufficient", "optional")
 INCLUDE = "include"
 SUBSTACK = "substack"
+# Debian-family libpam only (Debian patch 031_pam_include; upstream Linux-PAM has no such line):
+# `@include <target>` in the TYPE field. Not a control value, so it is its own edge kind.
+AT_INCLUDE = "@include"
+ANY_TYPE = "any"
 BRACKETED = "BRACKETED"
 
 # --- why include and substack are not one edge -------------------------------------------
@@ -51,6 +55,9 @@ EDGE_SEMANTICS = {
              "can terminate the containing stack",
     SUBSTACK: "target is evaluated as a self-contained sub-stack; a jump inside it "
               "cannot escape past the substack boundary",
+    AT_INCLUDE: "Debian-family libpam only: every line of the target, of every type, is read "
+                "as if written here; a missing or unreadable target makes the entry fail "
+                "(must-fail), it is never skipped",
 }
 
 # Named actions a bracketed control may take. Numeric values are jumps and stay numeric.

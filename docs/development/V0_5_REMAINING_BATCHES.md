@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 -->
 # v0.5 remaining batches — plan
 
-Status: PLANNING
+Status: IMPLEMENTED, released in 0.5.0 (2026-11-21). A historical record of how v0.5 was built and accepted.
 
 Implements: D-129
 

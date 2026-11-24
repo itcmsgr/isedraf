@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -24,7 +24,7 @@
 # meta:binaries="bash"
 # =============================================================================
 
-_isedraf_criteria='ISE-ACCOUNT-001 ISE-ACCOUNT-002 ISE-ACCOUNT-003 ISE-ACCOUNT-004 ISE-SSH-001 ISE-ACCOUNT-005 ISE-AUTH-001 ISE-SSH-002'
+_isedraf_criteria='ISE-ACCOUNT-001 ISE-ACCOUNT-002 ISE-ACCOUNT-003 ISE-ACCOUNT-004 ISE-SSH-001 ISE-ACCOUNT-005 ISE-AUTH-001 ISE-SSH-002 ISE-PRIV-001 ISE-PRIV-002 ISE-SSH-003 ISE-SSH-004 ISE-SSH-005 ISE-STORAGE-001'
 
 _isedraf_words() {
     local w

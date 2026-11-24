@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -216,12 +216,20 @@ def build(root, state_root_class, engine_version, snapshot_id=None,
     return evl_id, raw, results
 
 
+# EVAL-005 as amended by D-131: the stable token NO_BASELINE, then why. Evaluations made before
+# 0.6 carry "NO_BASELINE: baseline and delta are v0.4 (D-120)" and keep those bytes; readers decide
+# from the token and baseline_revision, never from the wording.
+NO_BASELINE = "NO_BASELINE"
+NO_BASELINE_REASON = (NO_BASELINE + ": no approved baseline was in force in this store when "
+                      "the run was evaluated, so nothing was compared")
+
+
 def _changes(common, in_force, info, core, data):
     """EVAL-005 as amended by D-127. No baseline: exactly the v0.3 record. A change is
     never manufactured: rows come only from the comparison of two verified snapshots."""
     if in_force is None:
         out = dict(common, comparison_performed=False,
-                   reason="NO_BASELINE: baseline and delta are v0.4 (D-120)",
+                   reason=NO_BASELINE_REASON,
                    baseline_revision=None, changes=[])
         if info and info.get("unledgered_revision"):
             # Interrupted before its ledger record: reported, never used (D-127).

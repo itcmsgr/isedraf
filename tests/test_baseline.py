@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -34,6 +34,8 @@ sys.path.insert(0, str(ROOT / "lib"))
 
 from isedraf import audit, canonical, cli, exitcodes, ledger, stateroot, verify  # noqa: E402
 from isedraf.baseline import approve, profile, projection, revision          # noqa: E402
+from isedraf.evaluate import run as evaluate_run                              # noqa: E402
+from isedraf.report import model as report_model                              # noqa: E402
 
 SSHD = "PermitRootLogin no\nPasswordAuthentication no\nMatch User alice\n    X11Forwarding no\n"
 FILES = {
@@ -249,12 +251,24 @@ class ClassRefusal(unittest.TestCase):
 
 
 class Comparison(Store):
+    def test_an_evaluation_made_before_0_6_is_still_read_as_no_baseline(self):
+        # D-131: earlier evaluations keep their bytes and the v0.4 wording; readers decide from the
+        # token and baseline_revision, so the old and the new record read the same way.
+        for reason in ("NO_BASELINE: baseline and delta are v0.4 (D-120)",
+                       evaluate_run.NO_BASELINE_REASON):
+            native = {"status": "EVALUATED",
+                      "changes": {"comparison_performed": False, "reason": reason,
+                                  "baseline_revision": None, "changes": []}}
+            self.assertEqual(report_model.baseline_comparison(native)["status"], "NO_BASELINE")
+        self.assertTrue(evaluate_run.NO_BASELINE_REASON.startswith("NO_BASELINE: "))
+        self.assertNotIn("v0.4", evaluate_run.NO_BASELINE_REASON)
+
     def test_no_baseline_keeps_the_v03_record(self):
         self.audit()
         self.evaluate()
         changes = self.latest_changes()
         expected = {"comparison_performed": False,
-                    "reason": "NO_BASELINE: baseline and delta are v0.4 (D-120)",
+                    "reason": evaluate_run.NO_BASELINE_REASON,
                     "baseline_revision": None, "changes": []}
         for k, v in expected.items():
             self.assertEqual(changes[k], v)

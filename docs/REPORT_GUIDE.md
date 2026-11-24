@@ -162,6 +162,25 @@ reviewed and is not a regression or an improvement by itself. A changed collecti
 with an unchanged state is not a change. In the JSON report the same data is under
 `baseline_comparison`.
 
+## Recorded settings shown beside the criteria
+
+From 0.6 the report shows two recorded settings. Both come from the run being reported, and
+neither is a criterion: no threshold is applied and no result changes.
+
+- **`pam_unix` with `nullok`**, beside ISE-ACCOUNT-002. Each `auth` line of the declared PAM
+  configuration that loads `pam_unix` with the `nullok` argument is listed, with its service
+  and file. With `nullok`, `pam_unix` does not refuse an account because its password field is
+  empty; whether a login succeeds depends on the whole stack, which is not computed. Lines of
+  other types are not listed. The criterion keeps the result its evaluation recorded, including
+  NOT_EVALUATED when `/etc/shadow` could not be read. When the PAM area is PARTIAL and no such
+  line was found, the report says that a line in what was not read is not excluded.
+- **Maximum password age per local account**, from each account's `/etc/shadow` record, in
+  three forms kept apart: `no limit` (the field is empty), a number of days exactly as written
+  (99999 included), and `not collected`, with why (no `/etc/shadow` record, the file not read,
+  or a malformed field).
+
+In the JSON report they are under `pam_nullok` and `password_max_age`.
+
 ## Limitations
 
 The report ends with the limitations that apply to this run, for example that host

@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -75,13 +75,62 @@ def _observed(o):
     return observation_text(o)
 
 
-def _native_markdown(native):
+def nullok_lines(block):
+    """D-132 (3): the nullok observation beside ISE-ACCOUNT-002, as plain sentences."""
+    if not block:
+        return []
+    head = "%s report observation (PAM, snapshot %s): " % (block.get("beside"),
+                                                         block.get("snapshot_id"))
+    status = block.get("status")
+    if status == "OBSERVED":
+        return [head + "pam_unix with nullok on an auth line in service %s (%s line %s)"
+                % (x.get("service"), x.get("source_path"), x.get("source_line"))
+                for x in block.get("lines") or []] + [block.get("note")]
+    if status == "NOT_OBSERVED":
+        return [head + "no auth line of pam_unix carries nullok in the PAM section"]
+    if status == "NOT_ESTABLISHED":
+        return [head + "no auth line of pam_unix carries nullok in what was read; the PAM "
+                "section is %s, so a line in what was not read is not excluded"
+                % block.get("pam_section_status")]
+    return [head + "not collected; the PAM section is %s"
+            % (block.get("pam_section_status") or "absent")]
+
+
+def max_age_text(row):
+    """One account's maximum password age: no limit, a number of days, or not collected."""
+    if row.get("max_age") == "NO_LIMIT":
+        return "no limit (%s)" % row.get("detail")
+    if row.get("max_age") == "DAYS":
+        return "%s days (%s)" % (row.get("max_days"), row.get("detail"))
+    return "not collected (%s)" % row.get("detail")
+
+
+def _max_age_markdown(block):
+    if not block:
+        return []
+    out = ["## Maximum password age per local account", "", "*%s*" % block.get("note"), ""]
+    if block.get("accounts_section_status") != "COLLECTED":
+        out += ["The accounts section is %s%s." % (
+            block.get("accounts_section_status") or "absent",
+            ": " + block["accounts_section_reason"].replace("|", "\\|")
+            if block.get("accounts_section_reason") else ""), ""]
+    if not block.get("rows"):
+        return out + ["No local account record in the committed evidence.", ""]
+    out += ["| Account | UID | Maximum password age |", "|---|---|---|"]
+    for r in block["rows"]:
+        out.append("| %s | %s | %s |" % (("%s" % r.get("name")).replace("|", "\\|"),
+                                         r.get("uid"), max_age_text(r)))
+    return out + [""]
+
+
+def _native_markdown(native, nullok=None):
     out = ["## Native criteria", "", "*%s*" % NATIVE_FRAMING, ""]
     status = native.get("status")
     if status != "EVALUATED":
         out += ["Not shown: %s (%s)." % ((native.get("reason") or "; ".join(
             native.get("problems") or [])).replace("|", "\\|"), status), ""]
-        return out
+        out += ["- %s" % line for line in nullok_lines(nullok)]
+        return out + ([""] if nullok else [])
     out.append("Evaluation `%s`" % native.get("evaluation_id"))
     out += ["", "| Criterion | Result | Severity | Reason |", "|---|---|---|---|"]
     for r in native.get("results") or []:
@@ -93,6 +142,8 @@ def _native_markdown(native):
         for o in r.get("observations") or []:
             out.append("- %s observed %s" % (r["criterion_id"], _observed(o)))
         out.append("- %s scope: %s" % (r["criterion_id"], r.get("scope")))
+        if nullok and r["criterion_id"] == nullok.get("beside"):
+            out += ["- %s" % line for line in nullok_lines(nullok)]
     out.append("")
     return out
 
@@ -189,9 +240,11 @@ def to_markdown(report):
                    "reference.*")
         out.append("")
     out.extend(_native_markdown(report.get("native_results") or {"status": "NOT_SHOWN",
-                                                                  "reason": "no native results"}))
+                                                                  "reason": "no native results"},
+                                report.get("pam_nullok")))
     out.extend(_comparison_markdown(report.get("baseline_comparison") or {
         "status": "NOT_EVALUATED", "reason": "no comparison in this report"}))
+    out.extend(_max_age_markdown(report.get("password_max_age")))
 
     assessment = report.get("assessment")
     if assessment:
@@ -586,11 +639,14 @@ def to_html(report):
     # v0.5 R5: coverage, the native results and the baseline comparison first; the
     # per-section evidence detail, with its digests, follows them.
     native = report.get("native_results") or {"status": "NOT_SHOWN", "reason": "no native results"}
+    nullok = report.get("pam_nullok")
     w('<div class="panel"><h2>Native criteria</h2>\n<p class="reason">%s</p>\n'
       % _esc(NATIVE_FRAMING))
     if native.get("status") != "EVALUATED":
         w("<p>Not shown: %s (%s).</p>\n" % (_esc(native.get("reason") or "; ".join(
             native.get("problems") or [])), _esc(native.get("status"))))
+        for line in nullok_lines(nullok):
+            w('<p class="reason">%s</p>\n' % _esc(line))
     else:
         w('<p class="ref">evaluation: %s</p>\n<table>\n' % _esc(native.get("evaluation_id")))
         for r in native.get("results") or []:
@@ -601,6 +657,9 @@ def to_html(report):
                 w("<tr><th></th><td colspan=\"2\">observed %s</td></tr>\n" % _esc(_observed(o)))
             w('<tr><th></th><td colspan="2" class="reason">scope: %s</td></tr>\n'
               % _esc(r.get("scope")))
+            if nullok and r["criterion_id"] == nullok.get("beside"):
+                for line in nullok_lines(nullok):
+                    w('<tr><th></th><td colspan="2">%s</td></tr>\n' % _esc(line))
         w("</table>\n")
     w("</div>\n")
 
@@ -642,6 +701,25 @@ def to_html(report):
                 w("<p>%s %s: %s</p>\n" % (_esc(r["section"]), _esc(r.get("primitive")),
                                          _esc(r.get("reason"))))
     w("</div>\n")
+
+    ages = report.get("password_max_age")
+    if ages:
+        w('<div class="panel"><h2>Maximum password age per local account</h2>\n'
+          '<p class="reason">%s</p>\n' % _esc(ages.get("note")))
+        if ages.get("accounts_section_status") != "COLLECTED":
+            w("<p>The accounts section is %s%s.</p>\n" % (
+                _esc(ages.get("accounts_section_status") or "absent"),
+                _esc(": " + ages["accounts_section_reason"])
+                if ages.get("accounts_section_reason") else ""))
+        if ages.get("rows"):
+            w("<table>\n<tr><th>Account</th><th>UID</th><th>Maximum password age</th></tr>\n")
+            for row in ages["rows"]:
+                w("<tr><td>%s</td><td>%s</td><td>%s</td></tr>\n" % (
+                    _esc(row.get("name")), _esc(row.get("uid")), _esc(max_age_text(row))))
+            w("</table>\n")
+        else:
+            w("<p>No local account record in the committed evidence.</p>\n")
+        w("</div>\n")
 
     for name, s in _ordered(sections):
         w('<section id="section-%s">\n<h2>%s %s</h2>\n'

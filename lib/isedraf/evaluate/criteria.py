@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -791,6 +791,479 @@ def ise_ssh_002(section, record, digests):
             "yes nor no. " + SSH_SCOPE_NOTE, [], evidence)
 
 
+# --- ISE-PRIV-001 / ISE-PRIV-002: the declared local sudo policy (D-131) ---------------
+# Both read sections/sudo.json, which a Full Audit fills through read_sudoers_graph_v1. The
+# evidence is the DECLARED policy: aliases are recorded, not resolved; group membership is not
+# consulted; host matching and sudo's last-match rule are not applied. The position of an
+# include directive is not in the committed evidence, so the order of declarations is known
+# within one file (source_line) and not between files.
+
+PRIV_001 = "ISE-PRIV-001"
+PRIV_002 = "ISE-PRIV-002"
+ARTIFACT_SUDO = "sections/sudo.json"
+SUDOERS_OPERATION = "read_sudoers_graph_v1"
+SUDOERS_ROOT = "/etc/sudoers"
+P_SUDO_STATUS = "/collection_status"
+P_INCLUDE_STATUS = "/evidence/provenance/include_status"
+P_MALFORMED = "/evidence/provenance/malformed_count"
+ALIAS_NAME = re.compile(r"^[A-Z][A-Z0-9_]*$")
+SUDO_SCOPE_NOTE = ("Declared local sudo policy only: aliases are not resolved, group membership "
+                   "is not consulted, and sudo's last-match rule is not applied.")
+_SUDO_COMMON = (
+    ("manifest.json", "/manifest_core/auxiliary_artifacts/sections~1sudo.json"),
+    (ARTIFACT_SUDO, P_SUDO_STATUS),
+    (ARTIFACT_SUDO, P_COV + "/<i>/status"), (ARTIFACT_SUDO, P_COV + "/<i>/operation_id"),
+    (ARTIFACT_SUDO, P_COV + "/<i>/source"), (ARTIFACT_SUDO, P_COV + "/<i>/access_outcome"),
+    (ARTIFACT_SUDO, P_INCLUDE_STATUS), (ARTIFACT_SUDO, P_MALFORMED),
+    (ARTIFACT_SUDO, P_RECORDS + "/<i>/kind"), (ARTIFACT_SUDO, P_RECORDS + "/<i>/source_path"),
+    (ARTIFACT_SUDO, P_RECORDS + "/<i>/source_line"))
+PRIV_001_POINTERS = _SUDO_COMMON + tuple(
+    (ARTIFACT_SUDO, P_RECORDS + "/<i>/" + f)
+    for f in ("principals", "host", "runas_users", "runas_groups", "commands",
+              "scope_type", "scope", "options"))
+ROOT_TARGETS = ("root", "#0")
+
+
+def _runas_default(records):
+    """Who a rule without a run-as list runs as: sudoers(5) - "the runas_default user (root by
+    default)". Returns ("root" | "other" | "uncertain", [indexes of the settings])."""
+    found = [(i, r.get("scope_type"), o) for i, r in enumerate(records)
+             if r.get("kind") == "DEFAULTS" for o in (r.get("options") or [])
+             if o.get("name") == "runas_default"]
+    if not found:
+        return "root", []
+    cited = sorted(set(i for i, _s, _o in found))
+    values = set(o.get("value") for _i, _s, o in found)
+    if any(s != "GLOBAL" or o.get("negated") for _i, s, o in found) or len(values) != 1:
+        return "uncertain", cited
+    return ("root" if values.pop() in ROOT_TARGETS else "other"), cited
+PRIV_002_POINTERS = _SUDO_COMMON + tuple(
+    (ARTIFACT_SUDO, P_RECORDS + "/<i>/" + f) for f in ("scope_type", "scope", "options"))
+
+
+def _sudo_policy(section, digests):
+    """(records, None, evidence) when the declared policy is sufficient, else
+    (None, (reason, detail), evidence). Raises MalformedEvidence on a value the model lacks."""
+    if not isinstance(section, dict) or section.get("section") != "sudo" or \
+            section.get("schema_version") != SECTION_SCHEMA_VERSION:
+        raise MalformedEvidence("sections/sudo.json is not a sudo section of schema %d"
+                                % SECTION_SCHEMA_VERSION)
+    status = section.get("collection_status")
+    if status not in STATUSES:
+        raise MalformedEvidence("the sudo section status %r is not a SCOPE-022 status" % (status,))
+    evidence = [_pointer("manifest.json", _SUDO_COMMON[0][1], digests),
+                _pointer(ARTIFACT_SUDO, P_SUDO_STATUS, digests)]
+    if section.get("evidence") is None:
+        if status == COLLECTED:
+            raise MalformedEvidence("the sudo section is COLLECTED and holds no evidence")
+        return None, ("SECTION_" + status, "the sudo section is %s and holds no evidence"
+                      % status), evidence
+    coverage = resolve(section, P_COV)
+    records = resolve(section, P_RECORDS)
+    if not isinstance(coverage, list) or not isinstance(records, list) or not all(
+            isinstance(x, dict) for x in coverage + records):
+        raise MalformedEvidence("the sudo coverage or records are not lists of objects")
+    roots = [(i, e) for i, e in enumerate(coverage)
+             if e.get("operation_id") == SUDOERS_OPERATION and e.get("source") == SUDOERS_ROOT]
+    if len(roots) > 1:
+        raise MalformedEvidence("more than one coverage entry names %s for %s"
+                                % (SUDOERS_OPERATION, SUDOERS_ROOT))
+    if not roots:
+        return None, ("SOURCE_NOT_TESTED", "/etc/sudoers was not read through %s for this "
+                      "snapshot (a Standard Audit does not read it)" % SUDOERS_OPERATION), evidence
+    (ci, root), = roots
+    evidence += [_pointer(ARTIFACT_SUDO, "%s/%d/%s" % (P_COV, ci, f), digests)
+                 for f in ("status", "operation_id", "source", "access_outcome")]
+    if root.get("status") != COLLECTED:
+        if root.get("access_outcome") == "NOT_FOUND":
+            return None, ("SUDOERS_ABSENT", "the Full Audit found no /etc/sudoers; with no "
+                          "declared policy to read, the criterion is not evaluated (sudo being "
+                          "absent is not established by this alone)"), evidence
+        return None, ("SOURCE_" + str(root.get("status")), "/etc/sudoers was not read (%s)"
+                      % root.get("access_outcome")), evidence
+    evidence += [_pointer(ARTIFACT_SUDO, P_INCLUDE_STATUS, digests),
+                 _pointer(ARTIFACT_SUDO, P_MALFORMED, digests)]
+    if status != COLLECTED:
+        return None, ("SECTION_" + status, "the declared sudo policy is %s: %s"
+                      % (status, section.get("reason"))), evidence
+    if resolve(section, P_INCLUDE_STATUS) != COLLECTED:
+        return None, ("INCLUDES_INCOMPLETE", "not every include of the sudo policy was read"), \
+            evidence
+    if resolve(section, P_MALFORMED) != 0 or any(r.get("kind") == "UNSUPPORTED" for r in records):
+        return None, ("UNSUPPORTED_LINES", "a line of the sudo policy could not be read"), evidence
+    return records, None, evidence
+
+
+def _alias_names(records):
+    return set(r.get("name") for r in records if r.get("kind") == "ALIAS")
+
+
+def _is_alias(value, aliases):
+    return value in aliases or (isinstance(value, str) and value != "ALL"
+                                and bool(ALIAS_NAME.match(value)))
+
+
+def _cite(i, fields, digests):
+    return [_pointer(ARTIFACT_SUDO, "%s/%d/%s" % (P_RECORDS, i, f), digests)
+            for f in ("kind", "source_path", "source_line") + fields]
+
+
+def ise_priv_001(section, record, digests):
+    records, gap, evidence = _sudo_policy(section, digests)
+    if gap:
+        return (NE, gap[0], gap[1] + ". " + SUDO_SCOPE_NOTE, [], evidence)
+    aliases = _alias_names(records)
+    default_target, default_cited = _runas_default(records)
+    for i in default_cited:
+        evidence += _cite(i, ("scope_type", "scope", "options"), digests)
+    decisive, unresolved = [], []
+    for i, r in enumerate(records):
+        if r.get("kind") != "SPEC":
+            continue
+        principals, commands = r.get("principals"), r.get("commands")
+        host, runas_u, runas_g = r.get("host"), r.get("runas_users"), r.get("runas_groups")
+        if not isinstance(principals, list) or not isinstance(commands, list) or \
+                not isinstance(host, dict):
+            raise MalformedEvidence("a SPEC record lacks principals, commands or host")
+        passwordless = [c for c in commands if "NOPASSWD" in (c.get("tags") or [])]
+        relevant = [c for c in passwordless
+                    if c.get("command") == "ALL" or _is_alias(c.get("command"), aliases)]
+        if not relevant:
+            continue
+        if all(p.get("kind") == "USER" and p.get("value") == "root" and not p.get("negated")
+               for p in principals):
+            continue                                   # a declaration only for root: excluded
+        # As root: a user list naming ALL or root, or no run-as list while runas_default is root.
+        users = runas_u or []
+        if runas_u is None and runas_g:
+            continue                                   # (:group) runs as the invoking user
+        if runas_u is None and default_target == "other":
+            continue                                   # runas_default names another user
+        as_root_plain = (runas_u is None and default_target == "root") or any(
+            u.get("value") in ("ALL",) + ROOT_TARGETS and not u.get("negated") for u in users)
+        default_open = runas_u is None and default_target == "uncertain"
+        runas_open = any(u.get("negated") or _is_alias(u.get("value"), aliases) for u in users)
+        if not as_root_plain and not runas_open and not default_open:
+            continue                                   # a named non-root target: outside
+        why = []
+        if any(p.get("negated") for p in principals):
+            why.append("a negated principal")
+        if any(p.get("kind") == "ALIAS_REFERENCE" or _is_alias(p.get("value"), aliases)
+               for p in principals):
+            why.append("a principal alias")
+        if host.get("negated") or host.get("value") != "ALL":
+            why.append("a named or negated host" if not _is_alias(host.get("value"), aliases)
+                       else "a host alias")
+        if runas_open:
+            why.append("a run-as alias or negation")
+        if default_open:
+            why.append("runas_default set in a way the evidence does not decide")
+        if any(c.get("negated") for c in commands):
+            why.append("a negated command")
+        if not any(c.get("command") == "ALL" and not c.get("negated") for c in relevant):
+            why.append("a command alias")
+        cited = _cite(i, ("principals", "host", "runas_users", "runas_groups", "commands"),
+                      digests)
+        where = {"source_path": r.get("source_path"), "source_line": r.get("source_line"),
+                 "principals": [("!" if p.get("negated") else "") + str(p.get("value"))
+                                for p in principals]}
+        if why:
+            unresolved.append(dict(where, undecided_by=why))
+        else:
+            decisive.append(where)
+        evidence += cited
+    observations = ([dict(d, kind="UNAUTHENTICATED_ALL_AS_ROOT") for d in decisive]
+                    + [dict(u, kind="UNRESOLVED_CANDIDATE") for u in unresolved])
+    if decisive:
+        return ("FAIL", "UNAUTHENTICATED_ALL_AS_ROOT", "the declared sudo policy grants every "
+                "command as root, on every host, without authentication, to %d declaration(s) "
+                "for principals other than root. " % len(decisive) + SUDO_SCOPE_NOTE,
+                observations, evidence)
+    if unresolved:
+        return ("MANUAL_REVIEW", "CANDIDATE_NOT_RESOLVED", "%d passwordless rule(s) may grant "
+                "every command as root, but an alias, a named host or a negation decides it, "
+                "and the evidence does not resolve it. " % len(unresolved) + SUDO_SCOPE_NOTE,
+                observations, evidence)
+    return ("PASS", "NO_UNAUTHENTICATED_ALL_AS_ROOT", "no declaration in the sudo policy grants "
+            "every command as root without authentication to a principal other than root, and "
+            "no passwordless rule is left unresolved. " + SUDO_SCOPE_NOTE, [], evidence)
+
+
+def _authenticate_settings(records):
+    """[(i, scope_type, member, negated, source_path, source_line)] for every `authenticate`
+    option, one entry per member of the scope as written (GLOBAL has the one member "*")."""
+    out = []
+    for i, r in enumerate(records):
+        if r.get("kind") != "DEFAULTS":
+            continue
+        options = r.get("options")
+        if not isinstance(options, list):
+            raise MalformedEvidence("a DEFAULTS record lacks its options")
+        stype = r.get("scope_type")
+        members = ["*"] if stype == "GLOBAL" else [
+            m.strip() for m in str(r.get("scope") or "").split(",") if m.strip()]
+        for o in options:
+            if o.get("name") != "authenticate":
+                continue
+            for m in members:
+                out.append((i, stype, m, bool(o.get("negated")), r.get("source_path"),
+                            r.get("source_line")))
+    return out
+
+
+def ise_priv_002(section, record, digests):
+    records, gap, evidence = _sudo_policy(section, digests)
+    if gap:
+        return (NE, gap[0], gap[1] + ". " + SUDO_SCOPE_NOTE, [], evidence)
+    aliases = _alias_names(records)
+    settings = _authenticate_settings(records)
+    by_scope = {}
+    for s in settings:
+        by_scope.setdefault((s[1], s[2]), []).append(s)
+    disabled, unresolved = [], []
+    for (stype, member), entries in sorted(by_scope.items()):
+        values = set(e[3] for e in entries)
+        files = set(e[4] for e in entries)
+        where = {"scope_type": stype, "scope_member": member,
+                 "declarations": [{"source_path": e[4], "source_line": e[5],
+                                   "negated": e[3]} for e in entries]}
+        if member != "*" and (member.startswith("!") or _is_alias(member, aliases)):
+            if True in values:
+                unresolved.append(dict(where, undecided_by="an alias or negation as the scope"))
+            continue
+        if len(values) > 1 and len(files) > 1:
+            unresolved.append(dict(where, undecided_by="settings in several files: the order "
+                                   "between files is not in the evidence"))
+            continue
+        last = max(entries, key=lambda e: (e[5] if isinstance(e[5], int) else -1))
+        if last[3]:
+            disabled.append(where)
+    cited = sorted(set(e[0] for e in settings))
+    for i in cited:
+        evidence += _cite(i, ("scope_type", "scope", "options"), digests)
+    observations = ([dict(d, kind="AUTHENTICATION_DISABLED") for d in disabled]
+                    + [dict(u, kind="UNRESOLVED_SCOPE") for u in unresolved])
+    if disabled:
+        return ("FAIL", "AUTHENTICATION_DISABLED", "in %d scope(s) of the declared sudo policy "
+                "the last authenticate setting is !authenticate. " % len(disabled)
+                + SUDO_SCOPE_NOTE,
+                observations, evidence)
+    if unresolved:
+        return ("MANUAL_REVIEW", "SCOPE_NOT_RESOLVED", "%d scope(s) set authenticate in a way the "
+                "evidence does not decide (an alias or negation as the scope, or settings in "
+                "several files). " % len(unresolved) + SUDO_SCOPE_NOTE, observations, evidence)
+    return ("PASS", "AUTHENTICATION_NOT_DISABLED", "no scope of the declared sudo policy ends "
+            "with !authenticate, and no setting is left unresolved. " + SUDO_SCOPE_NOTE,
+            observations, evidence)
+
+
+# --- ISE-SSH-003 / -004 / -005: more global sshd -T settings (D-132) --------------------
+
+SSH_003 = "ISE-SSH-003"
+SSH_004 = "ISE-SSH-004"
+SSH_005 = "ISE-SSH-005"
+SSH_003_POINTERS = SSH_002_POINTERS
+SSH_004_POINTERS = SSH_002_POINTERS
+SSH_005_POINTERS = SSH_002_POINTERS
+
+
+def _sshd_settings(section, digests, keywords):
+    """({keyword: value}, None, evidence) when sshd -T was collected and reports each keyword
+    exactly once, else (None, (reason, detail), evidence). As ISE-SSH-002 reads it."""
+    if not isinstance(section, dict) or section.get("section") != "ssh" or \
+            section.get("schema_version") != SECTION_SCHEMA_VERSION:
+        raise MalformedEvidence("sections/ssh.json is not an ssh section of schema %d"
+                                % SECTION_SCHEMA_VERSION)
+    status = section.get("collection_status")
+    if status not in STATUSES:
+        raise MalformedEvidence("the ssh section status %r is not a SCOPE-022 status" % (status,))
+    evidence = [_pointer("manifest.json", SSH_002_POINTERS[0][1], digests)]
+    if section.get("evidence") is None:
+        if status == COLLECTED:
+            raise MalformedEvidence("the ssh section is COLLECTED and holds no evidence")
+        return None, ("SECTION_" + status, "the ssh section is %s and holds no evidence" % status), \
+            evidence
+    coverage = resolve(section, P_COV)
+    records = resolve(section, P_RECORDS)
+    if not isinstance(coverage, list) or not isinstance(records, list) or not all(
+            isinstance(x, dict) for x in coverage + records):
+        raise MalformedEvidence("the ssh coverage or records are not lists of objects")
+    resolved = [(i, e) for i, e in enumerate(coverage) if e.get("operation_id") == EFFECTIVE_OPERATION]
+    if len(resolved) > 1:
+        raise MalformedEvidence("more than one coverage entry names %s" % EFFECTIVE_OPERATION)
+    if not resolved:
+        return None, ("SOURCE_NOT_TESTED", "sshd -T was not run for this snapshot (a Standard "
+                      "Audit does not run it)"), evidence
+    (ci, entry), = resolved
+    evidence += [_pointer(ARTIFACT_SSH, "%s/%d/%s" % (P_COV, ci, f), digests)
+                 for f in ("status", "operation_id")]
+    if entry.get("status") not in STATUSES:
+        raise MalformedEvidence("the sshd -T coverage status %r is not a SCOPE-022 status"
+                                % (entry.get("status"),))
+    if entry.get("status") != COLLECTED:
+        return None, ("SOURCE_" + entry["status"], "sshd -T is %s (%s)" % (
+            entry["status"], entry.get("reason"))), evidence
+    values = {}
+    for keyword in keywords:
+        hits = [(i, r) for i, r in enumerate(records)
+                if r.get("kind") == "RESOLVED_SETTING" and r.get("keyword") == keyword]
+        for i, _r in hits:
+            evidence += [_pointer(ARTIFACT_SSH, "%s/%d%s" % (P_RECORDS, i, p), digests)
+                         for p in ("/kind", "/keyword", "/value")]
+        if len(hits) != 1:
+            return None, ("SETTING_NOT_REPORTED_ONCE", "sshd -T reported %s %d time(s), not once"
+                          % (keyword, len(hits))), evidence
+        values[keyword] = hits[0][1].get("value")
+    return values, None, evidence
+
+
+def ise_ssh_003(section, record, digests):
+    values, gap, evidence = _sshd_settings(section, digests, ("permitrootlogin",))
+    if gap:
+        return (NE, gap[0], gap[1] + ". " + SSH_SCOPE_NOTE, [], evidence)
+    value = values["permitrootlogin"]
+    seen = [{"permitrootlogin": value}]
+    if value == "no":
+        return ("PASS", "ROOT_LOGIN_NO", "sshd -T reports PermitRootLogin no: root cannot log in "
+                "over SSH by any method. " + SSH_SCOPE_NOTE, seen, evidence)
+    if value == "yes":
+        return ("FAIL", "ROOT_LOGIN_YES", "sshd -T reports PermitRootLogin yes: root can log in "
+                "over SSH with any enabled method, a password included. " + SSH_SCOPE_NOTE,
+                seen, evidence)
+    if value in ("prohibit-password", "without-password"):
+        return ("MANUAL_REVIEW", "ROOT_LOGIN_WITHOUT_PASSWORD", "sshd -T reports PermitRootLogin "
+                "%s: root cannot log in with a password or keyboard-interactive authentication, "
+                "but can with a key or another method that is not a password; whether that access "
+                "is intended needs a person. " % value + SSH_SCOPE_NOTE, seen, evidence)
+    if value == "forced-commands-only":
+        return ("MANUAL_REVIEW", "ROOT_LOGIN_FORCED_COMMANDS", "sshd -T reports PermitRootLogin "
+                "forced-commands-only: root can log in only with a public key whose authorized_keys "
+                "entry forces a command, and runs only that command; whether those commands are "
+                "intended needs a person. " + SSH_SCOPE_NOTE, seen, evidence)
+    return (NE, "SETTING_VALUE_UNKNOWN", "sshd -T reports a PermitRootLogin value this criterion "
+            "does not know. " + SSH_SCOPE_NOTE, seen, evidence)
+
+
+def ise_ssh_004(section, record, digests):
+    values, gap, evidence = _sshd_settings(section, digests, ("hostbasedauthentication",))
+    if gap:
+        return (NE, gap[0], gap[1] + ". " + SSH_SCOPE_NOTE, [], evidence)
+    value = values["hostbasedauthentication"]
+    seen = [{"hostbasedauthentication": value}]
+    if value == "no":
+        return ("PASS", "HOSTBASED_NO", "sshd -T reports HostbasedAuthentication no: host-based "
+                "authentication is off globally. " + SSH_SCOPE_NOTE, seen, evidence)
+    if value == "yes":
+        return ("FAIL", "HOSTBASED_YES", "sshd -T reports HostbasedAuthentication yes: a user can "
+                "log in because the connecting host is trusted, without proving who they are "
+                "(host-based authentication). " + SSH_SCOPE_NOTE, seen, evidence)
+    return (NE, "SETTING_VALUE_UNKNOWN", "sshd -T reports a HostbasedAuthentication value that is "
+            "neither yes nor no. " + SSH_SCOPE_NOTE, seen, evidence)
+
+
+def ise_ssh_005(section, record, digests):
+    values, gap, evidence = _sshd_settings(section, digests,
+                                           ("hostbasedauthentication", "ignorerhosts"))
+    if gap:
+        return (NE, gap[0], gap[1] + ". " + SSH_SCOPE_NOTE, [], evidence)
+    hostbased, ignore = values["hostbasedauthentication"], values["ignorerhosts"]
+    seen = [{"hostbasedauthentication": hostbased, "ignorerhosts": ignore}]
+    if hostbased == "no":
+        return ("NOT_APPLICABLE", "HOSTBASED_OFF", "sshd -T reports HostbasedAuthentication no, so "
+                "no user trust file can grant a host-based login; IgnoreRhosts %s is recorded. "
+                % ignore + SSH_SCOPE_NOTE, seen, evidence)
+    if hostbased != "yes":
+        return (NE, "SETTING_VALUE_UNKNOWN", "sshd -T reports a HostbasedAuthentication value that "
+                "is neither yes nor no. " + SSH_SCOPE_NOTE, seen, evidence)
+    if ignore == "yes":
+        return ("PASS", "USER_TRUST_FILES_IGNORED", "host-based authentication is on and sshd -T "
+                "reports IgnoreRhosts yes: users' .rhosts and .shosts files are not used. "
+                + SSH_SCOPE_NOTE, seen, evidence)
+    if ignore == "no":
+        return ("FAIL", "USER_TRUST_FILES_USED", "host-based authentication is on and sshd -T "
+                "reports IgnoreRhosts no: users' .rhosts and .shosts files are used. "
+                + SSH_SCOPE_NOTE, seen, evidence)
+    if ignore == "shosts-only":
+        return ("FAIL", "USER_SHOSTS_USED", "host-based authentication is on and sshd -T reports "
+                "IgnoreRhosts shosts-only: users' .shosts files are used (.rhosts is ignored). "
+                + SSH_SCOPE_NOTE, seen, evidence)
+    return (NE, "SETTING_VALUE_UNKNOWN", "sshd -T reports an IgnoreRhosts value this criterion "
+            "does not know. " + SSH_SCOPE_NOTE, seen, evidence)
+
+
+# --- ISE-STORAGE-001: /dev/shm mounted nosuid (D-132) ----------------------------------
+
+STORAGE_001 = "ISE-STORAGE-001"
+ARTIFACT_MOUNTS = "sections/mounts.json"
+HOST_MOUNT_TABLE = "/proc/1/mountinfo"
+P_ACTIVE_STATUS = "/evidence/provenance/comparison/active_status"
+P_ACTIVE_COMPLETE = "/evidence/provenance/active/universe_complete"
+P_ACTIVE = "/evidence/provenance/active/records"
+SHM = "/dev/shm"
+STORAGE_001_POINTERS = (
+    ("manifest.json", "/manifest_core/auxiliary_artifacts/sections~1mounts.json"),
+    (ARTIFACT_MOUNTS, P_ACTIVE_STATUS), (ARTIFACT_MOUNTS, P_ACTIVE_COMPLETE),
+    (ARTIFACT_MOUNTS, P_ACTIVE + "/<i>/mount_point"), (ARTIFACT_MOUNTS, P_ACTIVE + "/<i>/source_path"),
+    (ARTIFACT_MOUNTS, P_ACTIVE + "/<i>/parse_status"), (ARTIFACT_MOUNTS, P_ACTIVE + "/<i>/fstype"),
+    (ARTIFACT_MOUNTS, P_ACTIVE + "/<i>/mount_options"))
+MOUNT_NOTE = ("The active mount of /dev/shm in the host's mount table (PID 1's mount namespace); "
+              "other mount namespaces are not observed.")
+
+
+def ise_storage_001(section, record, digests):
+    if not isinstance(section, dict) or section.get("section") != "mounts" or \
+            section.get("schema_version") != SECTION_SCHEMA_VERSION:
+        raise MalformedEvidence("sections/mounts.json is not a mounts section of schema %d"
+                                % SECTION_SCHEMA_VERSION)
+    status = section.get("collection_status")
+    if status not in STATUSES:
+        raise MalformedEvidence("the mounts section status %r is not a SCOPE-022 status" % (status,))
+    evidence = [_pointer("manifest.json", STORAGE_001_POINTERS[0][1], digests)]
+    if section.get("evidence") is None:
+        if status == COLLECTED:
+            raise MalformedEvidence("the mounts section is COLLECTED and holds no evidence")
+        return (NE, "SECTION_" + status, "the mounts section is %s and holds no evidence. "
+                % status + MOUNT_NOTE, [], evidence)
+    evidence += [_pointer(ARTIFACT_MOUNTS, p, digests) for p in (P_ACTIVE_STATUS, P_ACTIVE_COMPLETE)]
+    active_status, complete = resolve(section, P_ACTIVE_STATUS), resolve(section, P_ACTIVE_COMPLETE)
+    records = resolve(section, P_ACTIVE)
+    if active_status != COLLECTED or complete is not True:
+        return (NE, "ACTIVE_MOUNTS_NOT_COLLECTED", "the active mount table is %s (complete: %s). "
+                % (active_status, complete) + MOUNT_NOTE, [], evidence)
+    if not isinstance(records, list) or not all(isinstance(r, dict) for r in records):
+        raise MalformedEvidence("the active mount records are not a list of objects")
+    if any(r.get("source_path") != HOST_MOUNT_TABLE for r in records):
+        return (NE, "HOST_NAMESPACE_NOT_ESTABLISHED", "the active mounts were not read from the "
+                "host's mount table (%s), so they may be one process's view; a Standard Audit "
+                "cannot establish the host's namespace. " % HOST_MOUNT_TABLE + MOUNT_NOTE,
+                [], evidence)
+    hits = [(i, r) for i, r in enumerate(records) if r.get("mount_point") == SHM]
+    for i, _r in hits:
+        evidence += [_pointer(ARTIFACT_MOUNTS, "%s/%d/%s" % (P_ACTIVE, i, f), digests)
+                     for f in ("mount_point", "source_path", "parse_status", "fstype",
+                               "mount_options")]
+    seen = [{"mount_point": SHM, "fstype": r.get("fstype"), "mount_options": r.get("mount_options")}
+            for _i, r in hits]
+    if not hits:
+        return (NE, "NO_DEV_SHM_MOUNT", "the host's mount table has no mount at /dev/shm, so there "
+                "are no mount options to evaluate. " + MOUNT_NOTE, [], evidence)
+    if len(hits) > 1:
+        return (NE, "DEV_SHM_MOUNTED_MORE_THAN_ONCE", "the host's mount table has %d mounts at "
+                "/dev/shm; which one is in effect is not decided here. " % len(hits) + MOUNT_NOTE,
+                seen, evidence)
+    (_i, shm), = hits
+    options = shm.get("mount_options")
+    if shm.get("parse_status") != "OK" or not isinstance(options, list):
+        return (NE, "DEV_SHM_MOUNT_NOT_PARSED", "the /dev/shm mount line could not be read. "
+                + MOUNT_NOTE, seen, evidence)
+    if "nosuid" in options:
+        return ("PASS", "DEV_SHM_NOSUID", "/dev/shm is mounted nosuid: set-user-ID and set-group-ID "
+                "bits on files there are ignored. " + MOUNT_NOTE, seen, evidence)
+    return ("FAIL", "DEV_SHM_SUID_ALLOWED", "/dev/shm is mounted without nosuid: a set-user-ID file "
+            "placed in this world-writable directory would run with its owner's privileges. "
+            + MOUNT_NOTE, seen, evidence)
+
+
 # The evaluators this engine implements, keyed by criterion_id, with the pointers each
 # reads and the artifacts it needs. An admitted criterion with no entry stops the
 # evaluation (EVAL-004: every admitted criterion yields exactly one result).
@@ -803,7 +1276,14 @@ EVALUATORS = {
     ACCOUNT_005: (ise_account_005, ACCOUNT_005_POINTERS, (ARTIFACT_ACCOUNTS,)),
     AUTH_001: (ise_auth_001, AUTH_001_POINTERS, (ARTIFACT_LOGIN,)),
     SSH_002: (ise_ssh_002, SSH_002_POINTERS, (ARTIFACT_SSH,)),
+    PRIV_001: (ise_priv_001, PRIV_001_POINTERS, (ARTIFACT_SUDO,)),
+    PRIV_002: (ise_priv_002, PRIV_002_POINTERS, (ARTIFACT_SUDO,)),
+    SSH_003: (ise_ssh_003, SSH_003_POINTERS, (ARTIFACT_SSH,)),
+    SSH_004: (ise_ssh_004, SSH_004_POINTERS, (ARTIFACT_SSH,)),
+    SSH_005: (ise_ssh_005, SSH_005_POINTERS, (ARTIFACT_SSH,)),
+    STORAGE_001: (ise_storage_001, STORAGE_001_POINTERS, (ARTIFACT_MOUNTS,)),
 }
 # Which record dimension states a result's scope (EVAL-004): the declared files for the
 # account and login.defs criteria, the resolved configuration for sshd -T.
-SCOPE_DIMENSION = {SSH_001: "resolved", SSH_002: "resolved"}
+SCOPE_DIMENSION = {SSH_001: "resolved", SSH_002: "resolved", SSH_003: "resolved",
+                   SSH_004: "resolved", SSH_005: "resolved", STORAGE_001: "active"}

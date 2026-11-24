@@ -19,7 +19,7 @@ codes are defined once in `lib/isedraf/exitcodes.json`; their full meanings are 
 `isedraf` with no arguments, and `isedraf help`:
 
 ```text
-isedraf 0.5.0 - Linux host evidence and assurance tool.
+isedraf 0.6.0 - Linux host evidence and assurance tool.
 
 ISEDRAF collects evidence about this Linux host, commits it as one run,
 evaluates it against its native criteria and reports on it.
@@ -46,6 +46,10 @@ More:
 Accepted on the user route and, before anything else is checked, under sudo or root (the same answer, exit 0; they read no evidence, open no store and start nothing). `isedraf help` naming anything else exits 64 and lists the valid commands.
 
 `isedraf`, `isedraf help`, `isedraf help --all`, `isedraf help --help`, `isedraf help -h`, `isedraf --help`, `isedraf -h`, `isedraf --version`, `isedraf help help`, `isedraf help audit`, `isedraf help evaluate`, `isedraf help explain`, `isedraf help baseline`, `isedraf help baseline approve`, `isedraf help list`, `isedraf help report`, `isedraf help identity`, `isedraf help inventory`
+
+## Native criteria
+
+The criteria `isedraf explain` and `isedraf evaluate` know are listed one per row, with their applicability, collection requirements, results and limitations, in [`NATIVE_CRITERIA.csv`](NATIVE_CRITERIA.csv) - in the package at `/usr/share/doc/isedraf/docs/reference/NATIVE_CRITERIA.csv`, generated from the installed registry (D-130).
 
 ## Overview
 

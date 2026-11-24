@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -260,6 +260,109 @@ class NoVerdicts(Base):
             attrs = [n.attr for n in ast.walk(tree) if isinstance(n, ast.Attribute)]
             for forbidden in ("Popen", "check_output", "system"):
                 self.assertNotIn(forbidden, attrs, module.__name__)
+
+
+
+
+class AtInclude(Base):
+    """v0.6 (D-130 scope A): `@include` is Debian-family libpam syntax (patch 031_pam_include).
+
+    On a Debian-family host it is an edge of every type, followed like `include`; elsewhere, or
+    when the family is not established, it stays UNSUPPORTED with the reason - there, libpam itself
+    would not read it."""
+
+    def os_release(self, text):
+        os.makedirs(os.path.join(self.base, "etc"), exist_ok=True)
+        with open(os.path.join(self.base, "etc", "os-release"), "w") as handle:
+            handle.write(text)
+
+    def debian_stack(self):
+        self.service("login", "@include common-auth\naccount required pam_unix.so\n")
+        self.service("common-auth", "auth required pam_unix.so nullok\n")
+
+    def test_on_debian_it_is_an_edge_of_every_type_and_is_followed(self):
+        self.os_release('ID=debian\nVERSION_ID="12"\n')
+        self.debian_stack()
+        ev = acquire.collect(self.base)
+        edge = [r for r in ev.records if r.get("edge") == model.AT_INCLUDE]
+        self.assertEqual(len(edge), 1)
+        self.assertEqual((edge[0]["kind"], edge[0]["type"], edge[0]["target_service"]),
+                         (model.EDGE, model.ANY_TYPE, "common-auth"))
+        self.assertIn("common-auth", [r["service"] for r in ev.records if r["kind"] == model.RULE])
+        self.assertEqual(ev.status, result.COLLECTED, ev.reason)
+        self.assertTrue(ev.provenance["at_include_basis"]["debian_family"])
+        self.assertIn(model.AT_INCLUDE, ev.provenance["edge_semantics"])
+
+    def test_ubuntu_is_debian_family_by_id_like(self):
+        self.os_release('ID=ubuntu\nID_LIKE=debian\n')
+        self.debian_stack()
+        ev = acquire.collect(self.base)
+        self.assertEqual(ev.status, result.COLLECTED, ev.reason)
+
+    def test_the_directive_is_case_insensitive_as_in_libpam(self):
+        self.os_release("ID=debian\n")
+        self.service("login", "@INCLUDE common-auth\n")
+        self.service("common-auth", "auth required pam_unix.so\n")
+        ev = acquire.collect(self.base)
+        self.assertEqual([r["kind"] for r in ev.records if r["service"] == "login"], [model.EDGE])
+
+    def test_on_another_family_it_stays_unsupported_with_the_reason(self):
+        self.os_release('ID="rocky"\nID_LIKE="rhel centos fedora"\n')
+        self.debian_stack()
+        ev = acquire.collect(self.base)
+        line = [r for r in ev.records if r["service"] == "login" and r["source_line"] == 1][0]
+        self.assertEqual(line["kind"], model.UNSUPPORTED)
+        self.assertIn("not Debian-family", line["reason"])
+        self.assertEqual(ev.status, result.PARTIAL)
+        self.assertFalse(ev.provenance["at_include_basis"]["debian_family"])
+
+    def test_without_os_release_the_family_is_not_established(self):
+        self.debian_stack()
+        ev = acquire.collect(self.base)
+        line = [r for r in ev.records if r["service"] == "login" and r["source_line"] == 1][0]
+        self.assertEqual(line["kind"], model.UNSUPPORTED)
+        self.assertIn("not established", line["reason"])
+        self.assertEqual(ev.provenance["at_include_basis"]["status"], result.NOT_TESTED)
+
+    def test_a_missing_target_is_recorded_and_the_stack_is_partial(self):
+        self.os_release("ID=debian\n")
+        self.service("login", "@include common-auth\n")
+        ev = acquire.collect(self.base)
+        self.assertIn("MISSING_SERVICE", self.events(ev))
+        self.assertEqual(ev.status, result.PARTIAL)
+
+    def test_an_absolute_target_is_never_read(self):
+        self.os_release("ID=debian\n")
+        self.service("login", "@include /etc/shadow\n")
+        ev = acquire.collect(self.base)
+        self.assertIn("AT_INCLUDE_ABSOLUTE_NOT_FOLLOWED", self.events(ev))
+        self.assertNotIn("/etc/shadow", [f.get("path") for f in ev.provenance["files"]])
+        self.assertEqual(ev.status, result.PARTIAL)
+        # The refusal stays visible as incomplete evidence, never as a complete stack.
+        self.assertIn("INCOMPLETE_STACK", ev.reason)
+        self.assertIn("AT_INCLUDE_ABSOLUTE_NOT_FOLLOWED", ev.reason)
+        self.assertNotIn(ev.status, (result.COLLECTED,))
+
+    def test_a_cycle_through_at_include_is_reported_and_terminates(self):
+        self.os_release("ID=debian\n")
+        self.service("a", "@include b\n")
+        self.service("b", "@include a\n")
+        ev = acquire.collect(self.base)
+        self.assertIn("CYCLE", self.events(ev))
+
+    def test_a_malformed_at_include_is_unsupported(self):
+        self.os_release("ID=debian\n")
+        self.service("login", "@include\n@include a b\n")
+        ev = acquire.collect(self.base)
+        lines = [r for r in ev.records if r["service"] == "login"]
+        self.assertEqual([r["kind"] for r in lines], [model.UNSUPPORTED, model.UNSUPPORTED])
+        self.assertIn("exactly one target", lines[1]["reason"])
+
+    def test_the_section_records_its_own_parser_version(self):
+        from isedraf import audit
+        self.assertEqual(audit.METHODS["pam"]["parser_version"], "2")
+        self.assertEqual(set(m["parser_version"] for n, m in audit.METHODS.items() if n != "pam"),
+                         {"1"})
 
 
 if __name__ == "__main__":

@@ -15,6 +15,10 @@ This page renders the registry record, exactly as `isedraf explain ISE-AUTH-001`
 
 ```text
 ISE-AUTH-001  (version 1, EXPERIMENTAL)
+Declared login.defs Password Hashing Method
+Introduced in ISEDRAF 0.3.0. Needs at least a Standard Audit: /etc/login.defs
+  is world-readable; a Standard Audit collects it; that is necessary, not
+  sufficient.
 
 Purpose
   Declared login.defs Password Hashing Method: evaluate the ENCRYPT_METHOD
@@ -115,6 +119,9 @@ Remediation guidance (illustrative; ISEDRAF changes nothing)
   set later by the tools that read it; check pam_unix options separately, as
   they decide the method for passwd changes.
 
-Baseline state  not available: baseline and delta are v0.4
-Delta           not available: baseline and delta are v0.4
+Baseline state  belongs to an evidence store, not to a criterion:
+                `isedraf evaluate` (or `sudo isedraf evaluate`) compares the
+                latest run with the store's approved baseline
+Delta           per run, in the Baseline comparison of the evaluation and of
+                the report (since 0.4.0)
 ```

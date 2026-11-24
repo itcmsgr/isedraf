@@ -19,9 +19,9 @@
     "ISE-UPDATE":  "update and support posture"
   },
   "check_types": {
-    "ISE-ASSET": [], "ISE-SW": [], "ISE-ACCOUNT": ["local account identity", "local credential storage"], "ISE-AUTH": ["password hashing policy"], "ISE-PRIV": [],
+    "ISE-ASSET": [], "ISE-SW": [], "ISE-ACCOUNT": ["local account identity", "local credential storage"], "ISE-AUTH": ["password hashing policy"], "ISE-PRIV": ["local sudo delegation"],
     "ISE-SSH": ["effective daemon configuration"], "ISE-SVC": [], "ISE-KERNEL": [], "ISE-LOG": [], "ISE-TIME": [],
-    "ISE-CRYPTO": [], "ISE-STORAGE": [], "ISE-NET": [], "ISE-UPDATE": []
+    "ISE-CRYPTO": [], "ISE-STORAGE": ["mount protection options"], "ISE-NET": [], "ISE-UPDATE": []
   },
   "$check_types_comment": "D-111 extended 2026-10-14: the groups a criterion's check_type may name, per family. ISEDRAF-authored names, never a framework's categories. Empty until criteria are authored; declaring a check type authors no criterion. 2026-11-01: ISE-ACCOUNT declares \"local account identity\".",
   "reserved_families": {
@@ -30,17 +30,24 @@
   "required_criterion_fields": [
     "criterion_id", "purpose", "rationale", "check_type", "facts_required", "dimensions",
     "evaluation_semantics", "applicability", "limitations", "evidence_pointers", "version",
-    "default_severity"
+    "default_severity", "title", "lifecycle", "introduced_in", "minimum_run"
   ],
   "optional_criterion_fields": ["manual_verification", "remediation_guidance"],
   "result_states": ["PASS", "FAIL", "NOT_APPLICABLE", "MANUAL_REVIEW", "NOT_EVALUATED"],
   "severity_levels": ["critical", "high", "medium", "low"],
+  "$catalogue_fields_comment": "D-130 (owner, 2026-11-21): title is a short name; lifecycle is the criterion's state, every one EXPERIMENTAL today (D-80); introduced_in is the ISEDRAF release that first delivered the criterion, never its own version; minimum_run names the collection route without which the evidence cannot be sufficient - a necessary condition, never a sufficient one: sufficiency is evaluation_semantics.evidence_sufficient_when.",
+  "lifecycle_states": ["EXPERIMENTAL"],
+  "collection_routes": ["STANDARD_AUDIT", "FULL_AUDIT"],
   "retired_criteria": [],
   "$retired_criteria_comment": "D-111 extended 2026-10-14: withdrawn criteria, each {criterion_id, last_version, retired_on}. An ID here is never reused and never reappears among the active criteria.",
   "criteria": [
     {
       "criterion_id": "ISE-ACCOUNT-001",
       "version": 1,
+      "title": "UID 0 Restricted to the Root Account",
+      "lifecycle": "EXPERIMENTAL",
+      "introduced_in": "0.3.0",
+      "minimum_run": {"route": "STANDARD_AUDIT", "reason": "/etc/passwd is world-readable; a Standard Audit collects it"},
       "check_type": "local account identity",
       "purpose": "Detect entries in the local account file /etc/passwd, as committed in the snapshot, other than the single root entry, that are assigned UID 0. The conclusion is scoped to that file.",
       "rationale": "UID 0 is the identity the kernel treats as root, whatever the account is called. Every additional name mapped to UID 0 is another way to act with full control of the host, and actions taken under it are recorded as UID 0, which makes them hard to attribute to a person.",
@@ -127,6 +134,10 @@
     {
       "criterion_id": "ISE-ACCOUNT-002",
       "version": 1,
+      "title": "Empty Local Shadow Password Fields",
+      "lifecycle": "EXPERIMENTAL",
+      "introduced_in": "0.3.0",
+      "minimum_run": {"route": "FULL_AUDIT", "reason": "/etc/shadow is collected only by a Full Audit (read_shadow_v1)"},
       "check_type": "local credential storage",
       "purpose": "Detect Empty Local Shadow Password Fields: local accounts whose /etc/shadow password field, as committed, is empty and not locked. The conclusion is an observation of that field only.",
       "rationale": "An empty password field records that no password is set for the account. Whether a login without a password is then possible depends on the authentication stack (PAM, SSH), which this criterion does not evaluate; the observed empty field is still a weakness worth knowing about.",
@@ -223,6 +234,10 @@
     {
       "criterion_id": "ISE-ACCOUNT-003",
       "version": 1,
+      "title": "Duplicate Local UIDs",
+      "lifecycle": "EXPERIMENTAL",
+      "introduced_in": "0.3.0",
+      "minimum_run": {"route": "STANDARD_AUDIT", "reason": "/etc/passwd is world-readable; a Standard Audit collects it"},
       "check_type": "local account identity",
       "purpose": "Detect Duplicate Local UIDs: two or more different local account names in /etc/passwd, as committed, that share one UID. The conclusion is scoped to that file.",
       "rationale": "The kernel knows accounts only by UID. Two names with the same UID are the same identity to every file, process and log entry, so actions under one cannot be told apart from actions under the other.",
@@ -310,6 +325,10 @@
     {
       "criterion_id": "ISE-ACCOUNT-004",
       "version": 1,
+      "title": "Legacy MD5 Password Hash Schemes",
+      "lifecycle": "EXPERIMENTAL",
+      "introduced_in": "0.3.0",
+      "minimum_run": {"route": "FULL_AUDIT", "reason": "/etc/shadow is collected only by a Full Audit (read_shadow_v1)"},
       "check_type": "local credential storage",
       "purpose": "Detect Legacy MD5 Password Hash Schemes: local /etc/shadow entries, as committed, whose stored hash uses an MD5-based scheme (MD5_CRYPT or SUN_MD5). The conclusion concerns the stored scheme only.",
       "rationale": "MD5-based password hashes are fast to compute, so a stolen /etc/shadow is much easier to crack. A stored MD5 hash is a weakness even on a locked account, because the hash itself is what an attacker would take.",
@@ -405,6 +424,10 @@
     {
       "criterion_id": "ISE-SSH-001",
       "version": 1,
+      "title": "SSH Global PermitEmptyPasswords Configuration",
+      "lifecycle": "EXPERIMENTAL",
+      "introduced_in": "0.3.0",
+      "minimum_run": {"route": "FULL_AUDIT", "reason": "sshd -T is run only by a Full Audit (resolve_sshd_effective_config_v1)"},
       "check_type": "effective daemon configuration",
       "purpose": "SSH Global PermitEmptyPasswords Configuration: the global value of PermitEmptyPasswords that sshd -T reports, as committed. The conclusion concerns the global configuration only, not every connection.",
       "rationale": "When PermitEmptyPasswords is yes, the SSH server accepts a password login for an account whose password is empty. With no, it refuses such logins globally.",
@@ -498,6 +521,10 @@
     {
       "criterion_id": "ISE-ACCOUNT-005",
       "version": 1,
+      "title": "Duplicate Local GIDs",
+      "lifecycle": "EXPERIMENTAL",
+      "introduced_in": "0.3.0",
+      "minimum_run": {"route": "STANDARD_AUDIT", "reason": "/etc/group is world-readable; a Standard Audit collects it"},
       "check_type": "local account identity",
       "purpose": "Detect Duplicate Local GIDs: two or more different group names in /etc/group, as committed, that share one GID. The conclusion is scoped to that file.",
       "rationale": "The kernel knows groups only by GID. Two group names with the same GID are one group to every file and process, so membership and access granted under one name silently apply under the other, which blurs who was meant to have access.",
@@ -585,6 +612,10 @@
     {
       "criterion_id": "ISE-AUTH-001",
       "version": 1,
+      "title": "Declared login.defs Password Hashing Method",
+      "lifecycle": "EXPERIMENTAL",
+      "introduced_in": "0.3.0",
+      "minimum_run": {"route": "STANDARD_AUDIT", "reason": "/etc/login.defs is world-readable; a Standard Audit collects it"},
       "check_type": "password hashing policy",
       "purpose": "Declared login.defs Password Hashing Method: evaluate the ENCRYPT_METHOD value declared in /etc/login.defs, as committed, against a narrowly defined legacy-algorithm policy (MD5 and DES are legacy), without claiming the effective PAM password hashing behaviour.",
       "rationale": "ENCRYPT_METHOD is the hashing method that the shadow-utils tools reading login.defs use for new passwords. Declaring MD5 or DES there means passwords set by those tools are stored with a legacy, fast-to-crack hash.",
@@ -682,6 +713,10 @@
     {
       "criterion_id": "ISE-SSH-002",
       "version": 1,
+      "title": "Global SSH StrictModes Configuration",
+      "lifecycle": "EXPERIMENTAL",
+      "introduced_in": "0.3.0",
+      "minimum_run": {"route": "FULL_AUDIT", "reason": "sshd -T is run only by a Full Audit (resolve_sshd_effective_config_v1)"},
       "check_type": "effective daemon configuration",
       "purpose": "Global SSH StrictModes Configuration: the global value of StrictModes that sshd -T reports, as committed. The conclusion concerns the global configuration only.",
       "rationale": "With StrictModes yes, sshd refuses a login when the user's home directory or key files can be written by others, so a key cannot be planted through loose permissions. With no, those checks are skipped.",
@@ -765,7 +800,325 @@
       ],
       "manual_verification": "Read-only, as root: `sshd -T | grep -i '^strictmodes'` prints the global value. The command changes nothing.",
       "remediation_guidance": "Guidance only; ISEDRAF changes nothing. Setting StrictModes yes in sshd_config and reloading sshd restores the permission checks; first make sure no account depends on loose home or key permissions."
+    },
+    {
+      "criterion_id": "ISE-PRIV-001",
+      "version": 1,
+      "title": "Every Command as Root Without Authentication",
+      "lifecycle": "EXPERIMENTAL",
+      "introduced_in": "0.6.0",
+      "minimum_run": {"route": "FULL_AUDIT", "reason": "/etc/sudoers and its includes are read only by a Full Audit (read_sudoers_graph_v1)"},
+      "check_type": "local sudo delegation",
+      "purpose": "Every Command as Root Without Authentication: rules in the declared local sudo policy, as committed, that let a principal other than root run every command, as root, on every host, without authenticating. The conclusion concerns the declared policy only.",
+      "rationale": "sudo exists so that a person proves who they are before acting as root. A rule that grants every command as root without a password removes that step: anyone who can act as that account - including a process or an attacker that has taken it over - becomes root with no further check, and nothing ties the action to a person who authenticated.",
+      "facts_required": [
+        "the collection status of the declared sudo policy read by the Full Audit's fixed operation read_sudoers_graph_v1, the status of /etc/sudoers in it, whether every include was read, and whether any line could not be read",
+        "for every user specification (SPEC): its principals with their kind and negation, its host, its run-as users and groups, and per command the command, its negation and the tags in force",
+        "the names of the declared aliases",
+        "every Defaults setting of runas_default, with its scope: a rule without a run-as list runs as the runas_default user (root by default)"
+      ],
+      "dimensions": {"declared": "the local sudo policy files as read in the committed snapshot", "resolved": "not evaluated: aliases, group membership, host matching and sudo's last-match rule are not resolved", "active": "not evaluated: sudo is not run"},
+      "evaluation_semantics": {
+        "input": "the committed, verified snapshot only: sections/sudo.json whose digest matches the snapshot manifest. The sudo policy is read only by a Full Audit (read_sudoers_graph_v1); a Standard Audit records it NOT_TESTED.",
+        "evidence_sufficient_when": [
+          "the coverage entry for /etc/sudoers with operation_id read_sudoers_graph_v1 has status COLLECTED",
+          "the sudo section is COLLECTED, its include_status is COLLECTED and its malformed_count is 0, with no UNSUPPORTED record"
+        ],
+        "rules": [
+          {"result": "NOT_EVALUATED", "when": "the evidence is not sufficient: every Standard Audit, a refused or partial read, an unread include, an unsupported line, and an /etc/sudoers the Full Audit did not find (reason SUDOERS_ABSENT: with no declared policy to read, the absence of sudo is not established by this alone)."},
+          {"result": "FAIL", "when": "the evidence is sufficient and some SPEC is decisive: its host is ALL (not negated); it runs as root (a run-as user list naming ALL or root, none negated or an alias, or no run-as list while runas_default is root: never set, or set only globally and only to root - sudoers(5): a rule without a run-as list runs as the runas_default user, root by default; when runas_default is set globally to another user, a rule without a run-as list is outside this criterion); it carries the command ALL, not negated, with NOPASSWD in force; no command in it is negated; and its principals - none negated, none an alias - include one that is not exactly the user root. A SPEC whose principals are only the user root is excluded. The result names each declaration with its file and line."},
+          {"result": "MANUAL_REVIEW", "when": "the evidence is sufficient, no SPEC is decisive, and some SPEC is an unresolved candidate: it carries NOPASSWD on ALL or on a command alias, runs as root or through a run-as alias or negation, concerns a principal other than only root, and an alias, a named or negated host, a negation, or a runas_default set in a user, host, run-as or command scope or to different values decides whether it grants every command as root without authentication."},
+          {"result": "PASS", "when": "the evidence is sufficient and no SPEC is decisive and none is an unresolved candidate: no declaration grants every command as root without authentication to a principal other than root, and no passwordless rule that could do so is left unresolved."}
+        ],
+        "never_produced": ["NOT_APPLICABLE"],
+        "determinism": "the result is a function of the committed evidence alone; evaluating the same snapshot again yields the same result and the same evidence references."
+      },
+      "applicability": "Every Linux host with a local sudo policy. This criterion never yields NOT_APPLICABLE: an /etc/sudoers that is not found gives NOT_EVALUATED, because the absence of sudo is not established by the absence of the file alone.",
+      "limitations": [
+        "Declared policy only: sudo's last-match rule is not applied, so a FAIL states the declared grant, not sudo's decision for one user - a later rule may still require a password for that user.",
+        "A %group grant is reported for the group; its members are not resolved from the evidence.",
+        "NOPASSWD on a named list of commands is outside this criterion: it is not every command.",
+        "Defaults !authenticate, which removes the password for every rule in its scope, is ISE-PRIV-002.",
+        "Only the local sudo policy files are read; LDAP and SSSD sudo rules are not.",
+        "A host other than ALL is not matched against this host's name: such a rule is a MANUAL_REVIEW, never a FAIL.",
+        "When runas_default is never set, sudo's documented default, root, is taken; a sudo built with another compiled-in default is not detected (sudo -V shows it)."
+      ],
+      "evidence_pointers": [
+        {"artifact": "manifest.json", "pointer": "/manifest_core/auxiliary_artifacts/sections~1sudo.json", "role": "the digest that binds the sudo section"},
+        {"artifact": "sections/sudo.json", "pointer": "/collection_status", "role": "the collection status of the declared sudo policy"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/provenance/coverage/<i>/status", "role": "status of the coverage entry for /etc/sudoers read by read_sudoers_graph_v1"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/provenance/coverage/<i>/operation_id", "role": "the fixed operation that selects that coverage entry"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/provenance/coverage/<i>/source", "role": "the file of that coverage entry (/etc/sudoers)"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/provenance/coverage/<i>/access_outcome", "role": "why /etc/sudoers was not read, when it was not"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/provenance/include_status", "role": "whether every include was read"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/provenance/malformed_count", "role": "lines that could not be read"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/records/<i>/kind", "role": "SPEC marks a user specification"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/records/<i>/source_path", "role": "the file of the declaration"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/records/<i>/source_line", "role": "the line of the declaration"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/records/<i>/principals", "role": "who the rule is for"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/records/<i>/host", "role": "the host the rule applies on"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/records/<i>/runas_users", "role": "the users the rule runs commands as"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/records/<i>/runas_groups", "role": "the groups the rule runs commands as"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/records/<i>/commands", "role": "the commands with their negation and tags in force"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/records/<i>/scope_type", "role": "the scope of a Defaults setting of runas_default"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/records/<i>/scope", "role": "that scope as written"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/records/<i>/options", "role": "the runas_default value"}
+      ],
+      "default_severity": "high",
+      "manual_verification": "Read-only, as root: `sudo -ll -U <user>` lists what a user may run and with which tags; `visudo -c` checks the files. Neither changes anything.",
+      "remediation_guidance": "Guidance only; ISEDRAF changes nothing. A rule granting every command without a password is usually narrowed to the commands that need it, or given back its password prompt, after confirming which automation depends on it; edit with visudo so a syntax error cannot lock sudo."
+    },
+    {
+      "criterion_id": "ISE-PRIV-002",
+      "version": 1,
+      "title": "Authentication Disabled by sudo Defaults",
+      "lifecycle": "EXPERIMENTAL",
+      "introduced_in": "0.6.0",
+      "minimum_run": {"route": "FULL_AUDIT", "reason": "/etc/sudoers and its includes are read only by a Full Audit (read_sudoers_graph_v1)"},
+      "check_type": "local sudo delegation",
+      "purpose": "Authentication Disabled by sudo Defaults: Defaults settings in the declared local sudo policy, as committed, that turn authentication off (!authenticate) for every rule or for a scope. The conclusion concerns the declared policy only.",
+      "rationale": "Defaults !authenticate removes the password prompt from every rule in its scope at once, so a single line can make every sudo rule passwordless - often far more than the person who wrote it intended.",
+      "facts_required": [
+        "the collection status of the declared sudo policy read by the Full Audit's fixed operation read_sudoers_graph_v1, the status of /etc/sudoers in it, whether every include was read, and whether any line could not be read",
+        "for every Defaults record: its scope type (global, user, run-as, host, command), its scope as written, its options with their negation, and its file and line",
+        "the names of the declared aliases"
+      ],
+      "dimensions": {"declared": "the local sudo policy files as read in the committed snapshot", "resolved": "not evaluated: aliases and the precedence between scope types are not resolved", "active": "not evaluated: sudo is not run"},
+      "evaluation_semantics": {
+        "input": "the committed, verified snapshot only: sections/sudo.json whose digest matches the snapshot manifest. The sudo policy is read only by a Full Audit (read_sudoers_graph_v1); a Standard Audit records it NOT_TESTED.",
+        "evidence_sufficient_when": [
+          "the coverage entry for /etc/sudoers with operation_id read_sudoers_graph_v1 has status COLLECTED",
+          "the sudo section is COLLECTED, its include_status is COLLECTED and its malformed_count is 0, with no UNSUPPORTED record"
+        ],
+        "rules": [
+          {"result": "NOT_EVALUATED", "when": "the evidence is not sufficient: every Standard Audit, a refused or partial read, an unread include, an unsupported line, and an /etc/sudoers the Full Audit did not find (reason SUDOERS_ABSENT)."},
+          {"result": "FAIL", "when": "the evidence is sufficient and some scope ends with !authenticate. A scope is identified by its type and one member as written (the global scope has one member; Defaults:alice,bob names the members alice and bob). Its settings are ordered by line within one file; settings of one scope in several files are ordered only when they agree, because the position of an include directive is not in the evidence. A scope whose member is an alias or a negation is never a FAIL. The result names each scope and its declarations."},
+          {"result": "MANUAL_REVIEW", "when": "the evidence is sufficient, no scope is a FAIL, and some scope is undecided: !authenticate set on a scope whose member is an alias or a negation, or settings of one scope that disagree and lie in several files."},
+          {"result": "PASS", "when": "the evidence is sufficient, no scope ends with !authenticate and none is undecided, including a policy that never sets authenticate."}
+        ],
+        "never_produced": ["NOT_APPLICABLE"],
+        "determinism": "the result is a function of the committed evidence alone; evaluating the same snapshot again yields the same result and the same evidence references."
+      },
+      "applicability": "Every Linux host with a local sudo policy. This criterion never yields NOT_APPLICABLE: an /etc/sudoers that is not found gives NOT_EVALUATED.",
+      "limitations": [
+        "Declared Defaults only. Scopes are compared as written: an alias used as a scope is not resolved, and a member written twice under different scopes of one type is compared as one member.",
+        "Precedence between scope types is not computed: a global !authenticate that a Defaults:alice authenticate re-enables for one user is still a FAIL for the global scope.",
+        "The order of settings in different files is not established from the evidence; settings that disagree across files give MANUAL_REVIEW.",
+        "rootpw, targetpw and runaspw are not assessed; NOPASSWD tags on rules are ISE-PRIV-001.",
+        "Only the local sudo policy files are read; LDAP and SSSD sudo rules are not."
+      ],
+      "evidence_pointers": [
+        {"artifact": "manifest.json", "pointer": "/manifest_core/auxiliary_artifacts/sections~1sudo.json", "role": "the digest that binds the sudo section"},
+        {"artifact": "sections/sudo.json", "pointer": "/collection_status", "role": "the collection status of the declared sudo policy"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/provenance/coverage/<i>/status", "role": "status of the coverage entry for /etc/sudoers read by read_sudoers_graph_v1"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/provenance/coverage/<i>/operation_id", "role": "the fixed operation that selects that coverage entry"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/provenance/coverage/<i>/source", "role": "the file of that coverage entry (/etc/sudoers)"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/provenance/coverage/<i>/access_outcome", "role": "why /etc/sudoers was not read, when it was not"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/provenance/include_status", "role": "whether every include was read"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/provenance/malformed_count", "role": "lines that could not be read"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/records/<i>/kind", "role": "DEFAULTS marks a Defaults setting"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/records/<i>/source_path", "role": "the file of the setting"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/records/<i>/source_line", "role": "the line of the setting"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/records/<i>/scope_type", "role": "global, user, run-as, host or command"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/records/<i>/scope", "role": "the scope as written"},
+        {"artifact": "sections/sudo.json", "pointer": "/evidence/records/<i>/options", "role": "the options with their negation"}
+      ],
+      "default_severity": "high",
+      "manual_verification": "Read-only, as root: `sudo -V` prints the defaults sudo was built with and the Defaults in force for the invoking user; `visudo -c` checks the files. Neither changes anything.",
+      "remediation_guidance": "Guidance only; ISEDRAF changes nothing. A Defaults !authenticate is usually removed, or replaced by NOPASSWD on the specific rules that need it, after confirming which automation depends on it; edit with visudo."
+    },
+    {
+      "criterion_id": "ISE-SSH-003",
+      "version": 1,
+      "title": "Global SSH Root Login Setting",
+      "lifecycle": "EXPERIMENTAL",
+      "introduced_in": "0.6.0",
+      "minimum_run": {"route": "FULL_AUDIT", "reason": "sshd -T is run only by a Full Audit (resolve_sshd_effective_config_v1)"},
+      "check_type": "effective daemon configuration",
+      "purpose": "Global SSH Root Login Setting: the global value of PermitRootLogin that sshd -T reports, as committed. The conclusion concerns the global configuration only, not every connection.",
+      "rationale": "Root is the account every attacker tries first, and a successful login as root needs no further step to control the host. Letting root log in over the network with a password exposes that account to password guessing; most administration can be done by logging in as a person and then elevating.",
+      "facts_required": [
+        "the collection status of the resolved dimension: the coverage entry whose operation_id is resolve_sshd_effective_config_v1",
+        "the resolved setting permitrootlogin and its value"
+      ],
+      "dimensions": {"declared": "not evaluated", "resolved": "sshd -T without a connection context: the global effective configuration", "active": "not evaluated: no connection is attempted"},
+      "evaluation_semantics": {
+        "input": "the committed, verified snapshot only: sections/ssh.json whose digest matches the snapshot manifest. sshd -T is run only by a Full Audit.",
+        "evidence_sufficient_when": [
+          "the one coverage entry whose operation_id is resolve_sshd_effective_config_v1 has status COLLECTED",
+          "exactly one RESOLVED_SETTING record has keyword permitrootlogin"
+        ],
+        "rules": [
+          {"result": "NOT_EVALUATED", "when": "the resolved dimension is not COLLECTED (every Standard Audit, a refused or failed sshd -T), the setting is not reported exactly once, or its value is not one this criterion knows."},
+          {"result": "PASS", "when": "the evidence is sufficient and the value is no: root cannot log in over SSH by any method."},
+          {"result": "FAIL", "when": "the evidence is sufficient and the value is yes: root can log in over SSH with any enabled method, a password included."},
+          {"result": "MANUAL_REVIEW", "when": "the evidence is sufficient and the value is prohibit-password or its older name without-password (root can log in with a key or another method that is not a password), or forced-commands-only (root can log in only with a public key whose authorized_keys entry forces a command). The value sshd -T returned is reported unchanged, with what access remains."}
+        ],
+        "never_produced": ["NOT_APPLICABLE"],
+        "determinism": "the result is a function of the committed evidence alone; evaluating the same snapshot again yields the same result and the same evidence references."
+      },
+      "applicability": "Every Linux host where the Full Audit ran sshd -T. Role-independent. This criterion never yields NOT_APPLICABLE.",
+      "limitations": [
+        "Global effective configuration only: values that a Match block sets for some users, groups or addresses are not resolved, and a per-connection value may differ.",
+        "Whether root has a password or authorized keys at all is not part of this criterion; a FAIL states what the SSH daemon permits.",
+        "Under MANUAL_REVIEW, which keys or forced commands root accepts is in root's authorized_keys, which the Full Audit does not read today."
+      ],
+      "evidence_pointers": [
+        {"artifact": "manifest.json", "pointer": "/manifest_core/auxiliary_artifacts/sections~1ssh.json", "role": "the digest that binds the ssh section"},
+        {"artifact": "sections/ssh.json", "pointer": "/evidence/provenance/coverage/<i>/status", "role": "status of the coverage entry whose operation_id is resolve_sshd_effective_config_v1"},
+        {"artifact": "sections/ssh.json", "pointer": "/evidence/provenance/coverage/<i>/operation_id", "role": "the fixed operation that selects that coverage entry"},
+        {"artifact": "sections/ssh.json", "pointer": "/evidence/records/<i>/kind", "role": "RESOLVED_SETTING marks an sshd -T line"},
+        {"artifact": "sections/ssh.json", "pointer": "/evidence/records/<i>/keyword", "role": "the setting name"},
+        {"artifact": "sections/ssh.json", "pointer": "/evidence/records/<i>/value", "role": "the setting value"}
+      ],
+      "default_severity": "high",
+      "manual_verification": "Read-only, as root: `sshd -T | grep -i '^permitrootlogin'` prints the global value. The command changes nothing.",
+      "remediation_guidance": "Guidance only; ISEDRAF changes nothing. PermitRootLogin is usually set to no, or to prohibit-password where key-based root access is needed, after confirming that another administrator account can log in and elevate; keep a session open while changing sshd_config and test with sshd -t."
+    },
+    {
+      "criterion_id": "ISE-SSH-004",
+      "version": 1,
+      "title": "Global SSH Host-Based Authentication Disabled",
+      "lifecycle": "EXPERIMENTAL",
+      "introduced_in": "0.6.0",
+      "minimum_run": {"route": "FULL_AUDIT", "reason": "sshd -T is run only by a Full Audit (resolve_sshd_effective_config_v1)"},
+      "check_type": "effective daemon configuration",
+      "purpose": "Global SSH Host-Based Authentication Disabled: the global value of HostbasedAuthentication that sshd -T reports, as committed. The conclusion concerns the global configuration only.",
+      "rationale": "Host-based authentication lets a user log in because the connecting machine is trusted, without the user proving who they are. Anyone who controls a trusted machine, or can appear to be it, can then log in as the users it vouches for.",
+      "facts_required": [
+        "the collection status of the resolved dimension: the coverage entry whose operation_id is resolve_sshd_effective_config_v1",
+        "the resolved setting hostbasedauthentication and its value"
+      ],
+      "dimensions": {"declared": "not evaluated", "resolved": "sshd -T without a connection context: the global effective configuration", "active": "not evaluated: no connection is attempted"},
+      "evaluation_semantics": {
+        "input": "the committed, verified snapshot only: sections/ssh.json whose digest matches the snapshot manifest. sshd -T is run only by a Full Audit.",
+        "evidence_sufficient_when": [
+          "the one coverage entry whose operation_id is resolve_sshd_effective_config_v1 has status COLLECTED",
+          "exactly one RESOLVED_SETTING record has keyword hostbasedauthentication"
+        ],
+        "rules": [
+          {"result": "NOT_EVALUATED", "when": "the resolved dimension is not COLLECTED (every Standard Audit, a refused or failed sshd -T), the setting is not reported exactly once, or its value is neither yes nor no."},
+          {"result": "PASS", "when": "the evidence is sufficient and the value is no: host-based authentication is off globally."},
+          {"result": "FAIL", "when": "the evidence is sufficient and the value is yes: the daemon accepts host-based authentication, a login vouched for by the connecting host."}
+        ],
+        "never_produced": ["NOT_APPLICABLE", "MANUAL_REVIEW"],
+        "determinism": "the result is a function of the committed evidence alone; evaluating the same snapshot again yields the same result and the same evidence references."
+      },
+      "applicability": "Every Linux host where the Full Audit ran sshd -T. Role-independent. This criterion never yields NOT_APPLICABLE.",
+      "limitations": [
+        "Global effective configuration only: values that a Match block sets for some users, groups or addresses are not resolved, and a per-connection value may differ.",
+        "Which hosts are trusted (shosts.equiv, hosts.equiv, users' .rhosts and .shosts) is not read; ISE-SSH-005 concerns the users' files."
+      ],
+      "evidence_pointers": [
+        {"artifact": "manifest.json", "pointer": "/manifest_core/auxiliary_artifacts/sections~1ssh.json", "role": "the digest that binds the ssh section"},
+        {"artifact": "sections/ssh.json", "pointer": "/evidence/provenance/coverage/<i>/status", "role": "status of the coverage entry whose operation_id is resolve_sshd_effective_config_v1"},
+        {"artifact": "sections/ssh.json", "pointer": "/evidence/provenance/coverage/<i>/operation_id", "role": "the fixed operation that selects that coverage entry"},
+        {"artifact": "sections/ssh.json", "pointer": "/evidence/records/<i>/kind", "role": "RESOLVED_SETTING marks an sshd -T line"},
+        {"artifact": "sections/ssh.json", "pointer": "/evidence/records/<i>/keyword", "role": "the setting name"},
+        {"artifact": "sections/ssh.json", "pointer": "/evidence/records/<i>/value", "role": "the setting value"}
+      ],
+      "default_severity": "high",
+      "manual_verification": "Read-only, as root: `sshd -T | grep -i '^hostbasedauthentication'` prints the global value. The command changes nothing.",
+      "remediation_guidance": "Guidance only; ISEDRAF changes nothing. HostbasedAuthentication is usually set to no unless a documented cluster relies on it; test with sshd -t before reloading."
+    },
+    {
+      "criterion_id": "ISE-SSH-005",
+      "version": 1,
+      "title": "User Trust Files Ignored by SSH Host-Based Authentication",
+      "lifecycle": "EXPERIMENTAL",
+      "introduced_in": "0.6.0",
+      "minimum_run": {"route": "FULL_AUDIT", "reason": "sshd -T is run only by a Full Audit (resolve_sshd_effective_config_v1)"},
+      "check_type": "effective daemon configuration",
+      "purpose": "User Trust Files Ignored by SSH Host-Based Authentication: when host-based authentication is on globally, whether the global IgnoreRhosts that sshd -T reports, as committed, keeps users' own .rhosts and .shosts files from granting it. The conclusion concerns the global configuration only.",
+      "rationale": "Users' .rhosts and .shosts files let each user decide which remote machines may log in as them. With host-based authentication on, honouring those files hands a security decision to every account, where one careless file opens that account to another machine.",
+      "facts_required": [
+        "the collection status of the resolved dimension: the coverage entry whose operation_id is resolve_sshd_effective_config_v1",
+        "the resolved settings hostbasedauthentication and ignorerhosts and their values"
+      ],
+      "dimensions": {"declared": "not evaluated", "resolved": "sshd -T without a connection context: the global effective configuration", "active": "not evaluated: no connection is attempted"},
+      "evaluation_semantics": {
+        "input": "the committed, verified snapshot only: sections/ssh.json whose digest matches the snapshot manifest. sshd -T is run only by a Full Audit.",
+        "evidence_sufficient_when": [
+          "the one coverage entry whose operation_id is resolve_sshd_effective_config_v1 has status COLLECTED",
+          "exactly one RESOLVED_SETTING record has keyword hostbasedauthentication, and exactly one has keyword ignorerhosts"
+        ],
+        "rules": [
+          {"result": "NOT_EVALUATED", "when": "the resolved dimension is not COLLECTED (every Standard Audit, a refused or failed sshd -T), a setting is not reported exactly once, or a value is not one this criterion knows."},
+          {"result": "NOT_APPLICABLE", "when": "the evidence is sufficient and HostbasedAuthentication is no: host-based authentication is off globally, so no user trust file can grant it (the documented condition of this criterion; ISE-SSH-004 reports the method itself)."},
+          {"result": "PASS", "when": "the evidence is sufficient, HostbasedAuthentication is yes and IgnoreRhosts is yes: users' .rhosts and .shosts files are not used."},
+          {"result": "FAIL", "when": "the evidence is sufficient, HostbasedAuthentication is yes and IgnoreRhosts is no (users' .rhosts and .shosts files are used) or shosts-only (users' .shosts files are used). The result names the files that are allowed."}
+        ],
+        "never_produced": ["MANUAL_REVIEW"],
+        "determinism": "the result is a function of the committed evidence alone; evaluating the same snapshot again yields the same result and the same evidence references."
+      },
+      "applicability": "Hosts where the Full Audit ran sshd -T and HostbasedAuthentication is yes globally. NOT_APPLICABLE when it is no.",
+      "limitations": [
+        "Global effective configuration only: values that a Match block sets for some users, groups or addresses are not resolved, and a per-connection value may differ.",
+        "The system-wide files /etc/hosts.equiv and /etc/ssh/shosts.equiv are outside this criterion: IgnoreRhosts does not govern them.",
+        "Whether any user actually has a .rhosts or .shosts file is not read."
+      ],
+      "evidence_pointers": [
+        {"artifact": "manifest.json", "pointer": "/manifest_core/auxiliary_artifacts/sections~1ssh.json", "role": "the digest that binds the ssh section"},
+        {"artifact": "sections/ssh.json", "pointer": "/evidence/provenance/coverage/<i>/status", "role": "status of the coverage entry whose operation_id is resolve_sshd_effective_config_v1"},
+        {"artifact": "sections/ssh.json", "pointer": "/evidence/provenance/coverage/<i>/operation_id", "role": "the fixed operation that selects that coverage entry"},
+        {"artifact": "sections/ssh.json", "pointer": "/evidence/records/<i>/kind", "role": "RESOLVED_SETTING marks an sshd -T line"},
+        {"artifact": "sections/ssh.json", "pointer": "/evidence/records/<i>/keyword", "role": "the setting name"},
+        {"artifact": "sections/ssh.json", "pointer": "/evidence/records/<i>/value", "role": "the setting value"}
+      ],
+      "default_severity": "medium",
+      "manual_verification": "Read-only, as root: `sshd -T | grep -iE '^(hostbasedauthentication|ignorerhosts)'` prints both global values. The command changes nothing.",
+      "remediation_guidance": "Guidance only; ISEDRAF changes nothing. Where host-based authentication is needed, IgnoreRhosts is usually set to yes so that only the system-wide trust files apply; test with sshd -t before reloading."
+    },
+    {
+      "criterion_id": "ISE-STORAGE-001",
+      "version": 1,
+      "title": "/dev/shm Mounted nosuid",
+      "lifecycle": "EXPERIMENTAL",
+      "introduced_in": "0.6.0",
+      "minimum_run": {"route": "FULL_AUDIT", "reason": "only a Full Audit reads the host's mount table (/proc/1/mountinfo); a Standard Audit reads its own process's view and cannot establish the host's namespace"},
+      "check_type": "mount protection options",
+      "purpose": "/dev/shm Mounted nosuid: whether the active mount at /dev/shm in the host's mount table, as committed, carries the nosuid option. The conclusion concerns that mount only.",
+      "rationale": "/dev/shm is writable by every user. Without nosuid, a set-user-ID program placed there runs with its owner's privileges, which turns a world-writable directory into a place to stage privilege escalation.",
+      "facts_required": [
+        "whether the active mount table was collected completely, and that it was read from the host's mount table (/proc/1/mountinfo)",
+        "the active mount at /dev/shm: its mount point, file system type, parse status and per-mount options"
+      ],
+      "dimensions": {"declared": "not evaluated: /etc/fstab may not declare /dev/shm, and a declared option is not the one in effect", "resolved": "not evaluated", "active": "the mount in effect in the host's mount table (PID 1's mount namespace)"},
+      "evaluation_semantics": {
+        "input": "the committed, verified snapshot only: sections/mounts.json whose digest matches the snapshot manifest. Only a Full Audit reads the host's mount table.",
+        "evidence_sufficient_when": [
+          "the active side of the mounts section is COLLECTED and complete",
+          "every active mount record was read from /proc/1/mountinfo (the host's mount namespace)",
+          "exactly one active mount has the mount point /dev/shm, and its line was parsed"
+        ],
+        "rules": [
+          {"result": "NOT_EVALUATED", "when": "the evidence is not sufficient: an incomplete or uncollected active table, a table that is not the host's (every Standard Audit), no mount at /dev/shm, more than one mount at /dev/shm, or an unparsed mount line."},
+          {"result": "PASS", "when": "the evidence is sufficient and the /dev/shm mount carries nosuid."},
+          {"result": "FAIL", "when": "the evidence is sufficient and the /dev/shm mount does not carry nosuid. The result shows the mount point and the options observed."}
+        ],
+        "never_produced": ["NOT_APPLICABLE", "MANUAL_REVIEW"],
+        "determinism": "the result is a function of the committed evidence alone; evaluating the same snapshot again yields the same result and the same evidence references."
+      },
+      "applicability": "Every Linux host whose Full Audit read the host's mount table. Role-independent. This criterion never yields NOT_APPLICABLE.",
+      "limitations": [
+        "The host's mount namespace only (PID 1's): containers and other mount namespaces are not observed.",
+        "Other options of /dev/shm (nodev, noexec) and other world-writable mounts (/tmp, /var/tmp) are outside this criterion.",
+        "The options in effect at collection time; a later remount is not seen."
+      ],
+      "evidence_pointers": [
+        {"artifact": "manifest.json", "pointer": "/manifest_core/auxiliary_artifacts/sections~1mounts.json", "role": "the digest that binds the mounts section"},
+        {"artifact": "sections/mounts.json", "pointer": "/evidence/provenance/comparison/active_status", "role": "the collection status of the active mount table"},
+        {"artifact": "sections/mounts.json", "pointer": "/evidence/provenance/active/universe_complete", "role": "whether the active table was read completely"},
+        {"artifact": "sections/mounts.json", "pointer": "/evidence/provenance/active/records/<i>/mount_point", "role": "the mount point"},
+        {"artifact": "sections/mounts.json", "pointer": "/evidence/provenance/active/records/<i>/source_path", "role": "the mount table read (/proc/1/mountinfo is the host's)"},
+        {"artifact": "sections/mounts.json", "pointer": "/evidence/provenance/active/records/<i>/parse_status", "role": "whether the mount line was parsed"},
+        {"artifact": "sections/mounts.json", "pointer": "/evidence/provenance/active/records/<i>/fstype", "role": "the file system type"},
+        {"artifact": "sections/mounts.json", "pointer": "/evidence/provenance/active/records/<i>/mount_options", "role": "the per-mount options in effect"}
+      ],
+      "default_severity": "medium",
+      "manual_verification": "Read-only: `findmnt -no OPTIONS /dev/shm` prints the options in effect. The command changes nothing.",
+      "remediation_guidance": "Guidance only; ISEDRAF changes nothing. nosuid is usually added to the /dev/shm entry in /etc/fstab (or the systemd mount unit) and applied with a remount at a planned time, after checking that no software relies on set-user-ID programs there."
     }
   ],
-  "$criteria_comment": "2026-11-01 (D-111): the first native criterion, ISE-ACCOUNT-001, admitted to the catalog; 2026-11-04: ISE-ACCOUNT-002, ISE-ACCOUNT-003, ISE-ACCOUNT-004 and ISE-SSH-001; 2026-11-05: ISE-ACCOUNT-005, ISE-AUTH-001 and ISE-SSH-002. Admission authors the record; evaluation is implemented separately, after the owner approves it. Every criterion carries the required fields; the gate checks namespace, fields, check type and independence."
+  "$criteria_comment": "2026-11-01 (D-111): the first native criterion, ISE-ACCOUNT-001, admitted to the catalog; 2026-11-04: ISE-ACCOUNT-002, ISE-ACCOUNT-003, ISE-ACCOUNT-004 and ISE-SSH-001; 2026-11-05: ISE-ACCOUNT-005, ISE-AUTH-001 and ISE-SSH-002; 2026-11-23 (D-131): ISE-PRIV-001 and ISE-PRIV-002, introduced in 0.6.0; 2026-11-24 (D-132): ISE-SSH-003, ISE-SSH-004, ISE-SSH-005 and ISE-STORAGE-001, introduced in 0.6.0. Admission authors the record; evaluation is implemented separately, after the owner approves it. Every criterion carries the required fields; the gate checks namespace, fields, check type and independence."
 }

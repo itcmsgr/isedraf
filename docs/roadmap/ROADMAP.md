@@ -7,8 +7,21 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 Status: PLANNED
 Implements: D-65, D-66, D-82, D-88
 
-Everything on this page is `PLANNED`, `FUTURE` or `OUT_OF_SCOPE`. Nothing here is released.
-For what exists, see [`../CURRENT_STATE.md`](../CURRENT_STATE.md).
+Work not yet released is `PLANNED`, `FUTURE` or `OUT_OF_SCOPE`. An entry that has shipped names
+the release that delivered it, and is kept as the record of the plan. For what exists, see
+[`../CURRENT_STATE.md`](../CURRENT_STATE.md).
+
+### Sources of truth
+
+| Question | Source |
+|---|---|
+| What is shipped, in which release | [`docs/CURRENT_STATE.md`](../CURRENT_STATE.md), generated from `scripts/ci/project_status.json` |
+| What comes next, in which order | this page |
+| What ISEDRAF is designed to be (frozen) | [`ISEDRAF_HLD.md`](../architecture/ISEDRAF_HLD.md), [`ISEDRAF_PRODUCT_HLD.md`](../architecture/ISEDRAF_PRODUCT_HLD.md) and the other frozen documents in `docs/architecture/` |
+| Why, and who decided | the owner decision cited in each document as `D-nnn`; the register itself is kept in the engineering repository |
+| Every command, option and exit code | [`docs/reference/CLI.md`](../reference/CLI.md), generated from `lib/isedraf/commands.py` |
+| Every native criterion | `lib/isedraf/catalog/native_controls.json`; pages in `docs/reference/criteria/` generated from it |
+| Every CI gate and its proof | [`docs/development/CI_INVENTORY.md`](../development/CI_INVENTORY.md) Part A, from `scripts/ci/gate_coverage.json` |
 
 ## GA release track — COMPLETE (owner directive, 2026-09-27)
 
@@ -478,7 +491,7 @@ v0.4  Historical Assurance - approved baseline and classified delta
       production workflow, built and lab-tested; one baseline per store; accepting a
       change, re-approval, tracking and `check` come after 0.4.
 
-v0.5  Operator experience (D-129), delivered in 0.5.0 (prepared 2026-11-20, not yet published)
+v0.5  Operator experience (D-129), delivered in 0.5.0 (published 2026-11-21)
       help: root --version/--help/help, isedraf help, a grouped help --all, per-command
       examples, effects, privileges and exits; bash completion of commands, options and
       criterion IDs from installed definitions; a common compact header, readable errors,
@@ -488,8 +501,16 @@ v0.5  Operator experience (D-129), delivered in 0.5.0 (prepared 2026-11-20, not 
       tree aligned as each feature lands, with a bounded documentation check; completion and
       offline documentation in the DEB and RPM, installation and upgrade verified.
 
-v0.6  Native audit coverage
-      ISE-* collectors and criteria chosen against a finite coverage matrix (D-111).
+v0.6  Native audit coverage, delivered in 0.6.0 (prepared 2026-11-24, not yet published)
+      ISE-* collectors and criteria chosen against a finite coverage matrix (D-111), scope A
+      (owner, 2026-11-21): the ten sections every audit already commits, their evidence made
+      complete first, then small batches of criteria by area. Matrix and decisions:
+      docs/development/V0_6_NATIVE_COVERAGE_DESIGN.md. In the candidate: the native criteria
+      catalogue (NATIVE_CRITERIA.csv, D-130); PAM @include read on Debian-family hosts; six
+      new criteria, fourteen in five families (D-131, D-132); nullok and the maximum password
+      age in the report. Not in it: a fifth fixed operation for authorized_keys (its design
+      needs a revision first). Acceptance of the installed packages:
+      docs/development/V0_6_RELEASE_ACCEPTANCE.md.
 
 v0.7  Audit of ISEDRAF itself
       security boundaries, evidence correctness, privileges, CLI, packaging, upgrades, and the

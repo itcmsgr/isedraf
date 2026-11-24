@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -70,8 +70,10 @@ COLLECTORS = {
 # (IQ-042). A collector or parser change bumps its version here, so a changed observation
 # can be told apart from a changed host. Versions are strings, as Evidence Limits schema 2
 # requires (ELIM-006).
+# pam parser 2 (v0.6, D-130 scope A): `@include` read as an edge on Debian-family hosts.
+PARSER_VERSIONS = {"pam": "2"}
 METHODS = dict((name, {"collector_id": "isedraf." + name, "collector_version": "1",
-                       "parser_version": "1"}) for name in SECTIONS)
+                       "parser_version": PARSER_VERSIONS.get(name, "1")}) for name in SECTIONS)
 if set(METHODS) != set(COLLECTORS):
     raise AssertionError("audit.METHODS and audit.COLLECTORS must name the same sections")
 

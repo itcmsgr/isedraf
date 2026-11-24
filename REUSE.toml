@@ -49,10 +49,10 @@ precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
 SPDX-License-Identifier = "MPL-2.0"
 
-# Measured compatibility records and rendered report samples: generated evidence, strict
-# JSON, no comment syntax.
+# Measured compatibility records, rendered report samples (strict JSON) and the native criteria
+# catalogue (D-130, CSV): generated files with no comment syntax.
 [[annotations]]
-path = ["docs/compatibility/records/**", "docs/reference/samples/**"]
+path = ["docs/compatibility/records/**", "docs/reference/samples/**", "docs/reference/NATIVE_CRITERIA.csv"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>"
 SPDX-License-Identifier = "MPL-2.0"
