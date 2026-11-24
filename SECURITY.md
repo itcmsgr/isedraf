@@ -11,8 +11,8 @@ Implements: D-30, D-31, D-35, D-46, §36
 
 | Version | Security fixes |
 |---|---|
-| 0.1.x (current release) | yes |
-| pre-releases (0.1.0-alpha1 and release candidates) | no - upgrade to 0.1.x |
+| 0.6.x (current release) | yes |
+| earlier releases (0.1.x to 0.5.x), pre-releases and release candidates | no - upgrade to 0.6.x |
 
 ## Reporting a vulnerability
 
@@ -27,7 +27,7 @@ Report vulnerabilities **privately**, by either route:
 working exploit or a step-by-step extraction path while the issue is unresolved.
 
 Include: affected version, platform and distribution, how ISEDRAF was run, what you observed, what you
-expected, and a minimal reproduction. **Redact before sending:** ISEDRAF 0.1 has no automatic
+expected, and a minimal reproduction. **Redact before sending:** ISEDRAF has no automatic
 redaction, so remove host names, account names, key fingerprints and sudo rule bodies by hand. See
 `SUPPORT.md`.
 
@@ -74,8 +74,8 @@ no memory is corrupted and no privilege is gained.
 ## What is not a vulnerability
 
 - ISEDRAF not detecting a change it never claimed to collect — check the evidence boundary first.
-- A fact that needs elevated privilege being reported as `NOT_TESTED`. ISEDRAF 0.1 runs unprivileged by
-  design.
+- A fact that needs elevated privilege being reported as `NOT_TESTED` by a standard audit, which runs
+  unprivileged by design; a Full Audit (`sudo isedraf audit`) reads those facts through fixed operations.
 - Local verification not defeating an administrator who alters both the evidence and its records.
   ISEDRAF does not claim this.
 

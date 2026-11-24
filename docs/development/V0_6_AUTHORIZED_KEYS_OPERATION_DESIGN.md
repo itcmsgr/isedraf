@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 -->
 # v0.6 — a fifth fixed operation for authorized_keys: owner design
 
-Status: PLANNING
+Status: PLANNED - not in 0.6.0. The design needs a revision (the allowed-path rule for a prefix taken from host configuration) before any implementation.
 
 Implements: D-129, D-123, D-124
 

@@ -72,7 +72,7 @@ SBOM attestations. You can also build them from a clean checkout: `bash packagin
 
 ```sh
 sudo apt install ./isedraf_<version>_all.deb       # Debian, Ubuntu (keep the ./)
-sudo dnf install ./isedraf-<version>.noarch.rpm    # RHEL family (keep the ./)
+sudo dnf install ./isedraf-<version>-1.noarch.rpm  # RHEL family (keep the ./)
 ```
 
 The package installs `/usr/bin/isedraf` and `/usr/lib/isedraf/`, declares the `isedraf`
@@ -93,7 +93,7 @@ sudo isedraf evaluate          # evaluate the last Full Audit run (system store)
 sudo isedraf baseline approve  # approve the last complete Full Audit run as the baseline
 ```
 
-Under `sudo`, ISEDRAF runs only `audit`, `report`, `evaluate` and `baseline approve`, and answers
+Under `sudo`, ISEDRAF runs only `audit`, `report`, `evaluate`, `baseline approve` and `list`, and answers
 `help`, `--help` and `--version`; everything else is refused. Baselines: [Getting started](docs/GETTING_STARTED.md#approve-a-baseline-and-compare).
 
 | Exit | Meaning |
@@ -105,6 +105,7 @@ Under `sudo`, ISEDRAF runs only `audit`, `report`, `evaluate` and `baseline appr
 | 65 | baseline approval refused, with the reason; nothing was written |
 | 66 | another ISEDRAF run holds the lock; nothing was collected |
 | 67 | the evidence store cannot be used; nothing was collected |
+| 68 | too little free space for the run; nothing was collected or written, and nothing is deleted |
 | 70 | refused under sudo or root, or Full Audit not supported here; nothing was collected |
 
 Exit 2 is the normal result on a real host. An interrupted Full Audit (Ctrl-C, SIGTERM,
@@ -112,14 +113,12 @@ SIGHUP) commits nothing and exits 128 plus the signal.
 
 ## What output do I get?
 
-- **Evidence**: one directory per run and a hash-chained ledger - in
-  `~/.local/state/isedraf` for a standard audit, in `/var/lib/isedraf` (root only) for
-  Full Audit.
+- **Evidence**: one directory per run, its evaluations (criteria results, findings, the baseline
+  comparison) and a hash-chained ledger - in `~/.local/state/isedraf` for a standard audit, in
+  `/var/lib/isedraf` (root only) for Full Audit. Removing the package never deletes it.
 - **A report** rendered from the last committed run, as Markdown, JSON (`--json`) or HTML
   (`--html`). It never collects. A Full Audit report states the run mode, how each source
   was acquired, and which evidence it re-verified.
-
-Removing the package never deletes the evidence.
 
 ## Where to read next
 
@@ -130,8 +129,9 @@ Removing the package never deletes the evidence.
 | review a run as an auditor, and check a fact by hand | [Auditor guide](docs/AUDITOR_GUIDE.md) |
 | read the report section by section | [Report guide](docs/REPORT_GUIDE.md) |
 | know exactly what ISEDRAF cannot tell you | [Security and limitations](docs/SECURITY_AND_LIMITATIONS.md) |
+| see every native criterion in a spreadsheet | [NATIVE_CRITERIA.csv](docs/reference/NATIVE_CRITERIA.csv), with [one page per criterion](docs/reference/criteria/) |
 
-Engineering and design documents: [`docs/`](docs/README.md); status: [Current state](docs/CURRENT_STATE.md).
+Commands: [CLI reference](docs/reference/CLI.md); engineering and design: [`docs/`](docs/README.md); status: [Current state](docs/CURRENT_STATE.md).
 
 ## Security
 

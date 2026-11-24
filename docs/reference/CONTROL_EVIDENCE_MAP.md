@@ -36,9 +36,11 @@ rest of the page.
 **Host identity has a complete row below. The audit sections that `isedraf audit` collects - host and
 platform inventory, local accounts and groups, NSS configuration, hostname, mounts, SSH server
 configuration, PAM, sudo, SSH authorized keys and login policy - do not have their rows here yet.** Until
-they do, the reference for each is its evidence file in the committed run (`sections/<area>.json`) and the
+they do, the reference for each is its evidence file in the committed run (`sections/<area>.json`), the
 report's "Evidence limitations" table, which names every source each area tried to read and what that
-means for the evidence. Rows follow as each area's mapping is written; see the engineering-debt table in
+means for the evidence, and, for the facts a native criterion reads, the
+[criteria catalogue](NATIVE_CRITERIA.csv) and the [criterion pages](criteria/), which name the evidence
+each criterion uses and what its result does not establish. Rows follow as each area's mapping is written; see the engineering-debt table in
 [the roadmap](../roadmap/ROADMAP.md).
 
 ## The two status vocabularies never merge
@@ -62,7 +64,8 @@ delta primitive, not an evaluation result (D-121).
 
 **A collection failure never becomes `PASS` or `FAIL`.** "We could not look" and "we looked and it is
 wrong" are different statements, and a tool that merges them is lying in whichever direction is
-convenient. Evaluation does not exist yet: it is W1-C.
+convenient. Evaluation is a separate step (`isedraf evaluate`), recorded apart from the run it reads, and
+it never changes collected evidence.
 
 ## State dimension
 
@@ -97,11 +100,11 @@ distinction, the dimension is marked `NOT_APPLICABLE` rather than guessed.
 | **Normalized ISEDRAF field** | `host_id` — `"sha256:" + hex(HASH_FRAME_V1("ISEDRAF:HOST-ID:V1", utf8(normalized machine-id)))` |
 | **Evidence artifact** | `state/host_identity.json` — the hashed state object, exactly `{"host_id":"sha256:…"}` |
 | **Provenance artifact** | `method/host_identity.json` — collector, parser and classification-table versions, `source_id`, `identity_scheme` |
-| **Persistent location** | `/var/lib/isedraf/snapshots/SDS-<ts>-<id>/` |
+| **Persistent location** | `<store>/snapshots/SDS-<ts>-<id>/` - the user store for a standard audit, `/var/lib/isedraf/` for a Full Audit |
 | **Collection status** | `COLLECTED` · `NOT_TESTED` (source absent) · `ERROR` (unreadable, or rejected by the grammar) |
 | **Reason vocabulary** | `SOURCE_ABSENT` · `SOURCE_UNREADABLE` · `SYNTAX_REJECTED` · `INTERNAL_ERROR` |
-| **Evaluation / interpretation** | `NOT_EVALUATED` — comparison and delta are W1-C |
-| **Explain / manual verification** | `isedraf explain` is PLANNED. Today: compare the rendered `host_id` with the `state_hash` in the snapshot manifest, and re-derive both from `state/host_identity.json` |
+| **Evaluation / interpretation** | no native criterion reads it; a baseline comparison uses it to decide applicability - a run whose `host_id` is not the baseline's is not compared |
+| **Explain / manual verification** | `isedraf explain` explains criteria, not facts. Compare the rendered `host_id` with the `state_hash` in the snapshot manifest, and re-derive both from `state/host_identity.json` |
 
 ### What a `COLLECTED` host identity does **not** prove
 
@@ -180,11 +183,12 @@ returns `None` for an unknown state, because not knowing is not the same as bein
 - **`PARTIAL` means partial.** A missing tool is `NOT_TESTED`, a present tool that failed is `ERROR`, and
   neither is rendered as an empty success.
 
-### Not yet in a snapshot
+### Committed with the run, outside the host-state hash
 
-`SNAP-021` freezes a W1-A snapshot as exactly three files, so writing an inventory artifact into one would
-change certified canonical bytes. Integration belongs to a **W1-C freeze set**, and no place was invented
-for it in the meantime. Today the inventory is produced by `isedraf inventory` and consumed directly.
+`isedraf audit` commits the inventory with the run as `sections/inventory.json`, bound by the run's
+manifest digest but not part of the snapshot's host-state hash: hardware and utilisation facts change
+legitimately and must not read as configuration change. `isedraf inventory` shows the inventory without
+committing anything.
 
 ## Where each fact appears in a report
 
@@ -199,7 +203,7 @@ Report
 │   ├── ledger record hash and sequence
 │   └── independent verification result
 │
-└── Host inventory —  W1-C1, NOT in the frozen snapshot
+└── Host inventory —  a bound section of the run, NOT in the host-state hash
     ├── collection_id
     └── artifact digest (a content SHA-256, not a snapshot hash)
 ```
@@ -208,8 +212,12 @@ Report
 |---|---|---|
 | Target · Evidence → Host identity | Host Identity | snapshot-bound, verified |
 | Platform · Compute · Storage · Network · Time | Host Inventory | artifact-digest bound |
-| Collection completeness | both | per-subdomain status |
-| Limitations | both | what the evidence does not support |
+| Audit sections | the ten audited areas | each a bound section of the run, with its status and reason |
+| Native criteria | the evidence each criterion names | from the committed evaluation, kept apart from collection status |
+| Baseline comparison | the sections the baseline tracks | from the committed evaluation; a report never compares |
+| Recorded settings (`nullok`, maximum password age) | PAM, local accounts | from the run's sections; not criteria |
+| Collection completeness · Evidence limitations | all | per-area status and what each source could not show |
+| Limitations | all | what the evidence does not support |
 
 A historical sample of the real output is in [`samples/SAMPLE_REPORT.md`](samples/SAMPLE_REPORT.md),
 with the same report as JSON beside it. Its evidence was collected by an unprivileged user on
@@ -231,17 +239,18 @@ once and the report is reproducible from it.
 ## Domains not yet mapped
 
 Each is listed so the intended shape of the map is knowable, and each is **absent from the table above on
-purpose**: nothing collects them yet.
+purpose**.
 
-| Domain | Status | Arrives with |
+| Domain | Collected today | Row in this map |
 |---|---|---|
-| Users & Groups · Privilege / sudo · Password & account ageing · `authorized_keys` | PLANNED | identity breadth (W1-D) |
-| SSH · PAM / authentication | PLANNED | W3 — the domain where `DECLARED` vs `RESOLVED` vs `ACTIVE` first genuinely diverges |
-| Mounts / filesystems | PLANNED | W3 |
-| Recording · Audit · Journald · Time synchronization | PLANNED | W4 |
-| Kernel / platform · SELinux / AppArmor · Services · Timers / cron | FUTURE | v0.1 |
-| Software inventory | FUTURE | later; observation only |
-| Framework mapping column (ISO / NIS2 / NIST) | FUTURE — v0.5 | a **view over** this map, never a replacement for it, and never canonical |
+| Users & Groups · Privilege / sudo · Password & account ageing · `authorized_keys` | yes - the accounts, NSS, sudo, authorized keys and login policy sections | not yet written |
+| SSH · PAM / authentication | yes - the SSH and PAM sections (`DECLARED` and, for SSH, the global `RESOLVED` configuration) | not yet written |
+| Mounts / filesystems | yes - the mounts section (declared and active) | not yet written |
+| Time synchronization | in the inventory only (`NTP enabled`, `clock synchronized`) | see Host Inventory above |
+| Recording · Audit · Journald | no | PLANNED |
+| Kernel / platform · SELinux / AppArmor · Services · Timers / cron | no | FUTURE |
+| Software inventory | no | FUTURE; observation only |
+| Framework mapping column | no | FUTURE - the roadmap's first framework release; a **view over** this map, never a replacement for it, and never canonical |
 
 ## Auditor workflow
 

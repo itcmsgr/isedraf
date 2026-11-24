@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 -->
 # v0.6 Release acceptance record
 
-Status: PLANNING
+Status: IMPLEMENTED, released in 0.6.0 (2026-11-24). A historical record of how v0.6 was built and accepted.
 
 Implements: D-130, D-129
 
