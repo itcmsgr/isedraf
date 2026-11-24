@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 -->
 # v0.2 release disposition of open implementation questions
 
-Status: PLANNING
+Status: IMPLEMENTED, released in 0.2.0 (2026-10-19). A historical record.
 Implements: D-118, D-120, D-124
 
 Owner direction 2026-10-10: classify every implementation question that is not closed into one of

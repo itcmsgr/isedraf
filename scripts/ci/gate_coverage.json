@@ -13,6 +13,22 @@
     ],
     "certification_command": "make check-vectors check-vectors-negative check-tests"
   },
+  "test_suites": {
+    "$comment": "G2 (owner 2026-11-21): a make check target that runs a test suite rather than one gate. Each is proven able to fail by an injection that makes the suite itself fail. check_gate_coverage.py requires every target of the make check aggregate to be in exactly one of gates, test_suites and composite_targets.",
+    "check-tests": {
+      "script": "Makefile",
+      "implements": "NORM-039, GOV-002",
+      "falsification": "GOV-002 a production test fails and check-tests still passes"
+    },
+    "check-vectors-crossversion": {
+      "script": "scripts/vectors/crossversion.sh",
+      "implements": "NORM-039, Z-12",
+      "falsification": "NORM-039 the corpus generator fails and the cross-version check still passes"
+    }
+  },
+  "composite_targets": {
+    "$comment": "A make check target that only runs other targets. Each member must itself be in gates or test_suites. None today."
+  },
   "gates": {
     "check-scope": {
       "script": "scripts/ci/check_bootstrap_scope.sh",

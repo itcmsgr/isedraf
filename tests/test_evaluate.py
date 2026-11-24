@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -358,7 +358,10 @@ class RecordShape(Slice):
         self.assertEqual(m["catalog"]["criteria"], {"ISE-ACCOUNT-001": 1, "ISE-ACCOUNT-002": 1,
                                                     "ISE-ACCOUNT-003": 1, "ISE-ACCOUNT-004": 1,
                                                     "ISE-SSH-001": 1, "ISE-ACCOUNT-005": 1,
-                                                    "ISE-AUTH-001": 1, "ISE-SSH-002": 1})
+                                                    "ISE-AUTH-001": 1, "ISE-SSH-002": 1,
+                                                    "ISE-PRIV-001": 1, "ISE-PRIV-002": 1,
+                                                    "ISE-SSH-003": 1, "ISE-SSH-004": 1,
+                                                    "ISE-SSH-005": 1, "ISE-STORAGE-001": 1})
         self.assertEqual(m["sections"]["sections/accounts.json"]["collector_id"],
                          "isedraf.accounts")
 
@@ -422,7 +425,7 @@ class Separation(Slice):
         code, out, _err = self.run_cli(["explain", ID])
         self.assertEqual(code, exitcodes.OK)
         self.assertIn("Limitations - what a result does not establish", out)
-        self.assertIn("v0.4", out)
+        self.assertIn("belongs to an evidence store, not to a criterion", out)   # D-130
         self.assertFalse(os.path.exists(self.store))          # nothing created or read
 
     def test_explain_of_an_unknown_criterion_is_a_usage_error(self):
@@ -457,6 +460,10 @@ class OneRecord(unittest.TestCase):
             self.assertIn(" ".join(value.split()), text)
         for p in c["evidence_pointers"]:             # a pointer is never split: a line of its own
             self.assertIn("      " + p["pointer"], lines)
+        # D-130 regression: the explanation describes the capability, never a store it has not read.
+        self.assertNotIn("not available: baseline and delta are v0.4", text)
+        self.assertIn("Baseline state belongs to an evidence store, not to a criterion", text)
+        self.assertIn("Delta per run, in the Baseline comparison", text)
 
 
 if __name__ == "__main__":

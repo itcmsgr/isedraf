@@ -1,6 +1,6 @@
-Upstream-Name: ISEDRAF (codename)
+Upstream-Name: ISEDRAF
 Upstream-Contact: Antonios Voulvoulis / ITCMS <contact@itcms.gr>
-Source: local development repository (unpublished)
+Source: https://github.com/itcmsgr/isedraf
 
 Files: *
 Copyright: 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>

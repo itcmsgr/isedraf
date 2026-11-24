@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 -->
 # Native Criterion Engineering & Evidence Protocol (v0.3)
 
-Status: PLANNING
+Status: IMPLEMENTED, released in 0.3.0 (2026-11-09); the protocol every native criterion follows.
 
 Proposed; owner review required.
 Implements: D-111, D-121, D-125

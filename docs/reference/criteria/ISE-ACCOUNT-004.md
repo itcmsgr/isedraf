@@ -15,6 +15,10 @@ This page renders the registry record, exactly as `isedraf explain ISE-ACCOUNT-0
 
 ```text
 ISE-ACCOUNT-004  (version 1, EXPERIMENTAL)
+Legacy MD5 Password Hash Schemes
+Introduced in ISEDRAF 0.3.0. Needs at least a Full Audit: /etc/shadow is
+  collected only by a Full Audit (read_shadow_v1); that is necessary, not
+  sufficient.
 
 Purpose
   Detect Legacy MD5 Password Hash Schemes: local /etc/shadow entries, as
@@ -123,6 +127,9 @@ Remediation guidance (illustrative; ISEDRAF changes nothing)
   password is next set; confirming the system's default scheme for new
   passwords and asking the account owner to change the password removes it.
 
-Baseline state  not available: baseline and delta are v0.4
-Delta           not available: baseline and delta are v0.4
+Baseline state  belongs to an evidence store, not to a criterion:
+                `isedraf evaluate` (or `sudo isedraf evaluate`) compares the
+                latest run with the store's approved baseline
+Delta           per run, in the Baseline comparison of the evaluation and of
+                the report (since 0.4.0)
 ```

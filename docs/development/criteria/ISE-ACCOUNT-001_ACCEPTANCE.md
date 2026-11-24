@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 -->
 # ISE-ACCOUNT-001 — Acceptance Record
 
-Status: PLANNING
+Status: IMPLEMENTED, released in 0.3.0 (2026-11-09). A historical record.
 
 Owner disposition: ACCEPTED, 2026-11-02 (section 6).
 Implements: D-111, D-121, D-125

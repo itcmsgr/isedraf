@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -115,6 +115,13 @@ done
 # bash completion generated from the same table. bash-completion loads the file on demand
 # from this directory; without that package the file is simply never read (no dependency).
 install -m 0644 docs/reference/CLI.md "$STAGE/usr/share/doc/isedraf/docs/CLI.md"
+# D-130 (v0.6): the native criteria catalogue and one page per criterion, offline, at the paths the
+# catalogue's documentation column names (docs/reference/...), relative to this directory.
+install -D -m 0644 docs/reference/NATIVE_CRITERIA.csv \
+    "$STAGE/usr/share/doc/isedraf/docs/reference/NATIVE_CRITERIA.csv" || die "staging the catalogue"
+for page in docs/reference/criteria/ISE-*.md; do
+    install -D -m 0644 "$page" "$STAGE/usr/share/doc/isedraf/$page" || die "staging $page"
+done
 install -D -m 0644 packaging/completion/isedraf.bash \
     "$STAGE/usr/share/bash-completion/completions/isedraf" || die "staging the bash completion"
 # The source record: which commit both packages were built from. One file, written once and

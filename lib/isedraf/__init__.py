@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -22,5 +22,5 @@
 
 """ISEDRAF — Linux host evidence and assurance tool."""
 
-ENGINE_VERSION = "0.5.0"               # SNAP-020: the VERSION file verbatim
+ENGINE_VERSION = "0.6.0"             # SNAP-020: the VERSION file verbatim
 __version__ = ENGINE_VERSION

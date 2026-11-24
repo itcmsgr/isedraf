@@ -1,4 +1,4 @@
-ISEDRAF (codename) — Linux Host Assurance, State Delta & Evidence Engine
+ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 
 Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 Contact: contact@itcms.gr
@@ -8,8 +8,7 @@ A copy of the licence is distributed with this software in the file LICENSE.
 If a copy was not distributed with this file, you can obtain one at
 https://mozilla.org/MPL/2.0/.
 
-"ISEDRAF" is an internal codename. The public project name has not been cleared
-(open decision OD-01) and will change before any public release.
+ISEDRAF is the project's name (owner decision D-108, 2026-09-18).
 
 THIRD-PARTY CONTENT
 -------------------

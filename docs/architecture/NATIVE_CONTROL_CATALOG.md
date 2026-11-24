@@ -87,8 +87,8 @@ so the earlier draft resolves to this explanation rather than to silence.
 
 Required: `criterion_id` · `purpose` · `rationale` · `check_type` · `facts_required` · `dimensions`
 (declared / resolved / active, where applicable) · `evaluation_semantics` · `applicability` ·
-`limitations` · `evidence_pointers` · `version` · `default_severity`. Optional: `manual_verification` ·
-`remediation_guidance`.
+`limitations` · `evidence_pointers` · `version` · `default_severity` · `title` · `lifecycle` ·
+`introduced_in` · `minimum_run`. Optional: `manual_verification` · `remediation_guidance`.
 
 **Extended by the owner, 2026-10-14 (`D-111` extended; design only, no criterion authored):**
 
@@ -103,6 +103,23 @@ Required: `criterion_id` · `purpose` · `rationale` · `check_type` · `facts_r
   without ISEDRAF. Never a command that changes the host.
 - `remediation_guidance`: optional, as before. It may describe a possible change, its operational
   impact and its risks; it is guidance only. ISEDRAF applies nothing.
+
+**Extended by the owner, 2026-11-21 (`D-130`), for the native criteria catalogue:**
+
+- `title`: a short name, one line of at most 80 characters, so a reader can find the criterion in
+  a list. It names; it never claims more than `purpose`.
+- `lifecycle`: the criterion's state, one of the registry's `lifecycle_states`. Every criterion is
+  `EXPERIMENTAL` today (`D-80`).
+- `introduced_in`: the ISEDRAF release that first delivered the criterion, as `X.Y.Z`. It is not the
+  criterion's `version`, which counts changes to the criterion itself, and it never changes.
+- `minimum_run`: `{route, reason}` - the collection route (`STANDARD_AUDIT` or `FULL_AUDIT`, the
+  registry's `collection_routes`) without which the evidence cannot be sufficient, and why. It is a
+  necessary condition, never a sufficient one: a Full Audit does not guarantee sufficient evidence;
+  `evaluation_semantics.evidence_sufficient_when` decides.
+
+The catalogue `docs/reference/NATIVE_CRITERIA.csv` is generated from the registry, one row per
+admitted criterion, and installed with the offline documentation. It is never edited by hand, and a
+candidate criterion is never in it.
 
 Result states (D-121): `PASS` · `FAIL` · `NOT_APPLICABLE` · `MANUAL_REVIEW` · `NOT_EVALUATED`.
 A criterion is atomic: it evaluates one normative condition. Only `COLLECTED` evidence yields a
@@ -234,7 +251,10 @@ evaluated, and what a `PASS` does not establish.
 
 An evaluation has no ledger entry (`STORE-020`) and never modifies a snapshot (`SNAP-011`).
 
-**Amended for v0.4 by D-127.** With no baseline in force, `changes.json` is exactly the v0.3 record. When
+**Amended for v0.4 by D-127.** With no baseline in force, `changes.json` is the v0.3 record, its
+reason the stable token `NO_BASELINE` followed by why (**amended by D-131**: an evaluation made from
+0.6 on states that no approved baseline was in force; an earlier evaluation keeps its bytes and its
+wording, and every reader decides from `baseline_revision` and the token, never from the wording). When
 a `baseline_approved` record is in force, the baseline is verified first (`BASE-008`, `BASE-011`) and
 `changes.json` holds the comparison: `baseline_revision`, `revision_hash`, the approved snapshot, the
 profile identity, `applicability` (`APPLICABLE`, `BASELINE_NOT_APPLICABLE` or `NOT_ESTABLISHED`), a
@@ -288,8 +308,10 @@ system-store evaluation is `PLANNED`, and nothing describes it as available.
 against it as `EVAL-005` as amended describes, and returns `5` when it does not verify (`AUTH-034`).
 
 **EVAL-009 (D-125) SHALL** **Explaining a criterion** (`D-77` applied to rule knowledge). `explain`
-renders every field of the record, its lifecycle `EXPERIMENTAL` (`D-80`) and its result scope, and it
-gives baseline state and delta as "not available: baseline and delta are v0.4". A generated
+renders every field of the record, its lifecycle `EXPERIMENTAL` (`D-80`) and its result scope.
+**Amended by D-130:** explaining a criterion describes a capability, not a store; it states that a
+baseline and its delta belong to an evidence store and are shown by `isedraf evaluate`, `sudo isedraf
+evaluate` and the report's Baseline comparison, and it never states a store's state. A generated
 documentation page per criterion renders the same record and is never edited by hand. Explaining a
 recorded result, with its evidence, is a later extension of the same contract.
 
@@ -327,9 +349,13 @@ contact with a licensing negotiation.
 
 ## Current state
 
-**Eight native criteria are admitted and evaluated:** `ISE-ACCOUNT-001` (owner decision 2026-11-01),
-`ISE-ACCOUNT-002`, `ISE-ACCOUNT-003`, `ISE-ACCOUNT-004` and `ISE-SSH-001` (owner decision 2026-11-04), and
-`ISE-ACCOUNT-005`, `ISE-AUTH-001` and `ISE-SSH-002` (owner decision 2026-11-05, `D-111`). Each record in `lib/isedraf/catalog/native_controls.json` is its criterion's only description. No
+**Fourteen native criteria are admitted and evaluated:** `ISE-ACCOUNT-001` (owner decision
+2026-11-01), `ISE-ACCOUNT-002`, `ISE-ACCOUNT-003`, `ISE-ACCOUNT-004` and `ISE-SSH-001` (owner decision
+2026-11-04), `ISE-ACCOUNT-005`, `ISE-AUTH-001` and `ISE-SSH-002` (owner decision 2026-11-05, `D-111`),
+`ISE-PRIV-001` and `ISE-PRIV-002` (owner decision 2026-11-23, `D-131`; check type `local sudo
+delegation`, introduced in 0.6.0), and `ISE-SSH-003`, `ISE-SSH-004`, `ISE-SSH-005` and
+`ISE-STORAGE-001` (owner decision 2026-11-24, `D-132`; the STORAGE check type `mount protection
+options`, introduced in 0.6.0). Each record in `lib/isedraf/catalog/native_controls.json` is its criterion's only description. No
 mapping of any kind exists.
 
 Admission is an owner amendment. Since an evaluator exists, a criterion is admitted in the same owner

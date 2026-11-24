@@ -1,4 +1,4 @@
-# ISEDRAF — Target CI / Validation Inventory
+# ISEDRAF — CI and validation inventory
 
 Copyright © 2026 Antonios Voulvoulis / ITCMS · SPDX-License-Identifier: MPL-2.0
 Status: IMPLEMENTED
@@ -6,8 +6,99 @@ Implements directive: §19, §20, §21, §22, §23, §24, §25, §26, §27
 
 <!-- doclint:exempt-forbidden-terms -->
 
-**Nothing here is implemented.** This is the target contract. Gates are built at Prompt 04 W0
-(governance/source/runtime safety) and Prompt 05 (corpus/product invariants).
+Two parts. **Part A** is what runs today, reconciled on 2026-11-21 against the `Makefile`,
+`scripts/ci/gate_coverage.json`, the workflows in `.github/workflows/` and the public repository's
+`main protection` ruleset. **Part B** is the target contract written before the first gate existed
+(2026-09), kept unchanged as a historical record; its planning labels (W0, W4, "DEFER") describe
+that time, not today.
+
+Sources of truth: the gate list is the `check:` target of the `Makefile`; each gate's script,
+requirement and falsification injection are in `scripts/ci/gate_coverage.json`; the injections are in
+`scripts/ci/falsifiable.sh`.
+
+## Part A — the gates that run today
+
+### A.1 Where they run, and what a failure does
+
+| Where | What runs | A failure |
+|---|---|---|
+| Every commit, pre-commit hook (`git-hooks/pre-commit`) | `make check` on the exact index being committed | the commit is refused |
+| Every commit, commit-msg hook (`git-hooks/commit-msg`) | the `Assisted-by:` disclosure; no AI `Co-Authored-By:` (D-93) | the commit is refused |
+| Pull request and push to `main`, workflow `governance.yml` | `make check`; `make check-falsifiable`; `make check-gate-coverage`; on Python 3.9 and 3.12 `make check-vectors check-vectors-negative check-tests`; `make check-dco-pr` | the job fails; each job is a required check, so the pull request cannot merge |
+| Pull request, push to `main` and weekly, workflow `codeql.yml` | CodeQL for Python and Actions | `analyze (python)` and `analyze (actions)` are required checks; a new open alert fails the CodeQL check |
+| Tag `v*`, workflow `release-candidate.yml` | `make check`, the package build, `make check-package-payload`, build provenance and SBOM attestations, a proof that the attestation binds | the run fails and produces no release artifact |
+| Push to `main`, weekly, and on a ruleset change, workflow `scorecard.yml` | OpenSSF Scorecard | reported, not blocking |
+
+Required status checks on the public `main` (ruleset `main protection`): `make check`,
+`make check-falsifiable`, `make check-gate-coverage`, `W1-A vectors (python 3.9)`,
+`W1-A vectors (python 3.12)`, `analyze (python)`, `analyze (actions)`, `DCO`. The ruleset also requires a
+linear history: pull requests land by rebase or squash, never by a merge commit.
+
+### A.2 The gates of `make check`, and the proof that each can fail
+
+Every gate below is proven able to fail by the falsification harness (`make check-falsifiable`, `GOV-002`):
+the injection named is applied to a copy of the tree and the gate must fail. "0.5.0 run" is the result of
+the full run on the 0.5.0 release commit (`8da0220`, 601 injections, all detected).
+
+| Gate | Script | Implements | Proof: falsification injection | 0.5.0 run |
+|---|---|---|---|---|
+| `check-scope` | `scripts/ci/check_bootstrap_scope.sh` | D-96 | D-96 product code with no verified freeze set | fired |
+| `check-headers` | `scripts/ci/check_headers.sh` | D-62, D-90, HDR-001 | L-03 junk meta:owner | fired |
+| `check-python-floor` | `scripts/ci/check_python_floor.py` | D-12 | D-12 production code uses an API newer than the runtime floor | fired |
+| `check-architecture` | `scripts/ci/check_architecture.py` | GOV-001, GOV-002, SCOPE-022, SCOPE-045 | ARCH-01 a shared primitive imports a domain module | fired |
+| `check-architecture-artifacts` | `scripts/ci/check_architecture_artifacts.py` | GOV-001, GOV-002 | ARCH-01 a committed architecture artifact drifts from the code | fired |
+| `check-packaging` | `scripts/ci/check_packaging.py` | D-86, EXEC-016 | D-86 the rpm spec declares a build dependency the release builder cannot resolve | fired |
+| `check-storage-vocabulary` | `scripts/ci/check_storage_vocabulary.py` | D-114, STORAGE-SEMANTICS-001, GOV-002 | D-114 a published document reports a storage device type of ROTATIONAL | fired |
+| `check-native-catalog` | `scripts/ci/check_native_catalog.py` | D-78, D-79, D-84, D-111 | D-111 a production module is named after a framework provider | fired |
+| `check-evidence-limits` | `scripts/ci/check_evidence_limits_schema.py` | D-122, D-115, D-121 | D-122 a code vocabulary gains a value the frozen schema does not have | fired |
+| `check-privileged-operations` | `scripts/ci/check_privileged_operations.py` | D-123, D-118, D-122 | D-123 a command string is registered as a privileged operation | fired |
+| `check-licensing` | `scripts/ci/check_licensing.py` | D-84, D-90, GOV-001 | D-90 an unregistered framework pack enters the tree | fired |
+| `check-public-claims` | `scripts/ci/check_public_claims.py` | C-01, D-88, D-89, D-90 | D-88 the README version badge disagrees with VERSION | fired |
+| `check-privacy` | `scripts/ci/check_privacy.py` | D-90, GOV-001 | D-90 an operator identifier reaches the publication surface | fired |
+| `check-docs-truth` | `scripts/ci/check_docs_truth.py` | C-01, C-06, D-88 | C-06 competitive framing naming an external project | fired |
+| `check-current-state` | `scripts/docs/current_state.py` | D-88, D-89, GOV-007 | D-89 the status registry claims a capability whose evidence is absent | fired |
+| `check-commands` | `scripts/ci/check_commands.py` | D-129, OUT-001, SCOPE-077, AUTH-019 | D-129 a command record's exit codes drift from exitcodes.json | fired |
+| `check-cli-reference` | `scripts/docs/cli_reference.py` | D-129, D-89 | D-129 the command reference is edited by hand | fired |
+| `check-completion` | `scripts/docs/bash_completion.py` | D-129 | D-129 the bash completion is edited by hand | fired |
+| `check-sample-report` | `scripts/docs/sample_report.py` | IQ-011, D-88, D-89 | IQ-011 the published sample drifts from the evidence it is generated from | fired |
+| `check-shell` | `Makefile` | D-12 | D-12 shell syntax error | fired |
+| `check-refs` | `scripts/ci/check_requirement_refs.py` | D-105, D-106 | D-105 undefined DECISION cited | fired |
+| `check-paths` | `scripts/ci/check_paths.sh` | D-99 | D-99 singular ledger.jsonl path reintroduced | fired <!-- paths:allow-legacy: the title of the injection that proves this gate --> |
+| `check-index` | `scripts/docs/master_index.py` | D-89 | D-89 stale MASTER_INDEX | fired |
+| `check-freeze` | `scripts/ci/check_freeze.sh` | D-68, GOV-004 | D-68 frozen artifact modified after manifest | fired |
+| `check-governance` | `scripts/ci/check_governance.py` | D-83, GOV-001 | D-83 a governance file changes without the manifest | fired |
+| `check-precommit` | `scripts/ci/check_precommit_index.sh` | GOV-002, D-68, D-83 | IQ-029 pre-commit validates the working tree instead of the committed content | fired |
+| `check-imports` | `scripts/ci/check_runtime_imports.py` | D-84, GOV-002 | D-84 runtime imports a module that is not on the allowlist | fired |
+| `check-exitcodes` | `scripts/ci/check_exitcodes.py` | OUT-001, OUT-017, D-72 | OUT-001 a constant drifts from exitcodes.json | fired |
+| `check-vectors` | `scripts/vectors/check.sh` | NORM-039 | NORM-039 golden vector mutated by one byte | fired |
+| `check-vectors-negative` | `scripts/vectors/negative_test.sh` | NORM-039, GOV-002 | Z-14 verifier accepts a corrupted artifact | fired |
+| `check-vectors-crossversion` (test suite) | `scripts/vectors/crossversion.sh` | NORM-039, Z-12 | NORM-039 the corpus generator fails and the cross-version check still passes | added after 0.5.0 (G2) |
+| `check-tests` (test suite) | `Makefile` | NORM-039, GOV-002 | GOV-002 a production test fails and check-tests still passes | added after 0.5.0 (G2) |
+| `check-test-inclusion` | `scripts/ci/check_test_inclusion.py` | GOV-002, NORM-039 | GOV-002 a test file is dropped from check-tests | fired |
+| `check-docs` | `scripts/docs/doclint.py` | D-87, D-88, D-89 | C-05 forbidden claim in a non-exempt document | fired |
+| `check-public-ux` | `scripts/docs/public_ux.py` | D-87, D-88, DOC-PUBLIC-UX-001 | DOC-PUBLIC-UX-001 paragraph-length rule disabled | fired |
+| `check-repo-security` | `scripts/ci/check_repo_security.py` | D-88, D-90, D-91, D-93 | L2-SEC-1 a workflow regains a write-all token | fired |
+| `check-dco` | `scripts/ci/check_dco.py` | D-91, D-92, D-93 | L2-DCO-1 the DCO check accepts a sign-off by someone other than the author | fired |
+| `check-export` | `scripts/ci/release_export.sh` | D-90, D-110 | EXP-1 an exported document cites a file the export removes | fired |
+
+### A.3 Known gaps (2026-11-21)
+
+- **G1 — stale prose (closed 2026-11-21 by `check-docs-truth` section 5).** The documentation gates (`check-docs`, `check-docs-truth`,
+  `check-public-ux`, `check-current-state`, `check-cli-reference`) check forbidden claims, framing,
+  references, digests, generated files and status values. They do not detect a document that describes
+  superseded behaviour: until 2026-11-21 this inventory denied that any gate existed while its
+  status said IMPLEMENTED. A targeted check is added with the v0.6 documentation alignment.
+- **G2 — closed 2026-11-21.** `check-tests` and `check-vectors-crossversion` ran in `make check` with no
+  entry in `gate_coverage.json`, which checked only what was declared. They are now test suites, each
+  with an injection that makes the suite fail; `check_gate_coverage.py` requires every `make check`
+  target to be exactly one of a gate, a test suite or a composite target, and an injection proves it.
+
+---
+
+## Part B — the target contract (2026-09, historical)
+
+Written before the first gate existed; kept as the record of the intent each gate was built from.
+"Nothing here is implemented" was true when written.
 
 **Principles.** No unexplained CI. No badge-driven engineering. Every gate has a reason, a requirement ID,
 a local command and a defined failure behaviour. Every mechanically enforceable frozen invariant should
@@ -202,7 +293,7 @@ existing baseline** — a schema or collector-version change across an upgrade i
 
 ## 12. Release engineering (directive §16)
 
-**Publication remains disabled.** Local build verification only; no tags, no releases, no remote.
+**Publication remained disabled at the time (2026-09).** Today a release is tagged by the owner; `release-candidate.yml` builds and attests it, and the owner publishes it (0.4.0 and 0.5.0 took this route); see Part A.
 
 | Item | Status |
 |---|---|
@@ -248,4 +339,4 @@ stale generated doc · unpinned action · workflow job without a timeout · syml
 | Release | 5 | 2 |
 | **Total** | **127** | **60** |
 
-Every gate above cites a requirement ID and a source. None is implemented yet.
+Every gate above cites a requirement ID and a source. None was implemented when this part was written; Part A lists what runs today.

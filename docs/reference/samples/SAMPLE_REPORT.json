@@ -415,6 +415,8 @@
     "reason": "no evaluation was looked up for this rendering. Run `isedraf evaluate` then `isedraf report` for your own store, or `sudo isedraf evaluate` then `sudo isedraf report` for a Full Audit (D-125, D-126)",
     "status": "NOT_SHOWN"
   },
+  "pam_nullok": null,
+  "password_max_age": null,
   "provenance": {
     "collection_methods": {
       "compute": "/proc/cpuinfo",
@@ -427,17 +429,17 @@
       "storage": "/sys/block + /proc/self/mounts + statvfs(2)",
       "time": "timedatectl show"
     },
-    "engine_version": "0.5.0",
+    "engine_version": "0.6.0",
     "inventory_schema_version": 1,
-    "report_schema_version": 4
+    "report_schema_version": 5
   },
   "report": {
-    "engine_version": "0.5.0",
+    "engine_version": "0.6.0",
     "generated_at": "2026-09-20T17:15:48Z",
     "report_id": "RPT-20260920T171548Z-71072fdd5e6cd97e",
     "status": "COMPLETE"
   },
-  "report_schema_version": 4,
+  "report_schema_version": 5,
   "target": {
     "fqdn": null,
     "fqdn_source": "NOT_AVAILABLE_LOCALLY",

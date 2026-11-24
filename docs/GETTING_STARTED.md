@@ -73,7 +73,7 @@ shortened):
 
 ```text
 ------------------------------------------------------------------------------
-ISEDRAF 0.5.0 | isedraf audit
+ISEDRAF 0.6.0 | isedraf audit
 Standard Audit, your personal evidence store
 snapshot SDS-20261115T065303Z-2a8c61d4974efe03, collected 2026-11-15T06:53:03Z
 ------------------------------------------------------------------------------

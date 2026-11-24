@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 -->
 # v0.5 Command definitions, help and completion — design
 
-Status: PLANNING
+Status: IMPLEMENTED, released in 0.5.0 (2026-11-21). A historical record of how v0.5 was built and accepted.
 
 Batches B1 and B2 implemented 2026-11-13; B3 and B4 in an owner kit, 2026-11-14 (`D-129` point 10) (see section 3).
 

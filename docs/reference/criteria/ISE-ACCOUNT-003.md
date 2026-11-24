@@ -15,6 +15,10 @@ This page renders the registry record, exactly as `isedraf explain ISE-ACCOUNT-0
 
 ```text
 ISE-ACCOUNT-003  (version 1, EXPERIMENTAL)
+Duplicate Local UIDs
+Introduced in ISEDRAF 0.3.0. Needs at least a Standard Audit: /etc/passwd is
+  world-readable; a Standard Audit collects it; that is necessary, not
+  sufficient.
 
 Purpose
   Detect Duplicate Local UIDs: two or more different local account names in
@@ -109,6 +113,9 @@ Remediation guidance (illustrative; ISEDRAF changes nothing)
   account; the change affects file ownership and running processes, so it is
   planned.
 
-Baseline state  not available: baseline and delta are v0.4
-Delta           not available: baseline and delta are v0.4
+Baseline state  belongs to an evidence store, not to a criterion:
+                `isedraf evaluate` (or `sudo isedraf evaluate`) compares the
+                latest run with the store's approved baseline
+Delta           per run, in the Baseline comparison of the evaluation and of
+                the report (since 0.4.0)
 ```

@@ -15,7 +15,7 @@ Destination at Prompt 04: `docs/development/HEADER_POLICY.md` (governance-manife
 | Contact | `contact@itcms.gr` |
 | SPDX licence | `MPL-2.0` |
 | Copyright year (new files) | `2026` |
-| Public name | `ISEDRAF (codename)` until **OD-01** is resolved |
+| Public name | `ISEDRAF` (D-108, which resolved OD-01 on 2026-09-18) |
 
 These strings are matched **verbatim** (`grep -F`) by gate L-05. Do not reformat, abbreviate, reorder or
 localize them. Do not inherit NFTBan's `2024-2026` range, its `contact@nftban.com` address, or the bare
@@ -56,7 +56,7 @@ under its own controlled vocabulary. `meta:owner` is never repurposed.
 ```bash
 #!/usr/bin/env bash
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -111,7 +111,7 @@ sysadmin or auditor opening **any** ISEDRAF-controlled source file sees the same
 
 ```python
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>

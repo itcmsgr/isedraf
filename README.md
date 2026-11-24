@@ -1,4 +1,4 @@
-# ISEDRAF (codename)
+# ISEDRAF
 
 <p align="center"><img src="docs/assets/isedraf.png" alt="ISEDRAF logo: a penguin examining a ledger line through a magnifying glass" width="600"></p>
 
@@ -6,10 +6,10 @@
 
 ISEDRAF is the Linux Host Assurance, State Delta & Evidence Engine. The logo's two lines spell out the name: Integrity · State · Evidence · Delta · Reporting · Analysis · Facts.
 
-[![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)](LICENSE) [![Version](https://img.shields.io/badge/version-0.5.0-lightgrey)](VERSION) [![Status](https://img.shields.io/badge/status-general%20availability-green)](docs/CURRENT_STATE.md) [![Platforms](https://img.shields.io/badge/platforms-11%20Linux%20distributions%20measured-informational)](docs/reference/PLATFORM_COMPATIBILITY.md) [![Governance](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml/badge.svg)](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/itcmsgr/isedraf/badge)](https://scorecard.dev/viewer/?uri=github.com/itcmsgr/isedraf) [![OpenSSF Baseline](https://www.bestpractices.dev/projects/15010/baseline)](https://www.bestpractices.dev/en/projects/15010/baseline-1)
+[![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)](LICENSE) [![Version](https://img.shields.io/badge/version-0.6.0-lightgrey)](VERSION) [![Status](https://img.shields.io/badge/status-general%20availability-green)](docs/CURRENT_STATE.md) [![Platforms](https://img.shields.io/badge/platforms-11%20Linux%20distributions%20measured-informational)](docs/reference/PLATFORM_COMPATIBILITY.md) [![Governance](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml/badge.svg)](https://github.com/itcmsgr/isedraf/actions/workflows/governance.yml) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/itcmsgr/isedraf/badge)](https://scorecard.dev/viewer/?uri=github.com/itcmsgr/isedraf) [![OpenSSF Baseline](https://www.bestpractices.dev/projects/15010/baseline)](https://www.bestpractices.dev/en/projects/15010/baseline-1)
 
-> **Current release: 0.5.0 — General Availability.** ISEDRAF 0.5 is easier to run: help on both routes,
-> completion, a summary after every run, `isedraf list`, plain refusals, a space check, ledger recovery.
+> **Current release: 0.6.0 — General Availability.** ISEDRAF 0.6 widens native coverage: fourteen
+> criteria (sudo policy, SSH server, `/dev/shm`), a criteria catalogue CSV, and `nullok` and password age in the report.
 
 ## What is ISEDRAF?
 
@@ -52,7 +52,7 @@ reason, and every source records how it was read.
 ## What it does not claim
 
 - **NOT_TESTED is not a pass.** It means the fact was not observed.
-- **Results come only from the eight native criteria** (EXPERIMENTAL), over committed evidence;
+- **Results come only from the fourteen [native criteria](docs/reference/NATIVE_CRITERIA.csv)** (EXPERIMENTAL), over committed evidence;
   FAIL or MANUAL_REVIEW is a finding. No score; an approved baseline means accepted, not secure.
 - **`sshd -T` is the global effective configuration only.** Values that depend on `Match`
   blocks, for a given user or address, are not resolved and are reported as such.

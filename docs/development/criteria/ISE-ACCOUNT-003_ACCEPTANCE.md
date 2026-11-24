@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 -->
 # ISE-ACCOUNT-003 — Acceptance Record
 
-Status: PLANNING
+Status: IMPLEMENTED, released in 0.3.0 (2026-11-09). A historical record.
 
 Owner disposition: ACCEPTED, 2026-11-05 (section 5). An evidence index following
 `docs/development/V0_3_NATIVE_CRITERION_EVIDENCE_PROTOCOL.md`. The criterion is its record in

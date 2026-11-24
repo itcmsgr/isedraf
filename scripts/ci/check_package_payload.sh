@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -71,6 +71,12 @@ if [ -n "$DEB" ] && [ -n "$RPM" ] && command -v rpm >/dev/null 2>&1; then
         bad "deb and rpm ship DIFFERENT documentation:"
         diff "$D/deb" "$D/rpm" | sed 's/^/          /' >&2
     fi
+    # D-130: the catalogue and every criterion page it links are in the package.
+    want="docs/reference/NATIVE_CRITERIA.csv"
+    for p in docs/reference/criteria/ISE-*.md; do want="$want $p"; done
+    for w in $want; do
+        grep -qx "$w" "$D/deb" || bad "deb: $w is not installed (D-130 offline catalogue)"
+    done
     # IQ-073: the same comparison for the runtime payload. The rpm copied the whole
     # lib/isedraf tree and so shipped two files the deb did not; no gate saw it.
     ar p "$DEB" data.tar.gz 2>/dev/null | tar tz 2>/dev/null \

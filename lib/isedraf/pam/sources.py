@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -33,8 +33,12 @@ from .. import textbytes
 from . import model
 
 
-def parse(text, service, source=None, start_ordinal=0, depth=0):
-    """One pam.d service file. Returns (records, malformed_count)."""
+def parse(text, service, source=None, start_ordinal=0, depth=0, at_include=None):
+    """One pam.d service file. Returns (records, malformed_count).
+
+    `at_include`: whether this platform's libpam reads `@include` lines - True on a Debian-family
+    host, False on another family, None when the family is not established. The parser stays
+    pure: the collector decides, from evidence it records."""
     records, malformed = [], 0
     ordinal = start_ordinal
     for line_number, line in _logical_lines(text):
@@ -44,7 +48,7 @@ def parse(text, service, source=None, start_ordinal=0, depth=0):
         base = {"service": service, "source_path": source,
                 "source_line": line_number, "ordinal": ordinal, "depth": depth}
         ordinal += 1
-        record = _rule(stripped, base)
+        record = _rule(stripped, base, at_include)
         if record["kind"] == model.UNSUPPORTED:
             malformed += 1
         records.append(record)
@@ -64,8 +68,20 @@ def _logical_lines(text):
         yield start, line.rstrip("\\")
 
 
-def _rule(text, base):
+def _rule(text, base, at_include=None):
     tokens = text.split()
+    if tokens and tokens[0].lower() == model.AT_INCLUDE:
+        if at_include is not True:
+            return dict(base, kind=model.UNSUPPORTED, raw_digest=_digest(text), reason=(
+                "@include is read only by Debian-family libpam; this platform is not "
+                "Debian-family" if at_include is False else
+                "@include is read only by Debian-family libpam; whether this platform is "
+                "Debian-family is not established"))
+        if len(tokens) != 2:
+            return dict(base, kind=model.UNSUPPORTED, raw_digest=_digest(text),
+                        reason="@include takes exactly one target")
+        return dict(base, kind=model.EDGE, type=model.ANY_TYPE, silent_if_missing=False,
+                    edge=model.AT_INCLUDE, target_service=tokens[1])
     if len(tokens) < 2:
         return dict(base, kind=model.UNSUPPORTED, raw_digest=_digest(text),
                     reason="line has too few fields to be a PAM rule")

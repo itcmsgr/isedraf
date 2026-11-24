@@ -12,6 +12,75 @@ Semantic Versioning once a release exists. `VERSION` is the single source of the
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-24
+
+ISEDRAF 0.6: native audit coverage. Fourteen native criteria in five families, a catalogue of every
+criterion as a CSV file, PAM `@include` read on Debian-family hosts, and `nullok` and the maximum
+password age per account in the report. The 0.6.0-rc1 entry below lists every change; nothing was
+added after 0.6.0-rc1 but the version.
+
+### Upgrading
+- From 0.5.0: existing runs, evaluations, baselines and the ledger are kept with their bytes;
+  nothing is approved, re-evaluated or deleted automatically. A run evaluated by 0.5.0 reports
+  `NO_EVALUATION` until it is evaluated again; a baseline approved under 0.5.0 still applies.
+
+### Tested
+- 0.6.0-rc1: `make check`; the full falsification run, 620 injections detected; the installed
+  packages upgraded from the published 0.5.0 with a Full Audit on Debian 12, Ubuntu 24.04, Rocky
+  Linux 9.7 and AlmaLinux 9.7 (every 0.5.0 file unchanged, the 0.5.0 baseline comparing
+  `UNCHANGED`, the new report content equal to the hosts' own files); every command and case on
+  both routes in an 80-column terminal (115 cases each).
+
+## [0.6.0-rc1] - 2026-11-24
+
+ISEDRAF 0.6: native audit coverage. Fourteen native criteria in five families (six new: two over
+the local sudo policy, three over the global SSH server configuration, the first over the mount
+table), a catalogue of every criterion as a CSV file, PAM `@include` read on Debian-family hosts,
+and two recorded settings in the report.
+
+### Upgrading
+- Existing runs, evaluations, baselines and the ledger are kept with their bytes and still read;
+  the ledger is only appended to. Nothing is approved, re-evaluated or deleted automatically.
+- An evaluation binds the engine and the criteria catalogue: after the upgrade, `isedraf report` of
+  a run evaluated by 0.5.0 says `NO_EVALUATION` until `isedraf evaluate` (or `sudo isedraf
+  evaluate`) runs again. The 0.5.0 evaluation stays in the store unchanged.
+- A baseline approved under 0.5.0 still applies: the PAM parser change does not reach the baseline
+  profile, so an unchanged host compares `UNCHANGED`.
+
+### Added
+- `docs/reference/NATIVE_CRITERIA.csv`: every native criterion this release delivers, one row each -
+  title, description, lifecycle, criterion version and the release that introduced it, severity,
+  check type, evidence sections, collection requirements, applicability, result meanings,
+  limitations and where it is explained. Generated from the registry; UTF-8, opens in a
+  spreadsheet. Installed with the offline documentation, with one page per criterion (D-130).
+- `isedraf explain` shows each criterion's title, the release that introduced it and the collection
+  route it needs at least.
+- Two native criteria over the declared local sudo policy, read by a Full Audit (D-131):
+  `ISE-PRIV-001` (every command as root without authentication) and `ISE-PRIV-002`
+  (authentication disabled by `Defaults !authenticate`). Both say `MANUAL_REVIEW` when an alias, a
+  named host, a negation or the order of files decides the answer, and `NOT_EVALUATED` when the
+  policy was not fully read - including an `/etc/sudoers` that is not found.
+- Four more native criteria (D-132): `ISE-SSH-003` (the global `PermitRootLogin`: `no` passes, `yes`
+  fails, `prohibit-password` and `forced-commands-only` need a person), `ISE-SSH-004` (host-based
+  authentication off globally), `ISE-SSH-005` (with host-based authentication on, users' `.rhosts` and
+  `.shosts` ignored; not applicable when it is off) and `ISE-STORAGE-001` (`/dev/shm` mounted `nosuid`
+  in the host's mount table). All four need a Full Audit.
+- Two recorded settings in the report, neither a criterion (D-132): beside `ISE-ACCOUNT-002`, each
+  `auth` line that loads `pam_unix` with `nullok`, with its service and file - the criterion keeps
+  the result its evaluation recorded; and the maximum password age of each local account, keeping
+  "no limit" (an empty field), a number of days as written (99999 included) and "not collected"
+  apart. The JSON report's schema version is 5 (`pam_nullok`, `password_max_age`).
+
+### Changed
+- A new evaluation with no approved baseline gives the reason `NO_BASELINE: no approved baseline
+  was in force in this store when the run was evaluated, so nothing was compared`. Earlier
+  evaluations keep their bytes and their wording and read the same way.
+- PAM: on Debian and Ubuntu, `@include common-auth` and the other `@include` lines are read as
+  what libpam does with them - every line of the target, of every type - so the PAM area of a
+  Debian-family host is no longer PARTIAL because of them. Elsewhere they are recorded as
+  unsupported, with the reason; an absolute target is not read. The PAM section's parser version is
+  2; earlier runs keep their recorded version and stay readable.
+
 ## [0.5.0] - 2026-11-20
 
 ISEDRAF 0.5: operator experience. Help on both routes, bash completion, a summary after every

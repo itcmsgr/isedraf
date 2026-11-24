@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -58,6 +58,12 @@ def render():
              "nothing). `isedraf help` naming anything else exits 64 and lists the valid "
              "commands.\n",
              ", ".join(forms) + "\n",
+             "## Native criteria\n",
+             "The criteria `isedraf explain` and `isedraf evaluate` know are listed one per row, with "
+             "their applicability, collection requirements, results and limitations, in "
+             "[`NATIVE_CRITERIA.csv`](NATIVE_CRITERIA.csv) - in the package at "
+             "`/usr/share/doc/isedraf/docs/reference/NATIVE_CRITERIA.csv`, generated from "
+             "the installed registry (D-130).\n",
              "## Overview\n", "```text", commands.overview().rstrip("\n"), "```\n"]
     for group in commands.GROUPS:
         members = [r for r in commands.COMMANDS if r["group"] == group]

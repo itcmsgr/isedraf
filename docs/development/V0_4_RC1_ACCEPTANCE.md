@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 -->
 # ISEDRAF 0.4.0-rc1 — Acceptance Record
 
-Status: PLANNING
+Status: IMPLEMENTED, released in 0.4.0 (2026-11-13). A historical record of the 0.4.0-rc1 acceptance.
 
 Owner disposition: release candidate ACCEPTED as the v0.4.0-rc1 checkpoint, 2026-11-12; publication then
 held for the regression of section 7, fixed in `a1910d7`. Not

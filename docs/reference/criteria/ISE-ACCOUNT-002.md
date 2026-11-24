@@ -15,6 +15,10 @@ This page renders the registry record, exactly as `isedraf explain ISE-ACCOUNT-0
 
 ```text
 ISE-ACCOUNT-002  (version 1, EXPERIMENTAL)
+Empty Local Shadow Password Fields
+Introduced in ISEDRAF 0.3.0. Needs at least a Full Audit: /etc/shadow is
+  collected only by a Full Audit (read_shadow_v1); that is necessary, not
+  sufficient.
 
 Purpose
   Detect Empty Local Shadow Password Fields: local accounts whose /etc/shadow
@@ -122,6 +126,9 @@ Remediation guidance (illustrative; ISEDRAF changes nothing)
   usually locked or given a password, after confirming which logins or
   automated jobs depend on it.
 
-Baseline state  not available: baseline and delta are v0.4
-Delta           not available: baseline and delta are v0.4
+Baseline state  belongs to an evidence store, not to a criterion:
+                `isedraf evaluate` (or `sudo isedraf evaluate`) compares the
+                latest run with the store's approved baseline
+Delta           per run, in the Baseline comparison of the evaluation and of
+                the report (since 0.4.0)
 ```

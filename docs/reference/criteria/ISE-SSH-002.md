@@ -15,6 +15,10 @@ This page renders the registry record, exactly as `isedraf explain ISE-SSH-002` 
 
 ```text
 ISE-SSH-002  (version 1, EXPERIMENTAL)
+Global SSH StrictModes Configuration
+Introduced in ISEDRAF 0.3.0. Needs at least a Full Audit: sshd -T is run only
+  by a Full Audit (resolve_sshd_effective_config_v1); that is necessary, not
+  sufficient.
 
 Purpose
   Global SSH StrictModes Configuration: the global value of StrictModes that
@@ -100,6 +104,9 @@ Remediation guidance (illustrative; ISEDRAF changes nothing)
   sshd_config and reloading sshd restores the permission checks; first make
   sure no account depends on loose home or key permissions.
 
-Baseline state  not available: baseline and delta are v0.4
-Delta           not available: baseline and delta are v0.4
+Baseline state  belongs to an evidence store, not to a criterion:
+                `isedraf evaluate` (or `sudo isedraf evaluate`) compares the
+                latest run with the store's approved baseline
+Delta           per run, in the Baseline comparison of the evaluation and of
+                the report (since 0.4.0)
 ```

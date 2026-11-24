@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 -->
 # v0.2 Full Audit — Design and Gap Audit
 
-Status: PLANNING
+Status: IMPLEMENTED, released in 0.2.0 (2026-10-19). A historical record.
 Implements: D-118, D-120, D-115, D-117
 
 This is the design input for v0.2, Evidence Authority (D-120). It measures each collector against
@@ -323,8 +323,9 @@ committed before the stop is processed stays valid and the caller is told so.
 
 ## 8. `read_sudoers_graph_v1` design (PROPOSAL, under `AUTH-029`)
 
-The operation is `PLANNED`. This section designs it within the frozen contract (`AUTH-029`, from the
-step C measurement IQ-056); it widens nothing. Nothing here is implemented.
+The operation was `PLANNED` when this section was written. It designs the operation within the frozen
+contract (`AUTH-029`, from the step C measurement IQ-056) and widens nothing. Historical: at that time
+nothing in it was built; `read_sudoers_graph_v1` has run in every Full Audit since 0.2.0.
 
 ### 8.1 Supervisor: mechanical acquisition of the fixed surface
 

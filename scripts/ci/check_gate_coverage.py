@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -58,6 +58,33 @@ for name, g in spec["gates"].items():
             fail.append(f"{name}: no falsifiability injection {g['falsification']!r} [GOV-002]")
     else:
         fail.append(f"{name}: declares no falsification case; state one or mark it in GOVERNANCE_GAPS [GOV-001]")
+
+# --- G2 (owner 2026-11-21): every target of `make check` is classified, exactly once. ------
+# Two targets (check-tests, check-vectors-crossversion) ran in `make check` for months with no
+# entry here, because this file checked only what was declared. A target added to the aggregate
+# now fails until it is a gate, a test suite or a composite target.
+suites = dict((k, v) for k, v in spec.get("test_suites", {}).items() if not k.startswith("$"))
+composites = dict((k, v) for k, v in spec.get("composite_targets", {}).items()
+                  if not k.startswith("$"))
+for name in sorted(aggregate):
+    kinds = [k for k, table in (("gate", spec["gates"]), ("test suite", suites),
+                                ("composite target", composites)) if name in table]
+    if not kinds:
+        fail.append(f"{name}: in `make check` but not classified in gate_coverage.json as a gate, "
+                    f"a test suite or a composite target [G2]")
+    elif len(kinds) > 1:
+        fail.append(f"{name}: classified twice ({', '.join(kinds)}) [G2]")
+for name, s in suites.items():
+    if name not in aggregate:
+        fail.append(f"{name}: a test suite not part of `make check` [G2]")
+    if not (ROOT / s["script"]).exists():
+        fail.append(f"{name}: script {s['script']} does not exist")
+    if not s.get("falsification") or s["falsification"] not in harness:
+        fail.append(f"{name}: a test suite with no injection that makes it fail [G2, GOV-002]")
+for name, c in composites.items():
+    for member in c.get("members", []):
+        if member not in spec["gates"] and member not in suites:
+            fail.append(f"{name}: member {member} is neither a gate nor a test suite [G2]")
 
 # --- Z-12: the Python matrix must exist AND be load-bearing ---------------------------
 # NORM-039 makes the golden vectors release-blocking on Python 3.9 and the current CI
@@ -153,4 +180,5 @@ if fail:
     for f in sorted(set(fail)):
         print(f"  FAIL  {f}", file=sys.stderr)
     sys.exit(1)
-print(f"  OK    {len(spec['gates'])} gates: wired into make check, reached by CI, falsifiable")
+print(f"  OK    {len(spec['gates'])} gates and {len(suites)} test suites: every make check target "
+      f"classified, wired, reached by CI, falsifiable")

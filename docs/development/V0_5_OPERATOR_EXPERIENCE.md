@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 -->
 # v0.5 Operator experience — scope register
 
-Status: PLANNING
+Status: IMPLEMENTED, released in 0.5.0 (2026-11-21). A historical record of how v0.5 was built and accepted.
 
 The one register of v0.5 work items (`D-129` point 3). Each item appears once, with its acceptance
 condition, implementation status and documentation impact. Release scope itself is the roadmap's; this

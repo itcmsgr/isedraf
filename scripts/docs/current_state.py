@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -251,6 +251,8 @@ def render():
            "architecture", "for shipped functionality. It is generated from one registry, because "
            "the hand-maintained", "version drifted until it announced that no product code "
            "existed while three commands worked.", "",
+           "What comes next, and where every other source of truth is: "
+           "[`roadmap/ROADMAP.md`](roadmap/ROADMAP.md#sources-of-truth).", "",
            "| | |", "|---|---|",
            "| Project stage | **%s** |" % r["project_stage"],
            "| Public release | **%s** |" % r["public_release"],

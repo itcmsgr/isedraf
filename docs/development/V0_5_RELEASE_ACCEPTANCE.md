@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS
 -->
 # v0.5 release acceptance record
 
-Status: PLANNING
+Status: IMPLEMENTED, released in 0.5.0 (2026-11-21). A historical record of how v0.5 was built and accepted.
 
 Implements: D-129
 
@@ -37,7 +37,7 @@ never merged into one claim.
 | Release candidate 0.5.0-rc3 | `46349ad` | full falsification 601/601 | section 4 |
 | Terminal UX, every command (owner GO 2026-11-20) | `16fec88`, `0a9776c`, `89a2e3a` | `make check` with `tests/test_terminal_width.py`; lab sweep 109/109 | section 5 |
 | Release candidate 0.5.0-rc4 | `d8da2c7` | full falsification 601/601 | section 5 |
-| Release 0.5.0 (owner GO 2026-11-20) | this commit, on `release/v0.5` | `make check`; the version-relevant checks of the built packages | section 5 |
+| Release 0.5.0 (owner GO 2026-11-20) | `8da0220` (`release/v0.5`); published 2026-11-21 as tag `v0.5.0` | `make check`; full falsification 601/601; upgrade from the published 0.4.0 package (Rocky 9.7) and the 109-case sweep (Debian 12, AlmaLinux 9.7); on the public tree, falsification 592 + 11 declared skips; the tag-built packages attested and smoke-tested (Debian 12, Rocky 9.7) | section 5 |
 
 ## 2. Release candidate 0.5.0-rc1 (`f22631d`, 2026-11-17)
 

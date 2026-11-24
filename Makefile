@@ -1,4 +1,4 @@
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
 #
@@ -330,6 +330,15 @@ check-tests:
 	@out=$$(python3 tests/test_commands.py 2>&1); rc=$$?; \
 	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
 	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_criteria_a064.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_criteria_priv.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_criteria_catalogue.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
 	@out=$$(python3 tests/test_terminal_width.py 2>&1); rc=$$?; \
 	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
 	 else echo "$$out"; exit $$rc; fi
@@ -385,6 +394,9 @@ check-tests:
 	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
 	 else echo "$$out"; exit $$rc; fi
 	@out=$$(python3 tests/test_report_truth.py 2>&1); rc=$$?; \
+	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
+	 else echo "$$out"; exit $$rc; fi
+	@out=$$(python3 tests/test_report_additions.py 2>&1); rc=$$?; \
 	 if [ $$rc -eq 0 ]; then echo "$$out" | tail -3; \
 	 else echo "$$out"; exit $$rc; fi
 	@out=$$(python3 tests/test_report.py 2>&1); rc=$$?; \

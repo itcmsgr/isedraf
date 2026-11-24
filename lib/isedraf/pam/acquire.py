@@ -1,5 +1,5 @@
 # =============================================================================
-# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine (codename)
+# ISEDRAF — Linux Host Assurance, State Delta & Evidence Engine
 # =============================================================================
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: Copyright (c) 2026 Antonios Voulvoulis / ITCMS <contact@itcms.gr>
@@ -54,8 +54,37 @@ class Services(bounded.Universe):
     include_directories = False
 
 
+OS_RELEASE = ("etc/os-release", "usr/lib/os-release")
+
+
+def at_include_support(root):
+    """Whether this platform's libpam reads `@include` (Debian family), and the basis.
+
+    `@include` is Debian's libpam patch 031_pam_include, not upstream Linux-PAM. The family is
+    taken from os-release (ID, ID_LIKE), recorded as the basis; a binary is never inspected.
+    Returns (True | False | None, basis); None when os-release cannot be read."""
+    for rel in OS_RELEASE:
+        outcome = hostio.read_file_lossless(os.path.join(root, rel))
+        if outcome.ok:
+            fields = {}
+            for line in outcome.value.splitlines():
+                key, sep, value = line.partition("=")
+                if sep:
+                    fields[key.strip()] = value.strip().strip("\"'")
+            ident, like = fields.get("ID", ""), fields.get("ID_LIKE", "").split()
+            family = ident == "debian" or "debian" in like
+            return family, {"source": "/" + rel, "status": result.COLLECTED, "id": ident,
+                            "id_like": like, "debian_family": family}
+        if outcome.detail != hostio.NOT_FOUND:
+            return None, {"source": "/" + rel, "status": result.NOT_TESTED,
+                          "access_outcome": outcome.detail, "debian_family": None}
+    return None, {"source": "/etc/os-release", "status": result.NOT_TESTED,
+                  "access_outcome": hostio.NOT_FOUND, "debian_family": None}
+
+
 def collect(root="/"):
     directory = os.path.join(root, PAM_D)
+    at_include, basis = at_include_support(root)
     _coverage = []          # R1.5-P acquisition context, one entry per service file
     listing = bounded.enumerate_paths(directory, Services())
     _coverage.extend(_listing_coverage(directory, listing))
@@ -63,7 +92,7 @@ def collect(root="/"):
         return result.Evidence(result.NOT_TESTED, records=[], source=directory,
                                reason=listing.reason,
                                provenance=_provenance(directory, [], [], 0,
-                                                  _coverage))
+                                                  _coverage, basis))
 
     records, files, events = [], [], []
     ordinal = 0
@@ -125,15 +154,25 @@ def collect(root="/"):
             return
         _coverage.append(coverage.source(
             "pam", path, result.COLLECTED, outcome.detail, coverage.OP_FILE_READ))
-        parsed, bad = sources.parse(outcome.value, service, path, ordinal, depth)
+        parsed, bad = sources.parse(outcome.value, service, path, ordinal, depth, at_include)
         ordinal += len(parsed)
         records.extend(parsed)
         _count[0] += bad
         in_progress.append(service)
         try:
             for record in parsed:
-                if record["kind"] == model.EDGE:
-                    load(record["target_service"], depth + 1, service)
+                if record["kind"] != model.EDGE:
+                    continue
+                if (record["edge"] == model.AT_INCLUDE
+                        and record["target_service"].startswith("/")):
+                    # Debian libpam reads an absolute @include target as a file; this lane
+                    # reads only pam.d services (a target is never joined as a path).
+                    events.append({"event": "AT_INCLUDE_ABSOLUTE_NOT_FOLLOWED",
+                                   "service": record["target_service"],
+                                   "referenced_by": service,
+                                   "detail": "an absolute @include target is not read"})
+                    continue
+                load(record["target_service"], depth + 1, service)
         finally:
             in_progress.pop()
 
@@ -148,7 +187,7 @@ def collect(root="/"):
     status, reason = _status(events, records, _count[0], listing)
     return result.Evidence(status, records=records, reason=reason, source=directory,
                            provenance=_provenance(directory, files, events,
-                                                  _count[0], _coverage))
+                                                  _count[0], _coverage, basis))
 
 
 def _status(events, records, malformed, listing):
@@ -156,7 +195,8 @@ def _status(events, records, malformed, listing):
     blocking = [e for e in events
                 if e["event"] in ("MISSING_SERVICE", "UNREADABLE_SERVICE",
                                   "DEPTH_LIMIT", "INVALID_SERVICE_NAME",
-                                  "UNDECODABLE_SERVICE_NAME", "CYCLE")]
+                                  "UNDECODABLE_SERVICE_NAME", "CYCLE",
+                                  "AT_INCLUDE_ABSOLUTE_NOT_FOLLOWED")]
     if blocking:
         problems.append(
             "INCOMPLETE_STACK: %d edge target(s) did not resolve (%s). The stack read "
@@ -197,8 +237,9 @@ def _listing_coverage(directory, listing):
                             universe=universe)]
 
 
-def _provenance(directory, files, events, malformed, coverage_entries=None):
+def _provenance(directory, files, events, malformed, coverage_entries=None, at_include=None):
     return {"scope": "DECLARED_PAM_STACK",
+            "at_include_basis": at_include,
             "limitation": model.LIMITATION,
             "not_collected": list(model.NOT_COLLECTED),
             "edge_semantics": model.EDGE_SEMANTICS,

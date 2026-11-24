@@ -141,6 +141,7 @@ isedraf.mounts.acquire,lib/isedraf/mounts/acquire.py,collect_active,FS_READ,read
 isedraf.mounts.acquire,lib/isedraf/mounts/acquire.py,collect_declared,FS_READ,read_file_lossless,no
 isedraf.nss.acquire,lib/isedraf/nss/acquire.py,_regular_file,FS_READ,stat,yes
 isedraf.nss.acquire,lib/isedraf/nss/acquire.py,collect,FS_READ,read_file_lossless,no
+isedraf.pam.acquire,lib/isedraf/pam/acquire.py,at_include_support,FS_READ,read_file_lossless,no
 isedraf.pam.acquire,lib/isedraf/pam/acquire.py,collect,FS_READ,read_file_lossless,no
 isedraf.pam.acquire,lib/isedraf/pam/acquire.py,load,FS_READ,read_file_lossless,no
 isedraf.report,lib/isedraf/report/__init__.py,write,FS_READ,open,no

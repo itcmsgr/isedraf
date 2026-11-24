@@ -16,9 +16,12 @@ A lower layer never contradicts a higher one. On conflict: keep the higher state
 - **`/docs` is canonical.** Everything important lives here and is reviewed like code.
 - **README** is the front door (≤ ~150 lines): what it is, why, what it assesses and deliberately does not,
   who it is for, install, first run, snapshot → baseline → delta in one paragraph, verify ISEDRAF itself,
-  report security issues, links into `/docs`. Says "codename" until OD-01 is resolved.
+  report security issues, links into `/docs`. The name is ISEDRAF (D-108); "codename" is no longer used.
 - **No GitHub Wiki** until an owner amendment. Future navigation publishes `/docs` itself (OD-11).
-- **Installed docs:** man page `isedraf.8` and `/usr/share/doc/isedraf/` for offline servers.
+- **Installed docs** (as of 0.5.0): `/usr/share/doc/isedraf/` for offline servers - the README and the
+  guides it links, the command reference, platform compatibility, storage and outputs, the licence and
+  the copyright file - and the bash completion. No man page is shipped; `isedraf help` and
+  `isedraf COMMAND --help` are the on-host reference.
 
 ## 3. Positioning
 Canonical description: *ISEDRAF is an open-source Linux host assurance, state-delta and evidence engine.
@@ -125,22 +128,23 @@ canonical state — never three separate truths.
 ## 13. Release documentation gate
 README describes released behaviour only · platform statement accurate · limitations current · CLI examples
 execute in corpus · schema docs match emitted artifacts · new statuses/exit codes documented ·
-comparability/migration notes present · SECURITY.md current · CHANGELOG complete · AI_ASSISTANCE.md and
+comparability/migration notes present · SECURITY.md current · CHANGELOG complete · AI_ASSISTED_DEVELOPMENT.md and
 DESIGN_PROVENANCE.md current · no FUTURE item in present tense.
 
 ## 14. AI-assistance transparency (D-91…D-94)
 ISEDRAF is built with AI assistance under human ownership, and says so plainly. Nothing is hidden.
 
-- **`AI_ASSISTANCE.md`** (root): structure adapted from NFTBan's existing convention (prompt 01 findings).
+- **`AI_ASSISTED_DEVELOPMENT.md`** (root): structure adapted from NFTBan's existing convention (prompt 01 findings).
   Lists every contributing AI tool with provider, role and phase; the owner's role (scope, decisions,
   approvals, responsibility, copyright); how contributions are marked; what always requires human review
   (architecture, security claims and limitations, privilege/capability changes, licensing/provenance,
   release notes, governance files). Model versions only when known. Credits are factual, not promotional.
-- **Commits:** keep tooling `Co-Authored-By:` trailers; add `Assisted-by: <tool> (<role>)`, or
-  `Assisted-by: none`. Enforced by `commit-msg`.
+- **Commits:** an `Assisted-by: <tool>` trailer (ISEDRAF commits use `Assisted-by: Claude Code`), or
+  `Assisted-by: none`. An AI `Co-Authored-By:` trailer is rejected: it claims authorship, and AI tools
+  hold no rights in ISEDRAF (D-92, D-93). Both enforced by `commit-msg`.
 - **PRs:** AI tools/roles field is mandatory.
 - **`docs/development/DESIGN_PROVENANCE.md` *(PLANNED — not yet created)*:** design phases → decision IDs → AI tools involved → reviewed
   external proposals and outcome → human approval point. Summaries only; no raw transcripts.
-- **README:** one short "AI assistance" line linking to `AI_ASSISTANCE.md`.
+- **README:** one short "AI assistance" line linking to `AI_ASSISTED_DEVELOPMENT.md`.
 - Wording: "developed with AI assistance", "reviewed and approved by the maintainer". Never imply AI output
   is unreviewed-authoritative, and never hide or minimize AI involvement.

@@ -15,6 +15,10 @@ This page renders the registry record, exactly as `isedraf explain ISE-ACCOUNT-0
 
 ```text
 ISE-ACCOUNT-005  (version 1, EXPERIMENTAL)
+Duplicate Local GIDs
+Introduced in ISEDRAF 0.3.0. Needs at least a Standard Audit: /etc/group is
+  world-readable; a Standard Audit collects it; that is necessary, not
+  sufficient.
 
 Purpose
   Detect Duplicate Local GIDs: two or more different group names in /etc/group,
@@ -107,6 +111,9 @@ Remediation guidance (illustrative; ISEDRAF changes nothing)
   by giving each group its own GID, after re-owning the files of the moved
   group; the change affects file access, so it is planned.
 
-Baseline state  not available: baseline and delta are v0.4
-Delta           not available: baseline and delta are v0.4
+Baseline state  belongs to an evidence store, not to a criterion:
+                `isedraf evaluate` (or `sudo isedraf evaluate`) compares the
+                latest run with the store's approved baseline
+Delta           per run, in the Baseline comparison of the evaluation and of
+                the report (since 0.4.0)
 ```
